@@ -81,7 +81,7 @@ export function requireAdmin(req, res, next) {
 const ALLOWED_ORIGINS = [
   'https://bronzx.web.app',
   'https://bronzx.firebaseapp.com',
-  'https://reselle.onrender.com',
+  'https://reseller-x1yk.onrender.com',
 ];
 
 export const userCors = cors({
