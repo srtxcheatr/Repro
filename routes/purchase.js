@@ -9,58 +9,73 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 /**
- * Fetches a product key from the Cloudflare Worker.
- * No internal secret – only origin/referer check in the Worker.
+ * Fetches a product key directly from the reseller API.
+ * No Cloudflare Worker involved.
  */
 async function fetchRealKey(sku, product) {
-  const workerUrl = process.env.RESELLER_WORKER_URL;
-  if (!workerUrl) {
-    throw new Error('Reseller service URL not configured (RESELLER_WORKER_URL missing)');
+  // ---- Load credentials from environment ----
+  const API_KEY = process.env.RESELLER_API_KEY;
+  const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://xyzcheats.com/api/reseller_v1.php';
+
+  if (!API_KEY) {
+    throw new Error('Reseller API key not configured (RESELLER_API_KEY missing)');
+  }
+  if (!MASTER_KEY) {
+    throw new Error('Reseller master key not configured (RESELLER_MASTER_KEY missing)');
   }
 
-  const payload = {
-    pid: product.pid,
-    duration: product.duration,
-    productName: product.name,
-  };
+  // ---- Build form data ----
+  const formData = new URLSearchParams();
+  formData.append('api_key', API_KEY);
+  formData.append('action', 'buy');
+  formData.append('product_id', product.pid);
+  formData.append('duration', product.duration);
 
+  // ---- Make request ----
   let response;
   try {
-    response = await fetch(workerUrl, {
+    response = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-master-key': MASTER_KEY,
       },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000), // 10 seconds
+      body: formData.toString(),
+      signal: AbortSignal.timeout(15000), // 15 seconds timeout
     });
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('Reseller service request timed out. Please try again.');
+      throw new Error('Reseller API request timed out. Please try again.');
     }
-    throw new Error(`Failed to connect to reseller service: ${err.message}`);
+    throw new Error(`Failed to connect to reseller API: ${err.message}`);
   }
 
+  // ---- Parse response ----
+  const text = await response.text();
   let data;
   try {
-    data = await response.json();
-  } catch (err) {
-    let text = '';
-    try {
-      text = await response.text();
-    } catch (_) {}
-    throw new Error(`Reseller service returned invalid response (${response.status}): ${text.slice(0, 200)}`);
+    data = JSON.parse(text);
+  } catch (_) {
+    // If response is not JSON, treat as plain text (maybe key)
+    if (text.trim().length > 0 && text.trim().length < 100) {
+      return text.trim(); // likely a key
+    }
+    throw new Error(`Reseller API returned invalid response: ${text.slice(0, 200)}`);
   }
 
+  // Check HTTP status
   if (!response.ok) {
     const msg = data?.message || data?.error || `HTTP ${response.status}`;
-    throw new Error(`Reseller service error: ${msg}`);
+    throw new Error(`Reseller API error: ${msg}`);
   }
 
+  // Check explicit success flag (if present)
   if (data.success === false) {
-    throw new Error(data.message || 'Reseller service reported failure');
+    throw new Error(data.message || 'Reseller API reported failure');
   }
 
+  // Extract key from various possible structures
   const key =
     data.key ||
     (data.data && data.data.key) ||
@@ -68,8 +83,8 @@ async function fetchRealKey(sku, product) {
     (typeof data === 'string' ? data : null);
 
   if (!key) {
-    console.error('Reseller response missing key:', JSON.stringify(data));
-    throw new Error('Reseller service returned no key. Please contact support.');
+    console.error('Reseller API response missing key:', JSON.stringify(data));
+    throw new Error('Reseller API returned no key. Please contact support.');
   }
 
   return key;
