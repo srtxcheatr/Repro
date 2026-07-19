@@ -9,16 +9,89 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 /**
- * STUB — not implemented here.
+ * Fetches a product key from the Cloudflare Worker (secure proxy).
  *
- * Plug in your actual reseller/key-fetch call. It receives the sku
- * and the full catalog entry (pid, row, name, duration, price), and
- * must either return the key string on success or throw on failure
- * (which cancels the whole transaction — no balance gets deducted,
- * no history entry gets written).
+ * Error cases handled:
+ * - Missing environment variables (RESELLER_WORKER_URL, WORKER_INTERNAL_SECRET)
+ * - Network errors / timeout (cannot reach Worker)
+ * - Non‑JSON / malformed response
+ * - HTTP error status (4xx/5xx)
+ * - success: false in response
+ * - No key in response
  */
 async function fetchRealKey(sku, product) {
-  throw new Error('fetchRealKey() is not implemented — plug in your reseller call here.');
+  const workerUrl = process.env.RESELLER_WORKER_URL;
+  const secret = process.env.WORKER_INTERNAL_SECRET;
+
+  if (!workerUrl) {
+    throw new Error('Reseller service URL not configured (RESELLER_WORKER_URL missing)');
+  }
+  if (!secret) {
+    throw new Error('Internal secret not configured (WORKER_INTERNAL_SECRET missing)');
+  }
+
+  const payload = {
+    pid: product.pid,
+    duration: product.duration,
+    productName: product.name,
+  };
+
+  let response;
+  try {
+    response = await fetch(workerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': secret,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000), // 10 seconds timeout
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Reseller service request timed out. Please try again.');
+    }
+    // Network errors (DNS, connection refused, etc.)
+    throw new Error(`Failed to connect to reseller service: ${err.message}`);
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    // If response is not JSON, capture raw text for debugging
+    let text = '';
+    try {
+      text = await response.text();
+    } catch (_) {}
+    throw new Error(`Reseller service returned invalid response (${response.status}): ${text.slice(0, 200)}`);
+  }
+
+  // Check HTTP status
+  if (!response.ok) {
+    const msg = data?.message || data?.error || `HTTP ${response.status}`;
+    throw new Error(`Reseller service error: ${msg}`);
+  }
+
+  // Check explicit failure flag
+  if (data.success === false) {
+    throw new Error(data.message || 'Reseller service reported failure');
+  }
+
+  // Extract key from various response structures
+  const key =
+    data.key ||
+    (data.data && data.data.key) ||
+    (data.result && data.result.key) ||
+    (typeof data === 'string' ? data : null);
+
+  if (!key) {
+    // Log the full response (server‑side only) for debugging
+    console.error('Reseller response missing key:', JSON.stringify(data));
+    throw new Error('Reseller service returned no key. Please contact support.');
+  }
+
+  return key;
 }
 
 // POST /api/purchase/checkout  { sku, name, waNum }
@@ -37,7 +110,7 @@ router.post('/checkout', asyncHandler(async (req, res) => {
 
   telegramNotify(telegramFormat('Purchase attempt', {
     username: buyerName || req.email, email: req.email, product: product.name,
-    duration: product.duration, price: realPrice, uid: req.uid, status: 'attempt',
+    price: realPrice, uid: req.uid, status: 'attempt',
   }));
 
   try {
@@ -50,7 +123,7 @@ router.post('/checkout', asyncHandler(async (req, res) => {
         throw new Error('Insufficient balance');
       }
 
-      // ---- 3. Fetch/deliver the actual product key (your stub). ----
+      // ---- 3. Fetch/deliver the actual product key (now fully implemented). ----
       const key = await fetchRealKey(sku, product);
 
       const newBalance = currentBalance - realPrice;
@@ -67,14 +140,14 @@ router.post('/checkout', asyncHandler(async (req, res) => {
 
     telegramNotify(telegramFormat('Purchase success', {
       username: buyerName || req.email, email: req.email, product: product.name,
-      duration: product.duration, price: realPrice, key: result.key, uid: req.uid, status: 'success',
+      price: realPrice, uid: req.uid, status: 'success',
     }));
 
     res.json({ success: true, key: result.key, newBalance: result.newBalance });
   } catch (e) {
     telegramNotify(telegramFormat('Purchase rejected', {
       username: buyerName || req.email, email: req.email, product: product.name,
-      duration: product.duration, price: realPrice, uid: req.uid, status: 'failed', others: e.message,
+      price: realPrice, uid: req.uid, status: 'failed', others: e.message,
     }));
     res.status(402).json({ success: false, error: e.message });
   }
