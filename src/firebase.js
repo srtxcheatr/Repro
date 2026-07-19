@@ -76,18 +76,26 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
-// Only these origins may call /api/user/* and /api/purchase/* — keep
-// this in sync with wherever your frontend actually lives.
-const ALLOWED_ORIGINS = [
+// Your frontend has moved between different Render service names
+// several times already — instead of chasing each rename, this
+// allows any *.onrender.com origin (all under your own Render
+// account regardless of what you rename services to) plus your
+// Firebase Hosting domains if you ever use those instead.
+const ALLOWED_ORIGIN_SUFFIXES = ['.onrender.com'];
+const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
   'https://bronzx.firebaseapp.com',
-  'https://reseller-x1yk.onrender.com',
 ];
 
 export const userCors = cors({
   origin(origin, cb) {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
-    else cb(null, false);
+    if (!origin) return cb(null, true); // same-origin / curl / server-to-server
+    if (ALLOWED_EXACT_ORIGINS.includes(origin)) return cb(null, true);
+    try {
+      const host = new URL(origin).hostname;
+      if (ALLOWED_ORIGIN_SUFFIXES.some((suf) => host.endsWith(suf))) return cb(null, true);
+    } catch (e) { /* malformed origin header — fall through to reject */ }
+    cb(null, false);
   },
 });
 
