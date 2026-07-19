@@ -17,8 +17,44 @@ router.use(requireFirebaseUid);
  * (which cancels the whole transaction — no balance gets deducted,
  * no history entry gets written).
  */
+// routes/purchase.js — add this implementation
+
 async function fetchRealKey(sku, product) {
-  throw new Error('fetchRealKey() is not implemented — plug in your reseller call here.');
+  const workerUrl = process.env.RESELLER_WORKER_URL;
+  const secret = process.env.WORKER_INTERNAL_SECRET;
+
+  if (!workerUrl) {
+    throw new Error('RESELLER_WORKER_URL is not configured');
+  }
+  if (!secret) {
+    throw new Error('WORKER_INTERNAL_SECRET is not configured');
+  }
+
+  const payload = {
+    pid: product.pid,
+    duration: product.duration,
+  };
+
+  const response = await fetch(workerUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': secret,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Reseller API request failed');
+  }
+
+  if (!data.key) {
+    throw new Error('Reseller API returned no key');
+  }
+
+  return data.key;
 }
 
 // POST /api/purchase/checkout  { sku, name, waNum }
