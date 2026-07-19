@@ -37,7 +37,7 @@ router.post('/checkout', asyncHandler(async (req, res) => {
 
   telegramNotify(telegramFormat('Purchase attempt', {
     username: buyerName || req.email, email: req.email, product: product.name,
-    price: realPrice, uid: req.uid, status: 'attempt',
+    duration: product.duration, price: realPrice, uid: req.uid, status: 'attempt',
   }));
 
   try {
@@ -67,14 +67,14 @@ router.post('/checkout', asyncHandler(async (req, res) => {
 
     telegramNotify(telegramFormat('Purchase success', {
       username: buyerName || req.email, email: req.email, product: product.name,
-      price: realPrice, uid: req.uid, status: 'success',
+      duration: product.duration, price: realPrice, key: result.key, uid: req.uid, status: 'success',
     }));
 
     res.json({ success: true, key: result.key, newBalance: result.newBalance });
   } catch (e) {
     telegramNotify(telegramFormat('Purchase rejected', {
       username: buyerName || req.email, email: req.email, product: product.name,
-      price: realPrice, uid: req.uid, status: 'failed', others: e.message,
+      duration: product.duration, price: realPrice, uid: req.uid, status: 'failed', others: e.message,
     }));
     res.status(402).json({ success: false, error: e.message });
   }
