@@ -4,8 +4,10 @@ import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import { CATALOG } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
+import { telegramNotify } from './src/telegram.js';
 
 const app = express();
+app.set('trust proxy', true); // Render sits behind a proxy — this makes req.ip the real client IP
 app.use(express.json());
 
 // Catch bad JSON bodies with a clean response instead of a stack trace.
@@ -14,6 +16,34 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ success: false, error: 'Invalid JSON body' });
   }
   next(err);
+});
+
+// ---- Connection logger ----
+// Always notifies on errors/unauthorized attempts (401/403/5xx) — the
+// "who's poking at my backend" signal you actually want. Set
+// NOTIFY_ALL_REQUESTS=true on Render if you also want a ping for
+// every successful request too — off by default because your own
+// store polls /api/user/balance every 20s per visitor, which would
+// otherwise flood your phone with routine traffic, not just problems.
+const NOTIFY_ALL_REQUESTS = process.env.NOTIFY_ALL_REQUESTS === 'true';
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const isProblem = res.statusCode === 401 || res.statusCode === 403 || res.statusCode >= 500;
+    if (!isProblem && !NOTIFY_ALL_REQUESTS) return;
+
+    const origin = req.headers.origin || req.headers.referer || '—';
+    const emoji = isProblem ? '🚨' : '📡';
+    telegramNotify(
+      `${emoji} <b>${req.method} ${req.path}</b>\n` +
+      `IP: <code>${req.ip}</code>\n` +
+      `Origin: ${origin}\n` +
+      `Status: <b>${res.statusCode}</b>\n` +
+      `${Date.now() - start}ms`
+    );
+  });
+  next();
 });
 
 app.get('/', (req, res) => {
