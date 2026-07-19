@@ -10,7 +10,8 @@ router.use(requireFirebaseUid);
 
 /**
  * Fetches a product key directly from the reseller API.
- * No Cloudflare Worker involved.
+ * Requires RESELLER_API_KEY, RESELLER_MASTER_KEY env vars.
+ * Optionally RESELLER_ENDPOINT (defaults to xyzcheats.com).
  */
 async function fetchRealKey(sku, product) {
   // ---- Load credentials from environment ----
@@ -32,6 +33,8 @@ async function fetchRealKey(sku, product) {
   formData.append('product_id', product.pid);
   formData.append('duration', product.duration);
 
+  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}`);
+
   // ---- Make request ----
   let response;
   try {
@@ -42,7 +45,7 @@ async function fetchRealKey(sku, product) {
         'x-master-key': MASTER_KEY,
       },
       body: formData.toString(),
-      signal: AbortSignal.timeout(15000), // 15 seconds timeout
+      signal: AbortSignal.timeout(15000), // 15 seconds
     });
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -51,31 +54,35 @@ async function fetchRealKey(sku, product) {
     throw new Error(`Failed to connect to reseller API: ${err.message}`);
   }
 
-  // ---- Parse response ----
+  // ---- Read raw response ----
   const text = await response.text();
+  console.log('[Reseller] Raw response:', text);
+
+  // ---- Try to parse JSON ----
   let data;
   try {
     data = JSON.parse(text);
+    console.log('[Reseller] Parsed JSON:', JSON.stringify(data, null, 2));
   } catch (_) {
-    // If response is not JSON, treat as plain text (maybe key)
+    // Not JSON – treat as plain text (maybe a key)
     if (text.trim().length > 0 && text.trim().length < 100) {
       return text.trim(); // likely a key
     }
     throw new Error(`Reseller API returned invalid response: ${text.slice(0, 200)}`);
   }
 
-  // Check HTTP status
+  // ---- Check HTTP status ----
   if (!response.ok) {
     const msg = data?.message || data?.error || `HTTP ${response.status}`;
     throw new Error(`Reseller API error: ${msg}`);
   }
 
-  // Check explicit success flag (if present)
+  // ---- Check explicit failure flag ----
   if (data.success === false) {
     throw new Error(data.message || 'Reseller API reported failure');
   }
 
-  // Extract key from various possible structures
+  // ---- Extract key from various structures ----
   const key =
     data.key ||
     (data.data && data.data.key) ||
@@ -83,14 +90,15 @@ async function fetchRealKey(sku, product) {
     (typeof data === 'string' ? data : null);
 
   if (!key) {
-    console.error('Reseller API response missing key:', JSON.stringify(data));
+    console.error('[Reseller] No key in response:', JSON.stringify(data));
     throw new Error('Reseller API returned no key. Please contact support.');
   }
 
+  console.log('[Reseller] Key fetched successfully');
   return key;
 }
 
-// POST /api/purchase/checkout
+// ---- POST /api/purchase/checkout ----
 router.post('/checkout', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
@@ -121,8 +129,10 @@ router.post('/checkout', asyncHandler(async (req, res) => {
         throw new Error('Insufficient balance');
       }
 
+      // ---- Fetch key from reseller ----
       const key = await fetchRealKey(sku, product);
 
+      // ---- Deduct balance and record purchase ----
       const newBalance = currentBalance - realPrice;
       const historyEntry = {
         at: new Date().toISOString(),
