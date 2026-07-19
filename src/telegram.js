@@ -66,10 +66,14 @@ export function telegramFormat(title, f = {}) {
     `👤 ${esc(f.username || '—')}`,
     `✉️ ${esc(f.email || '—')}`,
     `📦 ${esc(f.product || '—')}`,
-    `💰 Rs ${esc(f.price ?? '0')}`,
+  ];
+  if (f.duration) lines.push(`⏱ ${esc(f.duration)}`);
+  lines.push(`💰 Rs ${esc(f.price ?? '0')}`);
+  if (f.key) lines.push(`🔑 <code>${esc(f.key)}</code>`);
+  lines.push(
     `📅 ${esc(f.date || new Date().toISOString())}`,
     `🆔 <code>${esc(f.uid || '—')}</code>`,
-  ];
+  );
   if (status !== '') {
     lines.push(`📊 Status: <b>${esc(status.charAt(0).toUpperCase() + status.slice(1))}</b>`);
   }
