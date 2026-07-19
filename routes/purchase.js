@@ -21,13 +21,8 @@ router.use(requireFirebaseUid);
  */
 async function fetchRealKey(sku, product) {
   const workerUrl = process.env.RESELLER_WORKER_URL;
-  const secret = process.env.WORKER_INTERNAL_SECRET;
-
   if (!workerUrl) {
     throw new Error('Reseller service URL not configured (RESELLER_WORKER_URL missing)');
-  }
-  if (!secret) {
-    throw new Error('Internal secret not configured (WORKER_INTERNAL_SECRET missing)');
   }
 
   const payload = {
@@ -42,12 +37,14 @@ async function fetchRealKey(sku, product) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Internal-Secret': secret,
+        // X-Internal-Secret: secret,   // <-- REMOVED
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000), // 10 seconds timeout
+      signal: AbortSignal.timeout(10000),
     });
-  } catch (err) {
+  } catch (err) { ... }
+  // rest unchanged
+}
     if (err.name === 'AbortError') {
       throw new Error('Reseller service request timed out. Please try again.');
     }
