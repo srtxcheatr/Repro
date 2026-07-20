@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { catalogFind } from '../src/catalog.js';
@@ -9,97 +10,35 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 /**
- * Fetches a product key directly from the reseller API.
- * Requires RESELLER_API_KEY, RESELLER_MASTER_KEY env vars.
- * Optionally RESELLER_ENDPOINT (defaults to xyzcheats.com).
+ * STUB — not implemented here.
+ *
+ * Plug in your actual reseller/key-fetch call. It receives the sku
+ * and the full catalog entry (pid, row, name, duration, price), and
+ * must either return the key string on success or throw on failure
+ * (which cancels the whole transaction — no balance gets deducted,
+ * no history entry gets written).
  */
 async function fetchRealKey(sku, product) {
-  // ---- Load credentials from environment ----
-  const API_KEY = process.env.RESELLER_API_KEY;
-  const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://xyzcheats.com/api/reseller_v1.php';
-
-  if (!API_KEY) {
-    throw new Error('Reseller API key not configured (RESELLER_API_KEY missing)');
-  }
-  if (!MASTER_KEY) {
-    throw new Error('Reseller master key not configured (RESELLER_MASTER_KEY missing)');
-  }
-
-  // ---- Build form data ----
-  const formData = new URLSearchParams();
-  formData.append('api_key', API_KEY);
-  formData.append('action', 'buy');
-  formData.append('product_id', product.pid);
-  formData.append('duration', product.duration);
-
-  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}`);
-
-  // ---- Make request ----
-  let response;
-  try {
-    response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'x-master-key': MASTER_KEY,
-      },
-      body: formData.toString(),
-      signal: AbortSignal.timeout(15000), // 15 seconds
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Reseller API request timed out. Please try again.');
-    }
-    throw new Error(`Failed to connect to reseller API: ${err.message}`);
-  }
-
-  // ---- Read raw response ----
-  const text = await response.text();
-  console.log('[Reseller] Raw response:', text);
-
-  // ---- Try to parse JSON ----
-  let data;
-  try {
-    data = JSON.parse(text);
-    console.log('[Reseller] Parsed JSON:', JSON.stringify(data, null, 2));
-  } catch (_) {
-    // Not JSON – treat as plain text (maybe a key)
-    if (text.trim().length > 0 && text.trim().length < 100) {
-      return text.trim(); // likely a key
-    }
-    throw new Error(`Reseller API returned invalid response: ${text.slice(0, 200)}`);
-  }
-
-  // ---- Check HTTP status ----
-  if (!response.ok) {
-    const msg = data?.message || data?.error || `HTTP ${response.status}`;
-    throw new Error(`Reseller API error: ${msg}`);
-  }
-
-  // ---- Check explicit failure flag ----
-  if (data.success === false) {
-    throw new Error(data.message || 'Reseller API reported failure');
-  }
-
-  // ---- Extract key from various structures ----
-  const key =
-    data.key ||
-    (data.data && data.data.key) ||
-    (data.result && data.result.key) ||
-    (typeof data === 'string' ? data : null);
-
-  if (!key) {
-    console.error('[Reseller] No key in response:', JSON.stringify(data));
-    throw new Error('Reseller API returned no key. Please contact support.');
-  }
-
-  console.log('[Reseller] Key fetched successfully');
-  return key;
+  throw new Error('fetchRealKey() is not implemented — plug in your reseller call here.');
 }
 
-// ---- POST /api/purchase/checkout ----
-router.post('/checkout', asyncHandler(async (req, res) => {
+// ---- In-memory job tracker ----
+// A single Render instance, low-traffic solo store — this is fine.
+// If this backend ever runs multiple instances, jobs would need to
+// move to Firestore/Redis instead, since each instance would have
+// its own separate Map.
+const jobs = new Map();
+const JOB_TTL_MS = 3 * 60 * 1000; // jobs are cleaned up 3 min after creation
+
+function setJob(jobId, patch) {
+  const existing = jobs.get(jobId) || {};
+  jobs.set(jobId, { ...existing, ...patch });
+}
+
+// POST /api/purchase/checkout/start — kicks off the job, returns
+// immediately with a jobId. The actual work happens in the
+// background function below; the frontend polls status separately.
+router.post('/checkout/start', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
   const buyerWa = String(req.body?.waNum || '').trim();
@@ -108,19 +47,53 @@ router.post('/checkout', asyncHandler(async (req, res) => {
   if (!product) {
     return res.status(400).json({ success: false, error: 'Unknown product' });
   }
-  const realPrice = Number(product.price);
-  const userRef = db().collection('users').doc(req.uid);
 
+  const jobId = crypto.randomUUID();
+  setJob(jobId, {
+    uid: req.uid, percent: 0, label: 'Queued...', done: false,
+    createdAt: Date.now(),
+  });
+  setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
+
+  res.json({ success: true, jobId });
+
+  // Fire-and-forget — runs after the response above is already sent.
+  runCheckoutJob(jobId, req.uid, req.email, sku, product, buyerName, buyerWa);
+}));
+
+// GET /api/purchase/checkout/status/:jobId
+router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, error: 'Job not found or expired', done: true });
+  }
+  if (job.uid !== req.uid) {
+    return res.status(403).json({ success: false, error: 'Not your job', done: true });
+  }
+  res.json({
+    percent: job.percent,
+    label: job.label,
+    done: job.done,
+    success: job.success ?? null,
+    key: job.key,
+    newBalance: job.newBalance,
+    error: job.error,
+  });
+}));
+
+async function runCheckoutJob(jobId, uid, email, sku, product, buyerName, buyerWa) {
+  const realPrice = Number(product.price);
+  const userRef = db().collection('users').doc(uid);
+
+  setJob(jobId, { percent: 10, label: 'Verifying product...' });
   telegramNotify(telegramFormat('Purchase attempt', {
-    username: buyerName || req.email,
-    email: req.email,
-    product: product.name,
-    price: realPrice,
-    uid: req.uid,
-    status: 'attempt',
+    username: buyerName || email, email, product: product.name,
+    duration: product.duration, price: realPrice, uid, status: 'attempt',
   }));
 
   try {
+    setJob(jobId, { percent: 30, label: 'Checking balance...' });
+
     const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
@@ -129,19 +102,14 @@ router.post('/checkout', asyncHandler(async (req, res) => {
         throw new Error('Insufficient balance');
       }
 
-      // ---- Fetch key from reseller ----
+      setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
       const key = await fetchRealKey(sku, product);
 
-      // ---- Deduct balance and record purchase ----
+      setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
       const historyEntry = {
-        at: new Date().toISOString(),
-        name: product.name,
-        duration: product.duration,
-        price: realPrice,
-        key,
-        buyerName,
-        buyerWa,
+        at: new Date().toISOString(), name: product.name, duration: product.duration,
+        price: realPrice, key, buyerName, buyerWa,
       };
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
       purchaseHistory.push(historyEntry);
@@ -150,28 +118,20 @@ router.post('/checkout', asyncHandler(async (req, res) => {
       return { key, newBalance };
     });
 
-    telegramNotify(telegramFormat('Purchase success', {
-      username: buyerName || req.email,
-      email: req.email,
-      product: product.name,
-      price: realPrice,
-      uid: req.uid,
-      status: 'success',
-    }));
+    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, ...result });
 
-    res.json({ success: true, key: result.key, newBalance: result.newBalance });
-  } catch (e) {
-    telegramNotify(telegramFormat('Purchase rejected', {
-      username: buyerName || req.email,
-      email: req.email,
-      product: product.name,
-      price: realPrice,
-      uid: req.uid,
-      status: 'failed',
-      others: e.message,
+    telegramNotify(telegramFormat('Purchase success', {
+      username: buyerName || email, email, product: product.name,
+      duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
     }));
-    res.status(402).json({ success: false, error: e.message });
+  } catch (e) {
+    setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
+
+    telegramNotify(telegramFormat('Purchase rejected', {
+      username: buyerName || email, email, product: product.name,
+      duration: product.duration, price: realPrice, uid, status: 'failed', others: e.message,
+    }));
   }
-}));
+}
 
 export default router;
