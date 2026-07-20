@@ -41,7 +41,7 @@ export async function telegramNotify(text) {
   }
 }
 
-function esc(s) {
+export function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
