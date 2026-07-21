@@ -89,7 +89,10 @@ sku_81: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL F
 sku_82: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 7 DAY', duration: '7 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
 sku_83: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 15 DAY', duration: '15 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
 
-sku_84: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 30 DAY', duration: '30 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },};   
+sku_84: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 30 DAY', duration: '30 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
+sku_87: { pid: '84', row: 'IOS FLUORITE MLBB', name: 'FLUORITE 1 DAY', duration: '1 DAYs FluoRite MLBB', price: 550, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
+sku_88: { pid: '84', row: 'IOS FLUORITE MLBB', name: 'FLUORITE 7 DAY', duration: '7 DAYs FluoRite MLBB', price: 550, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
+sku_89: { pid: '84', row: 'IOS FLUORITE MLBB', name: 'FLUORITE 30 DAY', duration: '30 DAYs FluoRite MLBB', price: 550, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },};   
 
 export function catalogFind(sku) {
   return CATALOG[sku] ?? null;
