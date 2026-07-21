@@ -83,7 +83,13 @@ export const CATALOG = {
   sku_76: { pid: '70', row: 'NEO STRIKE ANDROID', name: 'NEO STRIKE 3 DAY', duration: '3 DaYs', price: 300, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
   sku_77: { pid: '70', row: 'NEO STRIKE ANDROID', name: 'NEO STRIKE 7 DAY', duration: '7 DaYs', price: 500, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
   sku_78: { pid: '70', row: 'NEO STRIKE ANDROID', name: 'NEO STRIKE 14 DAY', duration: '14 DaYs', price: 650, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-  sku_79: { pid: '70', row: 'NEO STRIKE ANDROID', name: 'NEO STRIKE 28 DAY', duration: '28 DaYs', price: 850, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },};
+  sku_79: { pid: '70', row: 'NEO STRIKE ANDROID', name: 'NEO STRIKE 28 DAY', duration: '28 DaYs', price: 850, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
+sku_80: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 1 DAY', duration: '1 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
+sku_81: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 3 DAY', duration: '3 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
+sku_82: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 7 DAY', duration: '7 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
+sku_83: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 15 DAY', duration: '15 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },
+
+sku_84: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL FF ROOT 30 DAY', duration: '30 DaYs', price: 130, image: 'https://i.postimg.cc/ZYVQq2dp/Screenshot-20260721-202653.jpg', external: true },};   
 
 export function catalogFind(sku) {
   return CATALOG[sku] ?? null;
