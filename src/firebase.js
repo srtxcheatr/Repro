@@ -81,10 +81,10 @@ export function requireAdmin(req, res, next) {
 // allows any *.onrender.com origin (all under your own Render
 // account regardless of what you rename services to) plus your
 // Firebase Hosting domains if you ever use those instead.
-const ALLOWED_ORIGIN_SUFFIXES = ['.srt.cheats'];
+const ALLOWED_ORIGIN_SUFFIXES = ['.srt.hdhchbididjd'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
-  'https://bronzx.firebaseapp.com','https://masterkeypanle.onrender.com','https://srtstorev5.onrender.com',
+  'https://bronzx.firebaseapp.com','https://masterkeypanle.onrender.com','https://masterkeypanle.onrender.com',
 ];
 
 export const userCors = cors({
