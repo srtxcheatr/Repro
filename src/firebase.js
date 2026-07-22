@@ -84,7 +84,7 @@ export function requireAdmin(req, res, next) {
 const ALLOWED_ORIGIN_SUFFIXES = ['.srt.cheats'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
-  'https://bronzx.firebaseapp.com','https://masterkeypanle.onrender.com','',
+  'https://bronzx.firebaseapp.com','https://masterkeypanle.onrender.com','https://srtstorev5.onrender.com',
 ];
 
 export const userCors = cors({
