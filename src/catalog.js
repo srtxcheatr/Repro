@@ -36,8 +36,8 @@ export const CATALOG = {
   sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
   // ---- DRIPCLIENT 8BP NONROOT ANDROID (pid 59) ----
-  sku_19: { pid: '59', row: 'DRIP 8BP ', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
-  sku_20: { pid: '59', row: 'DRIP 8BP ', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 220, image: 'https://via.placeholder.com/300', external: true },
+  sku_19: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
+  sku_20: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 220, image: 'https://via.placeholder.com/300', external: true },
   sku_21: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
