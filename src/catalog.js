@@ -36,25 +36,25 @@ export const CATALOG = {
   sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
   // ---- DRIPCLIENT 8BP NONROOT ANDROID (pid 59) ----
-  sku_19: { pid: '59', row: 'DRIPCLIENT 8BP ', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
-  sku_20: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 220, image: 'https://via.placeholder.com/300', external: true },
-  sku_21: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
+  sku_19: { pid: '59', row: 'DRIP 8BP ', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
+  sku_20: { pid: '59', row: 'DRIP 8BP ', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 220, image: 'https://via.placeholder.com/300', external: true },
+  sku_21: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
-  sku_22: { pid: '62', row: 'DRIPCLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY', duration: '1 DaYS NONROOT', price: 120, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_23: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 15 DAY', duration: '15 DaYS NONROOT', price: 650, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_24: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 3 DAY', duration: '3 DaYS NONROOT', price: 220, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_25: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 920, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_26: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_22: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY', duration: '1 DaYS NONROOT', price: 120, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_23: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', duration: '15 DaYS NONROOT', price: 650, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_24: { pid: '62', row: 'DRIPCLIENT FF GLOBAL', name: 'DRIP NONROOT 3 DAY', duration: '3 DaYS NONROOT', price: 220, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_25: { pid: '62', row: 'DRIPCLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 920, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_26: { pid: '62', row: 'DRIPCLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
 
   // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
   sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 1080, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT PROXY FF NONROOT ANDROID (pid 91) ----
-  sku_32: { pid: '91', row: 'DRIPCLIENT PROXY FF ', name: 'DRIP PROXY 3 DAY', duration: '3 DaYs', price: 220, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_33: { pid: '91', row: 'DRIPCLIENT PROXY FF NONROOT ANDROID', name: 'DRIP PROXY 30 DAY', duration: '30 DaYs', price: 920, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_34: { pid: '91', row: 'DRIPCLIENT PROXY FF NONROOT ANDROID', name: 'DRIP PROXY 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY', duration: '3 DaYs', price: 220, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_33: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', duration: '30 DaYs', price: 920, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- FLUORITE IOS FF (pid 58) ----
   sku_35: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 1 DAY', duration: '1 DAYs FluoRite FF', price: 550, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
