@@ -4,20 +4,20 @@
 
 export const CATALOG = {
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
-  sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_2: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 15 DAY', duration: '15 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_3: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 3 DAY', duration: '3 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_4: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_5: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 130, image: 'https://via.placeholder.com/300', external: true },
+  sku_2: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 3 DAY', duration: '3 DaYs', price: 240, image: 'https://via.placeholder.com/300', external: true },
+  sku_3: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 7 DAY', duration: '7 DaYs', price: 450, image: 'https://via.placeholder.com/300', external: true },
+  sku_4: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 15 DAY', duration: '15 DaYs', price: 650, image: 'https://via.placeholder.com/300', external: true },
+  sku_5: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 30 DAY', duration: '30 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- BR MOD FF PC VERSION (pid 49) ----
   sku_6: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 180, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_7: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 1 DAY', duration: '1 Day Pc Bypass + Silent', price: 250, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_8: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 1 DAY', duration: '1 Day Pc Modmenu x86', price: 0, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_9: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 10 DAY', duration: '10 Day Pc Modmenu x86', price: 0, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_8: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 1 DAY', duration: '1 Day Pc Modmenu x86', price: 200, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_9: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 10 DAY', duration: '10 Day Pc Modmenu x86', price: 650, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_10: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 10 DAY', duration: '10 Days Pc Aim Silent', price: 650, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_11: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 10 DAY', duration: '10 Days Pc Bypass + Silent', price: 750, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_12: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 30 DAY', duration: '30 Day Pc Modmenu x86', price: 0, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_12: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 30 DAY', duration: '30 Day Pc Modmenu x86', price: 1350, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_13: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 30 DAY', duration: '30 Days Pc Aim Silent', price: 1250, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_14: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 30 DAY', duration: '30 Days Pc Bypass + Silent', price: 1450, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
@@ -28,9 +28,9 @@ export const CATALOG = {
   sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
   // ---- DRIPCLIENT 8BP NONROOT ANDROID (pid 59) ----
-  sku_19: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_20: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_21: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_19: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
+  sku_20: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 7 DAY', duration: '7 DaYs', price: 220, image: 'https://via.placeholder.com/300', external: true },
+  sku_21: { pid: '59', row: 'DRIPCLIENT 8BP NONROOT ANDROID', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
   sku_22: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 1 DAY', duration: '1 DaYS NONROOT', price: 120, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
@@ -59,13 +59,13 @@ export const CATALOG = {
   sku_37: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 7 DAY', duration: '7 DAYs FluoRite FF', price: 1550, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
 
   // ---- FLUORITE IOS MLBB (pid 84) ----
-  sku_38: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_39: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_40: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_38: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 1 DAY', duration: '1 DaYs', price: 450, image: 'https://via.placeholder.com/300', external: true },
+  sku_39: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 30 DAY', duration: '30 DaYs', price: 1500, image: 'https://via.placeholder.com/300', external: true },
+  sku_40: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 7 DAY', duration: '7 DaYs', price: 2800, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
-  sku_41: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 1500, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
-  sku_42: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 0, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+  sku_41: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 840, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+  sku_42: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1600, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
 
   // ---- HG CHEATS ANDROID PROXY FF NONROOT (pid 123) ----
   sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY', duration: '1 DaYs', price: 130, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
@@ -81,34 +81,34 @@ export const CATALOG = {
 
   // ---- HIKARI MOD FF ROOT ANDROID (pid 72) ----
   sku_51: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 1 DAY', duration: '1 Days', price: 120, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_52: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 15 DAY', duration: '15 Days', price: 0, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
+  sku_52: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 15 DAY', duration: '15 Days', price: 500, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
   sku_53: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 3 DAY', duration: '3 Days', price: 200, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
   sku_54: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 30 DAY', duration: '30 Days', price: 850, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
   sku_55: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 7 DAY', duration: '7 Days', price: 350, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
 
   // ---- IOS CLOUD CODM (pid 87) ----
-  sku_56: { pid: '87', row: 'IOS CLOUD CODM', name: 'CLOUD CODM 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_56: { pid: '87', row: 'IOS CLOUD CODM', name: 'CLOUD CODM 30 DAY', duration: '30 DaYs', price: 2800, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- IOS FLUORITE 8 BALL POOL (pid 86) ----
-  sku_57: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_58: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_59: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_57: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 1 DAY', duration: '1 DaYs', price: 450, image: 'https://via.placeholder.com/300', external: true },
+  sku_58: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 30 DAY', duration: '30 DaYs', price: 2800, image: 'https://via.placeholder.com/300', external: true },
+  sku_59: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 7 DAY', duration: '7 DaYs', price: 1500, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
-  sku_60: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year Ios Esign Gbox Certificate', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_61: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year Ios Signer Gbox Certificate', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_60: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year Ios Esign Gbox Certificate', price: 1000, image: 'https://via.placeholder.com/300', external: true },
+  sku_61: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year Ios Signer Gbox Certificate', price: 2000, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- KOS 8 BALL POOL NONROOT ANDROID (pid 76) ----
-  sku_62: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 1 DAY', duration: '1 DaYs Premium Access', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_63: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 30 DAY', duration: '30 DaYs Mod', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_64: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 30 DAY', duration: '30 DaYs Premium Access', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_65: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 7 DAY', duration: '7 DaYs Mod', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_66: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 7 DAY', duration: '7 DaYs Premium Access', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_62: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 1 DAY', duration: '1 DaYs Premium Access', price: 220, image: 'https://via.placeholder.com/300', external: true },
+  sku_63: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 30 DAY', duration: '30 DaYs Mod', price: 1500, image: 'https://via.placeholder.com/300', external: true },
+  sku_64: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 30 DAY', duration: '30 DaYs Premium Access', price: 2200, image: 'https://via.placeholder.com/300', external: true },
+  sku_65: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 7 DAY', duration: '7 DaYs Mod', price: 550, image: 'https://via.placeholder.com/300', external: true },
+  sku_66: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 7 DAY', duration: '7 DaYs Premium Access', price: 600, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- KOS CARROM POOL NONROOT ANDROID (pid 75) ----
-  sku_67: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_68: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_69: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_67: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 1 DAY', duration: '1 DaYs', price: 200, image: 'https://via.placeholder.com/300', external: true },
+  sku_68: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 30 DAY', duration: '30 DaYs', price: 1450, image: 'https://via.placeholder.com/300', external: true },
+  sku_69: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 7 DAY', duration: '7 DaYs', price: 450, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- KOS FF ROOT ANDROID (pid 74) ----
   sku_70: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 160, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
@@ -143,37 +143,37 @@ export const CATALOG = {
   sku_91: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 300, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 
   // ---- RAPID CORE FF ROOT ANDROID (pid 130) ----
-  sku_92: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_93: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 14 DAY', duration: '14 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_94: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_95: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_92: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 1 DAY', duration: '1 DaYs', price: 120, image: 'https://via.placeholder.com/300', external: true },
+  sku_93: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 14 DAY', duration: '14 DaYs', price: 650, image: 'https://via.placeholder.com/300', external: true },
+  sku_94: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 30 DAY', duration: '30 DaYs', price: 1000, image: 'https://via.placeholder.com/300', external: true },
+  sku_95: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 7 DAY', duration: '7 DaYs', price: 350, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- REAPER X PRO FF ROOT ANDROID (pid 81) ----
-  sku_96: { pid: '81', row: 'REAPER X PRO FF ROOT ANDROID', name: 'REAPER X 10 DAY', duration: '10 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_96: { pid: '81', row: 'REAPER X PRO FF ROOT ANDROID', name: 'REAPER X 10 DAY', duration: '10 DaYs', price: 350, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SILENT CHEAT FF NONROOT APKMOD (pid 127) ----
-  sku_97: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_98: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 14 DAY', duration: '14 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_99: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 28 DAY', duration: '28 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_100: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 3 DAY', duration: '3 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_101: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 7 DAY', duration: '7 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_97: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 100, image: 'https://via.placeholder.com/300', external: true },
+  sku_98: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 14 DAY', duration: '14 DaYs', price: 650, image: 'https://via.placeholder.com/300', external: true },
+  sku_99: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 28 DAY', duration: '28 DaYs', price: 1000, image: 'https://via.placeholder.com/300', external: true },
+  sku_100: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 3 DAY', duration: '3 DaYs', price: 160, image: 'https://via.placeholder.com/300', external: true },
+  sku_101: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 7 DAY', duration: '7 DaYs', price: 350, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SILENT CHEAT FF ROOT ANDROID (pid 128) ----
-  sku_102: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 1 DAY', duration: '1 DaYs BRUTAL', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_103: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 1 DAY', duration: '1 DaYs SAFE', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_104: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 14 DAY', duration: '14 DaYs BRUTAL', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_105: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 14 DAY', duration: '14 DaYs SAFE', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_106: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 28 DAY', duration: '28 DaYs BRUTAL', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_107: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 28 DAY', duration: '28 DaYs SAFE', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_108: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 3 DAY', duration: '3 DaYs BRUTAL', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_109: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 3 DAY', duration: '3 DaYs SAFE', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_110: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 7 DAY', duration: '7 DaYs BRUTAL', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_111: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 7 DAY', duration: '7 DaYs SAFE', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_102: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 1 DAY', duration: '1 DaYs BRUTAL', price: 110, image: 'https://via.placeholder.com/300', external: true },
+  sku_103: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 1 DAY', duration: '1 DaYs SAFE', price: 100, image: 'https://via.placeholder.com/300', external: true },
+  sku_104: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 14 DAY', duration: '14 DaYs BRUTAL', price: 680, image: 'https://via.placeholder.com/300', external: true },
+  sku_105: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 14 DAY', duration: '14 DaYs SAFE', price: 640, image: 'https://via.placeholder.com/300', external: true },
+  sku_106: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 28 DAY', duration: '28 DaYs BRUTAL', price: 1100, image: 'https://via.placeholder.com/300', external: true },
+  sku_107: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 28 DAY', duration: '28 DaYs SAFE', price: 9080, image: 'https://via.placeholder.com/300', external: true },
+  sku_108: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 3 DAY', duration: '3 DaYs BRUTAL', price: 180, image: 'https://via.placeholder.com/300', external: true },
+  sku_109: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 3 DAY', duration: '3 DaYs SAFE', price: 160, image: 'https://via.placeholder.com/300', external: true },
+  sku_110: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 7 DAY', duration: '7 DaYs BRUTAL', price: 380, image: 'https://via.placeholder.com/300', external: true },
+  sku_111: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 7 DAY', duration: '7 DaYs SAFE', price: 340, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SNAKE 8 BALL POOL NONROOT ANDROID (pid 79) ----
-  sku_112: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 10 DAY', duration: '10 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_113: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 3 DAY', duration: '3 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_114: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_112: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 10 DAY', duration: '10 DaYs', price: 2000, image: 'https://via.placeholder.com/300', external: true },
+  sku_113: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 3 DAY', duration: '3 DaYs', price: 800, image: 'https://via.placeholder.com/300', external: true },
+  sku_114: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 30 DAY', duration: '30 DaYs', price: 3800, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SNAKE CARROM POOL NONROOT ANDROID (pid 77) ----
   sku_115: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 10 DAY', duration: '10 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
@@ -181,21 +181,17 @@ export const CATALOG = {
   sku_117: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SNAKE SOCCER STARS NONROOT ANDROID (pid 78) ----
-  sku_118: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 10 DAY', duration: '10 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_119: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 3 DAY', duration: '3 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_120: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_118: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 10 DAY', duration: '10 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
+  sku_119: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 3 DAY', duration: '3 DaYs', price: 280, image: 'https://via.placeholder.com/300', external: true },
+  sku_120: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 30 DAY', duration: '30 DaYs', price: 2000, image: 'https://via.placeholder.com/300', external: true },
 
-  // ---- UNLIMITED CREDIT FOR 1 SEASON (pid 129) ----
-  sku_121: { pid: '129', row: 'UNLIMITED CREDIT FOR 1 SEASON', name: 'HIKARI MOD UNLIMITED CREDIT', duration: 'HIKARI MOD UNLIMITED CREDIT', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_122: { pid: '129', row: 'UNLIMITED CREDIT FOR 1 SEASON', name: 'MC PANEL UNLIMITED CREDIT', duration: 'MC PANEL UNLIMITED CREDIT', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_123: { pid: '129', row: 'UNLIMITED CREDIT FOR 1 SEASON', name: 'XYZ CHEATS UNLIMITED CREDIT', duration: 'XYZ CHEATS UNLIMITED CREDIT', price: 0, image: 'https://via.placeholder.com/300', external: true },
-
+  
   // ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
-  sku_124: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 0, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_125: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 15 DAY', duration: '15 Days', price: 450, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_126: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 140, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_127: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 30 DAY', duration: '30 Days', price: 850, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_128: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 7 DAY', duration: '7 Days', price: 240, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_121: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 120, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_122: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 15 DAY', duration: '15 Days', price: 450, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_123: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 140, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_124: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 30 DAY', duration: '30 Days', price: 850, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_125: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 7 DAY', duration: '7 Days', price: 240, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 };
 
 export function catalogFind(sku) {
