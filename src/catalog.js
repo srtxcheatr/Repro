@@ -21,6 +21,14 @@ export const CATALOG = {
   sku_13: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 30 DAY', duration: '30 Days Pc Aim Silent', price: 1250, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_14: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 30 DAY', duration: '30 Days Pc Bypass + Silent', price: 1450, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
+
+
+  // ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
+  sku_27: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY', duration: '1 DaYS PC AIMKILL', price: 200, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_28: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 15 DAY', duration: '15 DaYS PC AIMKILL', price: 900, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_29: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 30 DAY', duration: '30 DaYS PC AIMKILL', price: 1450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_30: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY', duration: '7 DaYS PC AIMKILL', price: 650, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  
   // ---- BR MOD FF ROOT ANDROID (pid 67) ----
   sku_15: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 150, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_16: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 750, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
@@ -39,11 +47,6 @@ export const CATALOG = {
   sku_25: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 920, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
   sku_26: { pid: '62', row: 'DRIPCLIENT FF NONROOT APKMOD', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
-  // ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
-  sku_27: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY', duration: '1 DaYS PC AIMKILL', price: 200, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_28: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 15 DAY', duration: '15 DaYS PC AIMKILL', price: 900, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_29: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 30 DAY', duration: '30 DaYS PC AIMKILL', price: 1450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_30: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY', duration: '7 DaYS PC AIMKILL', price: 650, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
   sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT ANDROID', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 1080, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
