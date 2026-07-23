@@ -1,9 +1,3 @@
-https://t.me/fluroitev1s is the ONLY place
-// prices exist. Whatever price/duration a request sends is ignored —
-// every purchase endpoint looks the real price up from here by `sku`.
-// Ported 1:1 from the PHP version (79 entries, auto-converted, not
-// hand-retyped, to avoid transcription errors on prices).
-
 export const CATALOG = {
   sku_1: { pid: '91', row: 'DRIP CLINT PROXY', apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d', name: 'DRIP PROXY 1 DAY', duration: '1 DaYs', price: 120, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
   sku_2: { pid: '91', row: 'DRIP CLINT PROXY', apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d', name: 'DRIP PROXY 3 DAY', duration: '3 DaYs', price: 220, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
@@ -83,6 +77,7 @@ export const CATALOG = {
   sku_74: { pid: '70', row: 'NEO STRIKE ANDROID', apkUrl: 'https://your-apk-link-for-neo-strike-android.example.com', name: 'NEO STRIKE 14 DAY', duration: '14 DaYs', price: 650, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
   sku_75: { pid: '70', row: 'NEO STRIKE ANDROID', apkUrl: 'https://your-apk-link-for-neo-strike-android.example.com', name: 'NEO STRIKE 28 DAY', duration: '28 DaYs', price: 850, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true }
 };
+
 
 export function catalogFind(sku) {
   return CATALOG[sku] ?? null;
