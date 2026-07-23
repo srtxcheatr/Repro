@@ -176,9 +176,9 @@ export const CATALOG = {
   sku_114: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 30 DAY', duration: '30 DaYs', price: 3800, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SNAKE CARROM POOL NONROOT ANDROID (pid 77) ----
-  sku_115: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 10 DAY', duration: '10 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_116: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 3 DAY', duration: '3 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
-  sku_117: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 30 DAY', duration: '30 DaYs', price: 0, image: 'https://via.placeholder.com/300', external: true },
+  sku_115: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 10 DAY', duration: '10 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
+  sku_116: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 3 DAY', duration: '3 DaYs', price: 280, image: 'https://via.placeholder.com/300', external: true },
+  sku_117: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 30 DAY', duration: '30 DaYs', price: 2000, image: 'https://via.placeholder.com/300', external: true },
 
   // ---- SNAKE SOCCER STARS NONROOT ANDROID (pid 78) ----
   sku_118: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 10 DAY', duration: '10 DaYs', price: 850, image: 'https://via.placeholder.com/300', external: true },
