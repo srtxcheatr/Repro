@@ -1,8 +1,7 @@
 import express from 'express';
+import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
-import { catalogForRole } from '../src/catalog.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -10,13 +9,13 @@ router.use(requireFirebaseUid);
 
 const DEFAULTS = (email) => ({
   email,
-  role: 'user', // 'user' (retail catalog) or 'reseller' (reseller catalog) - admin-only to change
   profileName: '',
   profilePhone: '',
   requestStatus: 'Active',
   adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
   balance: 0,
   purchaseHistory: [],
+  apiKeys: [],
 });
 
 // POST /api/user/init — called once right after signup/Google sign-in.
@@ -53,22 +52,7 @@ router.get('/balance', asyncHandler(async (req, res) => {
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
     email: data.email || req.email,
-    role: data.role || 'user',
-    hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
   });
-}));
-
-// GET /api/user/catalog — same shape as the public /api/catalog, but
-// returns the RESELLER catalog if this uid's role is 'reseller',
-// otherwise the normal retail catalog. This is what the storefront
-// should call instead of the public endpoint, so pricing reflects
-// the user's actual role. Role is read fresh from Firestore every
-// call (not from a token claim), so an admin's role change takes
-// effect on the user's very next page load/poll.
-router.get('/catalog', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const role = snap.exists ? (snap.data().role || 'user') : 'user';
-  res.json({ success: true, role, catalog: catalogForRole(role) });
 }));
 
 // POST /api/user/profile
@@ -117,16 +101,6 @@ router.post('/topup', asyncHandler(async (req, res) => {
       if (existing.some((t) => String(t.txCode).toUpperCase() === txCode)) {
         throw new Error('This transaction ID was already submitted');
       }
-
-      // First-time top-up is locked at exactly Rs 1000 — enforced
-      // here, not just in the UI, since a UI-only lock is trivially
-      // bypassed by editing the request (same lesson as everything
-      // else in this backend).
-      const hasCompletedFirstTopup = existing.some((t) => t.status === 'APPROVED');
-      if (!hasCompletedFirstTopup && amount !== 1000) {
-        throw new Error('Your first top-up must be exactly Rs 1000');
-      }
-
       const e = {
         date: new Date().toISOString(), amount, esewaId, txCode,
         status: 'PENDING', uid: req.uid, email: req.email,
@@ -135,54 +109,62 @@ router.post('/topup', asyncHandler(async (req, res) => {
       return e;
     });
     res.json({ success: true, request: entry });
-
-    telegramNotify(telegramFormat('Top-up request', {
-      username: req.email, email: req.email, product: `eSewa top-up (${esewaId})`,
-      price: amount, uid: req.uid, status: 'pending', others: `txCode: ${txCode}`,
-    }));
   } catch (e) {
     res.status(409).json({ success: false, error: e.message });
   }
 }));
 
-// GET /api/user/balance-history — the user's own deposit/adjustment
-// log (top-up approvals, admin corrections). Different from
-// /history, which is what they bought, not what was added to balance.
-router.get('/balance-history', asyncHandler(async (req, res) => {
+// GET /api/user/keys
+router.get('/keys', asyncHandler(async (req, res) => {
   const snap = await db().collection('users').doc(req.uid).get();
-  const log = snap.exists ? (snap.data().adminLog || []) : [];
-  res.json({ success: true, log: [...log].reverse() });
+  res.json({ success: true, apiKeys: snap.exists ? (snap.data().apiKeys || []) : [] });
 }));
 
-// POST /api/user/report — "Report a Problem" form. Notifies you on
-// Telegram with full context so you don't have to ask the user for
-// their UID/balance/etc. — it's all pulled server-side from their
-// actual account, not from anything the client claims.
-router.post('/report', asyncHandler(async (req, res) => {
-  const problem = String(req.body?.problem || '').trim();
-  if (!problem) {
-    return res.status(400).json({ success: false, error: 'Please describe the problem' });
+// POST /api/user/keys  { action: "generate" | "revoke" | "delete", key? }
+router.post('/keys', asyncHandler(async (req, res) => {
+  const action = String(req.body?.action || '');
+  const userRef = db().collection('users').doc(req.uid);
+
+  if (action === 'generate') {
+    try {
+      const keys = await db().runTransaction(async (tx) => {
+        const snap = await tx.get(userRef);
+        const existing = snap.exists ? (snap.data().apiKeys || []) : [];
+        const activeCount = existing.filter((k) => k.active).length;
+        if (activeCount >= 3) throw new Error('Max 3 active keys allowed. Revoke one first.');
+
+        const newKey = {
+          key: 'srtx_' + crypto.randomBytes(20).toString('hex'),
+          createdAt: new Date().toISOString(),
+          active: true,
+        };
+        const updated = [...existing, newKey];
+        tx.set(userRef, { apiKeys: updated }, { merge: true });
+        return updated;
+      });
+      return res.json({ success: true, apiKeys: keys });
+    } catch (e) {
+      return res.status(400).json({ success: false, error: e.message });
+    }
   }
-  if (problem.length > 1000) {
-    return res.status(400).json({ success: false, error: 'Please keep it under 1000 characters' });
+
+  if (action === 'revoke' || action === 'delete') {
+    const keyStr = String(req.body?.key || '');
+    if (!keyStr) return res.status(400).json({ success: false, error: 'Missing key' });
+
+    const keys = await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      const existing = snap.exists ? (snap.data().apiKeys || []) : [];
+      const updated = action === 'revoke'
+        ? existing.map((k) => (k.key === keyStr ? { ...k, active: false } : k))
+        : existing.filter((k) => k.key !== keyStr);
+      tx.set(userRef, { apiKeys: updated }, { merge: true });
+      return updated;
+    });
+    return res.json({ success: true, apiKeys: keys });
   }
 
-  const snap = await db().collection('users').doc(req.uid).get();
-  const data = snap.exists ? snap.data() : {};
-
-  telegramNotify(
-    `🐛 <b>Problem Report</b>\n` +
-    `👤 ${esc(data.profileName || '—')}\n` +
-    `✉️ ${esc(data.email || req.email)}\n` +
-    `📱 ${esc(data.profilePhone || '—')}\n` +
-    `💰 Rs ${esc(data.balance ?? 0)}\n` +
-    `🆔 <code>${esc(req.uid)}</code>\n` +
-    `🌐 IP: <code>${esc(req.ip)}</code>\n` +
-    `📅 ${esc(new Date().toISOString())}\n` +
-    `📝 ${esc(problem)}`
-  );
-
-  res.json({ success: true });
+  res.status(400).json({ success: false, error: 'Unknown action' });
 }));
 
 export default router;
