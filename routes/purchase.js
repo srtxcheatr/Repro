@@ -102,21 +102,15 @@ async function fetchRealKey(sku, product) {
 }
 
 // ---- In-memory job tracker ----
-// A single Render instance, low-traffic solo store — this is fine.
-// If this backend ever runs multiple instances, jobs would need to
-// move to Firestore/Redis instead, since each instance would have
-// its own separate Map.
 const jobs = new Map();
-const JOB_TTL_MS = 3 * 60 * 1000; // jobs are cleaned up 3 min after creation
+const JOB_TTL_MS = 3 * 60 * 1000;
 
 function setJob(jobId, patch) {
   const existing = jobs.get(jobId) || {};
   jobs.set(jobId, { ...existing, ...patch });
 }
 
-// POST /api/purchase/checkout/start — kicks off the job, returns
-// immediately with a jobId. The actual work happens in the
-// background function below; the frontend polls status separately.
+// POST /api/purchase/checkout/start
 router.post('/checkout/start', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
@@ -136,7 +130,6 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
 
   res.json({ success: true, jobId });
 
-  // Fire-and-forget — runs after the response above is already sent.
   runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa);
 }));
 
@@ -170,11 +163,6 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
   let realPrice = 0;
 
   try {
-    // Role — and therefore price — is re-derived server-side from
-    // Firestore right here, never from anything the client sent.
-    // This is what makes reseller pricing safe: a 'user'-role account
-    // can never talk its way into reseller prices by editing the
-    // request, because the price always comes from *this* lookup.
     const roleSnap = await userRef.get();
     role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
     product = catalogFind(sku, role);
@@ -196,7 +184,8 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
 
       if (currentBalance < realPrice) {
-        throw new Error('Insufficient balance');
+        // ---- 🟢 Custom friendly message ----
+        throw new Error('Please top up first then trying 🙏');
       }
 
       setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
