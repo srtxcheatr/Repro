@@ -2,6 +2,7 @@ import express from 'express';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
+import { catalogForRole } from '../src/catalog.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -9,10 +10,11 @@ router.use(requireFirebaseUid);
 
 const DEFAULTS = (email) => ({
   email,
+  role: 'user', // 'user' (retail catalog) or 'reseller' (reseller catalog) - admin-only to change
   profileName: '',
   profilePhone: '',
   requestStatus: 'Active',
-  adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
+  adminMessage: 'Welcome!  DEPOSIT 800 FOR USER TO RESELLER ROLL 🛑',
   balance: 0,
   purchaseHistory: [],
 });
@@ -51,8 +53,22 @@ router.get('/balance', asyncHandler(async (req, res) => {
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
     email: data.email || req.email,
+    role: data.role || 'user',
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
   });
+}));
+
+// GET /api/user/catalog — same shape as the public /api/catalog, but
+// returns the RESELLER catalog if this uid's role is 'reseller',
+// otherwise the normal retail catalog. This is what the storefront
+// should call instead of the public endpoint, so pricing reflects
+// the user's actual role. Role is read fresh from Firestore every
+// call (not from a token claim), so an admin's role change takes
+// effect on the user's very next page load/poll.
+router.get('/catalog', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').doc(req.uid).get();
+  const role = snap.exists ? (snap.data().role || 'user') : 'user';
+  res.json({ success: true, role, catalog: catalogForRole(role) });
 }));
 
 // POST /api/user/profile
