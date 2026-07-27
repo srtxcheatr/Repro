@@ -10,7 +10,7 @@ const EMPTY_USER = (uid, email = '') => ({
   success: true, uid, found: false,
   balance: 0, email, adminLog: [], purchases: [],
   topupRequests: [], requestStatus: 'Active', adminMessage: '',
-  profileName: '', profilePhone: '', role: 'user',
+  profileName: '', profilePhone: '',
 });
 
 // GET /api/admin/lookup?uid=... or ?email=...
@@ -47,36 +47,7 @@ router.get('/lookup', asyncHandler(async (req, res) => {
     adminMessage: data.adminMessage || '',
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
-    role: data.role || 'user',
   });
-}));
-
-// POST /api/admin/set-role  { uid, role: "user"|"reseller" }
-// Changes which catalog/prices a user sees and can check out at.
-// 'user' -> CATALOG (retail/high price), 'reseller' -> CATALOG_RESELLER
-// (your custom reseller price). Takes effect immediately — the
-// storefront reads role fresh from Firestore on every /api/user/catalog
-// and /api/purchase/checkout call, so nothing needs re-login.
-router.post('/set-role', asyncHandler(async (req, res) => {
-  const uid = String(req.body?.uid || '').trim();
-  const role = String(req.body?.role || '').trim();
-
-  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
-  if (!['user', 'reseller'].includes(role)) {
-    return res.status(400).json({ success: false, error: 'role must be "user" or "reseller"' });
-  }
-
-  const userRef = db().collection('users').doc(uid);
-  const snap = await userRef.get();
-  if (!snap.exists) {
-    return res.status(404).json({ success: false, error: 'No user found with that uid' });
-  }
-
-  const log = snap.data().adminLog || [];
-  log.push({ delta: 0, note: `Role changed to "${role}"`, resultingBalance: Number(snap.data().balance || 0), at: new Date().toISOString() });
-
-  await userRef.set({ role, adminLog: log }, { merge: true });
-  res.json({ success: true, uid, role });
 }));
 
 // POST /api/admin/adjust-balance  { uid, amount, direction: "add"|"deduct", note }
