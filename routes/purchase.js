@@ -58,7 +58,7 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   res.json({ success: true, jobId });
 
   // Fire-and-forget — runs after the response above is already sent.
-  runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa);
+  runCheckoutJob(jobId, req.uid, req.email, sku, product, buyerName, buyerWa);
 }));
 
 // GET /api/purchase/checkout/status/:jobId
@@ -81,35 +81,17 @@ router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
   });
 }));
 
-async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
+async function runCheckoutJob(jobId, uid, email, sku, product, buyerName, buyerWa) {
+  const realPrice = Number(product.price);
   const userRef = db().collection('users').doc(uid);
 
   setJob(jobId, { percent: 10, label: 'Verifying product...' });
-
-  let role = 'user';
-  let product = null;
-  let realPrice = 0;
+  telegramNotify(telegramFormat('Purchase attempt', {
+    username: buyerName || email, email, product: product.name,
+    duration: product.duration, price: realPrice, uid, status: 'attempt',
+  }));
 
   try {
-    // Role — and therefore price — is re-derived server-side from
-    // Firestore right here, never from anything the client sent.
-    // This is what makes reseller pricing safe: a 'user'-role account
-    // can never talk its way into reseller prices by editing the
-    // request, because the price always comes from *this* lookup.
-    const roleSnap = await userRef.get();
-    role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
-    product = catalogFind(sku, role);
-    if (!product) {
-      throw new Error('Unknown product');
-    }
-    realPrice = Number(product.price);
-
-    telegramNotify(telegramFormat('Purchase attempt', {
-      username: buyerName || email, email, product: product.name,
-      duration: product.duration, price: realPrice, uid, status: 'attempt',
-      others: `role: ${role}`,
-    }));
-
     setJob(jobId, { percent: 30, label: 'Checking balance...' });
 
     const result = await db().runTransaction(async (tx) => {
@@ -146,9 +128,8 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
     setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
 
     telegramNotify(telegramFormat('Purchase rejected', {
-      username: buyerName || email, email, product: product ? product.name : sku,
-      duration: product ? product.duration : '', price: realPrice, uid, status: 'failed',
-      others: `${e.message} (role: ${role})`,
+      username: buyerName || email, email, product: product.name,
+      duration: product.duration, price: realPrice, uid, status: 'failed', others: e.message,
     }));
   }
 }
