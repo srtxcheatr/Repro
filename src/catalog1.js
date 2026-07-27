@@ -1,6 +1,9 @@
-// src/catalog.js — completely replaced with the new product list
-// All SKUs run from 1 to 128.
-// Prices marked with 0 need to be set manually.
+// src/catalog1.js — CATALOG 1 = RETAIL / USER catalog (high price).
+// This is what a normal account with role "user" sees and buys at.
+// All SKUs run from 1 to 128. Prices marked with 0 need to be set
+// manually. Edit prices here any time — changes take effect on the
+// next page load / poll, no redeploy logic needed beyond a normal
+// deploy.
 
 export const CATALOG = {
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
@@ -200,7 +203,3 @@ export const CATALOG = {
 export function catalogFind(sku) {
   return CATALOG[sku] ?? null;
 }
-
-
-
-
