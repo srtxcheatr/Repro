@@ -50,14 +50,11 @@ app.get('/', (req, res) => {
   res.json({ ok: true, service: 'srtx-backend' });
 });
 
-// Public — just the RETAIL display catalog (sku/name/duration/price/row).
-// This always returns retail prices regardless of who's asking, since
-// there's no auth here to know a role. Logged-in resellers should hit
-// the authenticated GET /api/user/catalog instead (see routes/user.js),
-// which returns CATALOG_RESELLER for reseller-role accounts. The
-// checkout endpoint always re-derives price server-side from the
-// buyer's actual role in Firestore — never from either of these — so
-// exposing this for display isn't a trust boundary.
+// Public — just the display catalog (sku/name/duration/price/row).
+// The actual checkout endpoint re-derives price from this same data
+// server-side regardless of what a client sends, so exposing it for
+// display isn't a trust boundary — it's the same prices any visitor
+// already sees in the storefront UI.
 app.get('/api/catalog', userCors, (req, res) => {
   res.json({ success: true, catalog: CATALOG });
 });
