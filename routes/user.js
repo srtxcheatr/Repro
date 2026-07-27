@@ -14,7 +14,7 @@ const DEFAULTS = (email) => ({
   profileName: '',
   profilePhone: '',
   requestStatus: 'Active',
-  adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
+  adminMessage: 'Welcome! Pay via esewa  and top up 1000RS for unlock reseller roll for lower price or key 🔑',
   balance: 0,
   purchaseHistory: [],
 });
