@@ -10,13 +10,11 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 /**
- * STUB — not implemented here.
- *
- * Plug in your actual reseller/key-fetch call. It receives the sku
- * and the full catalog entry (pid, row, name, duration, price), and
- * must either return the key string on success or throw on failure
- * (which cancels the whole transaction — no balance gets deducted,
- * no history entry gets written).
+ * Fetch a real product key from the reseller API.
+ * Uses environment variables:
+ *   RESELLER_API_KEY      – your API key
+ *   RESELLER_MASTER_KEY   – master key for the x‑master‑key header
+ *   RESELLER_ENDPOINT     – (optional) API URL, defaults to https://xyzcheats.com/api/reseller_v1.php
  */
 async function fetchRealKey(sku, product) {
   // ---- Load credentials from environment ----
@@ -103,8 +101,23 @@ async function fetchRealKey(sku, product) {
   return key;
 }
 
-// ---- POST /api/purchase/checkout ----
-router.post('/checkout', asyncHandler(async (req, res) => {
+// ---- In-memory job tracker ----
+// A single Render instance, low-traffic solo store — this is fine.
+// If this backend ever runs multiple instances, jobs would need to
+// move to Firestore/Redis instead, since each instance would have
+// its own separate Map.
+const jobs = new Map();
+const JOB_TTL_MS = 3 * 60 * 1000; // jobs are cleaned up 3 min after creation
+
+function setJob(jobId, patch) {
+  const existing = jobs.get(jobId) || {};
+  jobs.set(jobId, { ...existing, ...patch });
+}
+
+// POST /api/purchase/checkout/start — kicks off the job, returns
+// immediately with a jobId. The actual work happens in the
+// background function below; the frontend polls status separately.
+router.post('/checkout/start', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
   const buyerWa = String(req.body?.waNum || '').trim();
@@ -113,19 +126,71 @@ router.post('/checkout', asyncHandler(async (req, res) => {
   if (!product) {
     return res.status(400).json({ success: false, error: 'Unknown product' });
   }
-  const realPrice = Number(product.price);
-  const userRef = db().collection('users').doc(req.uid);
 
-  telegramNotify(telegramFormat('Purchase attempt', {
-    username: buyerName || req.email,
-    email: req.email,
-    product: product.name,
-    price: realPrice,
-    uid: req.uid,
-    status: 'attempt',
-  }));
+  const jobId = crypto.randomUUID();
+  setJob(jobId, {
+    uid: req.uid, percent: 0, label: 'Queued...', done: false,
+    createdAt: Date.now(),
+  });
+  setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
+
+  res.json({ success: true, jobId });
+
+  // Fire-and-forget — runs after the response above is already sent.
+  runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa);
+}));
+
+// GET /api/purchase/checkout/status/:jobId
+router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, error: 'Job not found or expired', done: true });
+  }
+  if (job.uid !== req.uid) {
+    return res.status(403).json({ success: false, error: 'Not your job', done: true });
+  }
+  res.json({
+    percent: job.percent,
+    label: job.label,
+    done: job.done,
+    success: job.success ?? null,
+    key: job.key,
+    newBalance: job.newBalance,
+    error: job.error,
+  });
+}));
+
+async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
+  const userRef = db().collection('users').doc(uid);
+
+  setJob(jobId, { percent: 10, label: 'Verifying product...' });
+
+  let role = 'user';
+  let product = null;
+  let realPrice = 0;
 
   try {
+    // Role — and therefore price — is re-derived server-side from
+    // Firestore right here, never from anything the client sent.
+    // This is what makes reseller pricing safe: a 'user'-role account
+    // can never talk its way into reseller prices by editing the
+    // request, because the price always comes from *this* lookup.
+    const roleSnap = await userRef.get();
+    role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
+    product = catalogFind(sku, role);
+    if (!product) {
+      throw new Error('Unknown product');
+    }
+    realPrice = Number(product.price);
+
+    telegramNotify(telegramFormat('Purchase attempt', {
+      username: buyerName || email, email, product: product.name,
+      duration: product.duration, price: realPrice, uid, status: 'attempt',
+      others: `role: ${role}`,
+    }));
+
+    setJob(jobId, { percent: 30, label: 'Checking balance...' });
+
     const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
@@ -134,19 +199,14 @@ router.post('/checkout', asyncHandler(async (req, res) => {
         throw new Error('Insufficient balance');
       }
 
-      // ---- Fetch key from reseller ----
+      setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
       const key = await fetchRealKey(sku, product);
 
-      // ---- Deduct balance and record purchase ----
+      setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
       const historyEntry = {
-        at: new Date().toISOString(),
-        name: product.name,
-        duration: product.duration,
-        price: realPrice,
-        key,
-        buyerName,
-        buyerWa,
+        at: new Date().toISOString(), name: product.name, duration: product.duration,
+        price: realPrice, key, buyerName, buyerWa,
       };
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
       purchaseHistory.push(historyEntry);
@@ -155,28 +215,21 @@ router.post('/checkout', asyncHandler(async (req, res) => {
       return { key, newBalance };
     });
 
-    telegramNotify(telegramFormat('Purchase success', {
-      username: buyerName || req.email,
-      email: req.email,
-      product: product.name,
-      price: realPrice,
-      uid: req.uid,
-      status: 'success',
-    }));
+    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, ...result });
 
-    res.json({ success: true, key: result.key, newBalance: result.newBalance });
-  } catch (e) {
-    telegramNotify(telegramFormat('Purchase rejected', {
-      username: buyerName || req.email,
-      email: req.email,
-      product: product.name,
-      price: realPrice,
-      uid: req.uid,
-      status: 'failed',
-      others: e.message,
+    telegramNotify(telegramFormat('Purchase success', {
+      username: buyerName || email, email, product: product.name,
+      duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
     }));
-    res.status(402).json({ success: false, error: e.message });
+  } catch (e) {
+    setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
+
+    telegramNotify(telegramFormat('Purchase rejected', {
+      username: buyerName || email, email, product: product ? product.name : sku,
+      duration: product ? product.duration : '', price: realPrice, uid, status: 'failed',
+      others: `${e.message} (role: ${role})`,
+    }));
   }
-}));
+}
 
 export default router;
