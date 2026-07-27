@@ -1,137 +1,167 @@
 import express from 'express';
-import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
-import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { catalogFind } from '../src/catalog.js';
-import { telegramNotify, telegramFormat } from '../src/telegram.js';
+import { db, requireAdmin, adminCors } from '../src/firebase.js';
 
 const router = express.Router();
-router.use(userCors);
-router.use(requireFirebaseUid);
+router.use(adminCors);
+router.use(requireAdmin);
 
-/**
- * STUB — not implemented here.
- *
- * Plug in your actual reseller/key-fetch call. It receives the sku
- * and the full catalog entry (pid, row, name, duration, price), and
- * must either return the key string on success or throw on failure
- * (which cancels the whole transaction — no balance gets deducted,
- * no history entry gets written).
- */
-async function fetchRealKey(sku, product) {
-  throw new Error('fetchRealKey() is not implemented — plug in your reseller call here.');
-}
+const EMPTY_USER = (uid, email = '') => ({
+  success: true, uid, found: false,
+  balance: 0, email, adminLog: [], purchases: [],
+  topupRequests: [], requestStatus: 'Active', adminMessage: '',
+  profileName: '', profilePhone: '',
+});
 
-// ---- In-memory job tracker ----
-// A single Render instance, low-traffic solo store — this is fine.
-// If this backend ever runs multiple instances, jobs would need to
-// move to Firestore/Redis instead, since each instance would have
-// its own separate Map.
-const jobs = new Map();
-const JOB_TTL_MS = 3 * 60 * 1000; // jobs are cleaned up 3 min after creation
-
-function setJob(jobId, patch) {
-  const existing = jobs.get(jobId) || {};
-  jobs.set(jobId, { ...existing, ...patch });
-}
-
-// POST /api/purchase/checkout/start — kicks off the job, returns
-// immediately with a jobId. The actual work happens in the
-// background function below; the frontend polls status separately.
-router.post('/checkout/start', asyncHandler(async (req, res) => {
-  const sku = String(req.body?.sku || '');
-  const buyerName = String(req.body?.name || '').trim();
-  const buyerWa = String(req.body?.waNum || '').trim();
-
-  const product = catalogFind(sku);
-  if (!product) {
-    return res.status(400).json({ success: false, error: 'Unknown product' });
+// GET /api/admin/lookup?uid=... or ?email=...
+router.get('/lookup', asyncHandler(async (req, res) => {
+  const uidParam = String(req.query.uid || '').trim();
+  const emailParam = String(req.query.email || '').trim();
+  if (!uidParam && !emailParam) {
+    return res.status(400).json({ success: false, error: 'Provide a uid or email' });
   }
 
-  const jobId = crypto.randomUUID();
-  setJob(jobId, {
-    uid: req.uid, percent: 0, label: 'Queued...', done: false,
-    createdAt: Date.now(),
-  });
-  setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
+  let uid = uidParam;
+  let snap;
 
-  res.json({ success: true, jobId });
-
-  // Fire-and-forget — runs after the response above is already sent.
-  runCheckoutJob(jobId, req.uid, req.email, sku, product, buyerName, buyerWa);
-}));
-
-// GET /api/purchase/checkout/status/:jobId
-router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
-  const job = jobs.get(req.params.jobId);
-  if (!job) {
-    return res.status(404).json({ success: false, error: 'Job not found or expired', done: true });
+  if (uid) {
+    snap = await db().collection('users').doc(uid).get();
+  } else {
+    const q = await db().collection('users').where('email', '==', emailParam).limit(1).get();
+    if (q.empty) return res.json(EMPTY_USER('', emailParam));
+    snap = q.docs[0];
+    uid = snap.id;
   }
-  if (job.uid !== req.uid) {
-    return res.status(403).json({ success: false, error: 'Not your job', done: true });
-  }
+
+  if (!snap.exists) return res.json(EMPTY_USER(uid));
+
+  const data = snap.data();
   res.json({
-    percent: job.percent,
-    label: job.label,
-    done: job.done,
-    success: job.success ?? null,
-    key: job.key,
-    newBalance: job.newBalance,
-    error: job.error,
+    success: true, uid, found: true,
+    balance: Number(data.balance || 0),
+    email: data.email || '',
+    adminLog: [...(data.adminLog || [])].reverse().slice(0, 50),
+    purchases: [...(data.purchaseHistory || [])].reverse().slice(0, 50),
+    topupRequests: [...(data.topupRequests || [])].reverse().slice(0, 50),
+    requestStatus: data.requestStatus || 'Active',
+    adminMessage: data.adminMessage || '',
+    profileName: data.profileName || '',
+    profilePhone: data.profilePhone || '',
   });
 }));
 
-async function runCheckoutJob(jobId, uid, email, sku, product, buyerName, buyerWa) {
-  const realPrice = Number(product.price);
+// POST /api/admin/adjust-balance  { uid, amount, direction: "add"|"deduct", note }
+router.post('/adjust-balance', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  const amount = parseInt(req.body?.amount, 10);
+  const direction = String(req.body?.direction || 'add');
+  const note = String(req.body?.note || '').trim();
+
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+  if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Enter a valid amount' });
+  if (!['add', 'deduct'].includes(direction)) {
+    return res.status(400).json({ success: false, error: 'direction must be "add" or "deduct"' });
+  }
+
   const userRef = db().collection('users').doc(uid);
-
-  setJob(jobId, { percent: 10, label: 'Verifying product...' });
-  telegramNotify(telegramFormat('Purchase attempt', {
-    username: buyerName || email, email, product: product.name,
-    duration: product.duration, price: realPrice, uid, status: 'attempt',
-  }));
-
   try {
-    setJob(jobId, { percent: 30, label: 'Checking balance...' });
-
-    const result = await db().runTransaction(async (tx) => {
+    const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
+      const current = snap.exists ? Number(snap.data().balance || 0) : 0;
+      const delta = direction === 'add' ? amount : -amount;
+      const updated = current + delta;
+      if (updated < 0) throw new Error('That would take the balance negative');
 
-      if (currentBalance < realPrice) {
-        throw new Error('Insufficient balance');
+      const log = snap.exists ? (snap.data().adminLog || []) : [];
+      log.push({ delta, note, resultingBalance: updated, at: new Date().toISOString() });
+
+      tx.set(userRef, { balance: updated, adminLog: log }, { merge: true });
+      return updated;
+    });
+    res.json({ success: true, newBalance });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+}));
+
+// POST /api/admin/set-status  { uid, requestStatus?, adminMessage? }
+router.post('/set-status', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+
+  const allowed = ['Active', 'Pending', 'Rejected', 'Banned'];
+  const update = {};
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'requestStatus')) {
+    if (!allowed.includes(req.body.requestStatus)) {
+      return res.status(400).json({ success: false, error: `requestStatus must be one of: ${allowed.join(', ')}` });
+    }
+    update.requestStatus = req.body.requestStatus;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'adminMessage')) {
+    update.adminMessage = String(req.body.adminMessage);
+  }
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ success: false, error: 'Nothing to update' });
+  }
+
+  await db().collection('users').doc(uid).set(update, { merge: true });
+  res.json({ success: true });
+}));
+
+// POST /api/admin/topup-review  { uid, txCode, action: "approve"|"reject" }
+router.post('/topup-review', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  const txCode = String(req.body?.txCode || '').trim().toUpperCase();
+  const action = String(req.body?.action || '');
+
+  if (!uid || !txCode) return res.status(400).json({ success: false, error: 'Provide uid and txCode' });
+  if (!['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ success: false, error: 'action must be "approve" or "reject"' });
+  }
+
+  const userRef = db().collection('users').doc(uid);
+  try {
+    const newBalance = await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) throw new Error('User not found');
+      const data = snap.data();
+      const requests = data.topupRequests || [];
+
+      let found = false;
+      let amount = 0;
+      const updatedRequests = requests.map((r) => {
+        if (!found && r.txCode === txCode && r.status === 'PENDING') {
+          found = true;
+          amount = Number(r.amount || 0);
+          return { ...r, status: action === 'approve' ? 'APPROVED' : 'REJECTED', reviewedAt: new Date().toISOString() };
+        }
+        return r;
+      });
+
+      if (!found) throw new Error('No matching PENDING request with that transaction code');
+
+      const update = { topupRequests: updatedRequests };
+      let balance = Number(data.balance || 0);
+
+      if (action === 'approve') {
+        balance += amount;
+        const log = data.adminLog || [];
+        log.push({
+          delta: amount, note: `Top-up approved (txCode: ${txCode})`,
+          resultingBalance: balance, at: new Date().toISOString(),
+        });
+        update.balance = balance;
+        update.adminLog = log;
       }
 
-      setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
-      const key = await fetchRealKey(sku, product);
-
-      setJob(jobId, { percent: 90, label: 'Finalizing order...' });
-      const newBalance = currentBalance - realPrice;
-      const historyEntry = {
-        at: new Date().toISOString(), name: product.name, duration: product.duration,
-        price: realPrice, key, buyerName, buyerWa,
-      };
-      const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
-      purchaseHistory.push(historyEntry);
-
-      tx.set(userRef, { balance: newBalance, purchaseHistory }, { merge: true });
-      return { key, newBalance };
+      tx.set(userRef, update, { merge: true });
+      return balance;
     });
-
-    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, ...result });
-
-    telegramNotify(telegramFormat('Purchase success', {
-      username: buyerName || email, email, product: product.name,
-      duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
-    }));
+    res.json({ success: true, newBalance });
   } catch (e) {
-    setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
-
-    telegramNotify(telegramFormat('Purchase rejected', {
-      username: buyerName || email, email, product: product.name,
-      duration: product.duration, price: realPrice, uid, status: 'failed', others: e.message,
-    }));
+    res.status(400).json({ success: false, error: e.message });
   }
-}
+}));
 
 export default router;
