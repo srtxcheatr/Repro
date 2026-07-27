@@ -1,166 +1,181 @@
 import express from 'express';
+import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
-import { db, requireAdmin, adminCors } from '../src/firebase.js';
+import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
+import { catalogFind } from '../src/catalog.js';
+import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
-router.use(adminCors);
-router.use(requireAdmin);
+router.use(userCors);
+router.use(requireFirebaseUid);
 
-const EMPTY_USER = (uid, email = '') => ({
-  success: true, uid, found: false,
-  balance: 0, email, adminLog: [], purchases: [],
-  topupRequests: [], requestStatus: 'Active', adminMessage: '',
-  profileName: '', profilePhone: '',
-});
+/**
+ * STUB — not implemented here.
+ *
+ * Plug in your actual reseller/key-fetch call. It receives the sku
+ * and the full catalog entry (pid, row, name, duration, price), and
+ * must either return the key string on success or throw on failure
+ * (which cancels the whole transaction — no balance gets deducted,
+ * no history entry gets written).
+ */
+async function fetchRealKey(sku, product) {
+  // ---- Load credentials from environment ----
+  const API_KEY = process.env.RESELLER_API_KEY;
+  const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://xyzcheats.com/api/reseller_v1.php';
 
-// GET /api/admin/lookup?uid=... or ?email=...
-router.get('/lookup', asyncHandler(async (req, res) => {
-  const uidParam = String(req.query.uid || '').trim();
-  const emailParam = String(req.query.email || '').trim();
-  if (!uidParam && !emailParam) {
-    return res.status(400).json({ success: false, error: 'Provide a uid or email' });
+  if (!API_KEY) {
+    throw new Error('Reseller API key not configured (RESELLER_API_KEY missing)');
+  }
+  if (!MASTER_KEY) {
+    throw new Error('Reseller master key not configured (RESELLER_MASTER_KEY missing)');
   }
 
-  let uid = uidParam;
-  let snap;
+  // ---- Build form data ----
+  const formData = new URLSearchParams();
+  formData.append('api_key', API_KEY);
+  formData.append('action', 'buy');
+  formData.append('product_id', product.pid);
+  formData.append('duration', product.duration);
 
-  if (uid) {
-    snap = await db().collection('users').doc(uid).get();
-  } else {
-    const q = await db().collection('users').where('email', '==', emailParam).limit(1).get();
-    if (q.empty) return res.json(EMPTY_USER('', emailParam));
-    snap = q.docs[0];
-    uid = snap.id;
-  }
+  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}`);
 
-  if (!snap.exists) return res.json(EMPTY_USER(uid));
-
-  const data = snap.data();
-  res.json({
-    success: true, uid, found: true,
-    balance: Number(data.balance || 0),
-    email: data.email || '',
-    adminLog: [...(data.adminLog || [])].reverse().slice(0, 50),
-    purchases: [...(data.purchaseHistory || [])].reverse().slice(0, 50),
-    topupRequests: [...(data.topupRequests || [])].reverse().slice(0, 50),
-    requestStatus: data.requestStatus || 'Active',
-    adminMessage: data.adminMessage || '',
-    profileName: data.profileName || '',
-    profilePhone: data.profilePhone || '',
-  });
-}));
-
-// POST /api/admin/adjust-balance  { uid, amount, direction: "add"|"deduct", note }
-router.post('/adjust-balance', asyncHandler(async (req, res) => {
-  const uid = String(req.body?.uid || '').trim();
-  const amount = parseInt(req.body?.amount, 10);
-  const direction = String(req.body?.direction || 'add');
-  const note = String(req.body?.note || '').trim();
-
-  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
-  if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Enter a valid amount' });
-  if (!['add', 'deduct'].includes(direction)) {
-    return res.status(400).json({ success: false, error: 'direction must be "add" or "deduct"' });
-  }
-
-  const userRef = db().collection('users').doc(uid);
+  // ---- Make request ----
+  let response;
   try {
-    const newBalance = await db().runTransaction(async (tx) => {
-      const snap = await tx.get(userRef);
-      const current = snap.exists ? Number(snap.data().balance || 0) : 0;
-      const delta = direction === 'add' ? amount : -amount;
-      const updated = current + delta;
-      if (updated < 0) throw new Error('That would take the balance negative');
-
-      const log = snap.exists ? (snap.data().adminLog || []) : [];
-      log.push({ delta, note, resultingBalance: updated, at: new Date().toISOString() });
-
-      tx.set(userRef, { balance: updated, adminLog: log }, { merge: true });
-      return updated;
+    response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-master-key': MASTER_KEY,
+      },
+      body: formData.toString(),
+      signal: AbortSignal.timeout(15000), // 15 seconds
     });
-    res.json({ success: true, newBalance });
-  } catch (e) {
-    res.status(400).json({ success: false, error: e.message });
-  }
-}));
-
-// POST /api/admin/set-status  { uid, requestStatus?, adminMessage? }
-router.post('/set-status', asyncHandler(async (req, res) => {
-  const uid = String(req.body?.uid || '').trim();
-  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
-
-  const allowed = ['Active', 'Pending', 'Rejected', 'Banned'];
-  const update = {};
-
-  if (Object.prototype.hasOwnProperty.call(req.body, 'requestStatus')) {
-    if (!allowed.includes(req.body.requestStatus)) {
-      return res.status(400).json({ success: false, error: `requestStatus must be one of: ${allowed.join(', ')}` });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Reseller API request timed out. Please try again.');
     }
-    update.requestStatus = req.body.requestStatus;
-  }
-  if (Object.prototype.hasOwnProperty.call(req.body, 'adminMessage')) {
-    update.adminMessage = String(req.body.adminMessage);
-  }
-  if (Object.keys(update).length === 0) {
-    return res.status(400).json({ success: false, error: 'Nothing to update' });
+    throw new Error(`Failed to connect to reseller API: ${err.message}`);
   }
 
-  await db().collection('users').doc(uid).set(update, { merge: true });
-  res.json({ success: true });
-}));
+  // ---- Read raw response ----
+  const text = await response.text();
+  console.log('[Reseller] Raw response:', text);
 
-// POST /api/admin/topup-review  { uid, txCode, action: "approve"|"reject" }
-router.post('/topup-review', asyncHandler(async (req, res) => {
-  const uid = String(req.body?.uid || '').trim();
-  const txCode = String(req.body?.txCode || '').trim().toUpperCase();
-  const action = String(req.body?.action || '');
-
-  if (!uid || !txCode) return res.status(400).json({ success: false, error: 'Provide uid and txCode' });
-  if (!['approve', 'reject'].includes(action)) {
-    return res.status(400).json({ success: false, error: 'action must be "approve" or "reject"' });
-  }
-
-  const userRef = db().collection('users').doc(uid);
+  // ---- Try to parse JSON ----
+  let data;
   try {
-    const newBalance = await db().runTransaction(async (tx) => {
+    data = JSON.parse(text);
+    console.log('[Reseller] Parsed JSON:', JSON.stringify(data, null, 2));
+  } catch (_) {
+    // Not JSON – treat as plain text (maybe a key)
+    if (text.trim().length > 0 && text.trim().length < 100) {
+      return text.trim(); // likely a key
+    }
+    throw new Error(`Reseller API returned invalid response: ${text.slice(0, 200)}`);
+  }
+
+  // ---- Check HTTP status ----
+  if (!response.ok) {
+    const msg = data?.message || data?.error || `HTTP ${response.status}`;
+    throw new Error(`Reseller API error: ${msg}`);
+  }
+
+  // ---- Check explicit failure flag ----
+  if (data.success === false) {
+    throw new Error(data.message || 'Reseller API reported failure');
+  }
+
+  // ---- Extract key from various structures ----
+  const key =
+    data.key ||
+    (data.data && data.data.key) ||
+    (data.result && data.result.key) ||
+    (typeof data === 'string' ? data : null);
+
+  if (!key) {
+    console.error('[Reseller] No key in response:', JSON.stringify(data));
+    throw new Error('Reseller API returned no key. Please contact support.');
+  }
+
+  console.log('[Reseller] Key fetched successfully');
+  return key;
+}
+
+// ---- POST /api/purchase/checkout ----
+router.post('/checkout', asyncHandler(async (req, res) => {
+  const sku = String(req.body?.sku || '');
+  const buyerName = String(req.body?.name || '').trim();
+  const buyerWa = String(req.body?.waNum || '').trim();
+
+  const product = catalogFind(sku);
+  if (!product) {
+    return res.status(400).json({ success: false, error: 'Unknown product' });
+  }
+  const realPrice = Number(product.price);
+  const userRef = db().collection('users').doc(req.uid);
+
+  telegramNotify(telegramFormat('Purchase attempt', {
+    username: buyerName || req.email,
+    email: req.email,
+    product: product.name,
+    price: realPrice,
+    uid: req.uid,
+    status: 'attempt',
+  }));
+
+  try {
+    const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      if (!snap.exists) throw new Error('User not found');
-      const data = snap.data();
-      const requests = data.topupRequests || [];
+      const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
 
-      let found = false;
-      let amount = 0;
-      const updatedRequests = requests.map((r) => {
-        if (!found && r.txCode === txCode && r.status === 'PENDING') {
-          found = true;
-          amount = Number(r.amount || 0);
-          return { ...r, status: action === 'approve' ? 'APPROVED' : 'REJECTED', reviewedAt: new Date().toISOString() };
-        }
-        return r;
-      });
-
-      if (!found) throw new Error('No matching PENDING request with that transaction code');
-
-      const update = { topupRequests: updatedRequests };
-      let balance = Number(data.balance || 0);
-
-      if (action === 'approve') {
-        balance += amount;
-        const log = data.adminLog || [];
-        log.push({
-          delta: amount, note: `Top-up approved (txCode: ${txCode})`,
-          resultingBalance: balance, at: new Date().toISOString(),
-        });
-        update.balance = balance;
-        update.adminLog = log;
+      if (currentBalance < realPrice) {
+        throw new Error('Insufficient balance');
       }
 
-      tx.set(userRef, update, { merge: true });
-      return balance;
+      // ---- Fetch key from reseller ----
+      const key = await fetchRealKey(sku, product);
+
+      // ---- Deduct balance and record purchase ----
+      const newBalance = currentBalance - realPrice;
+      const historyEntry = {
+        at: new Date().toISOString(),
+        name: product.name,
+        duration: product.duration,
+        price: realPrice,
+        key,
+        buyerName,
+        buyerWa,
+      };
+      const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
+      purchaseHistory.push(historyEntry);
+
+      tx.set(userRef, { balance: newBalance, purchaseHistory }, { merge: true });
+      return { key, newBalance };
     });
-    res.json({ success: true, newBalance });
+
+    telegramNotify(telegramFormat('Purchase success', {
+      username: buyerName || req.email,
+      email: req.email,
+      product: product.name,
+      price: realPrice,
+      uid: req.uid,
+      status: 'success',
+    }));
+
+    res.json({ success: true, key: result.key, newBalance: result.newBalance });
   } catch (e) {
-    res.status(400).json({ success: false, error: e.message });
+    telegramNotify(telegramFormat('Purchase rejected', {
+      username: buyerName || req.email,
+      email: req.email,
+      product: product.name,
+      price: realPrice,
+      uid: req.uid,
+      status: 'failed',
+      others: e.message,
+    }));
+    res.status(402).json({ success: false, error: e.message });
   }
 }));
 
