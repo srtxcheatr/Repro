@@ -60,8 +60,8 @@ export const CATALOG = {
 
   // ---- FLUORITE IOS MLBB (pid 84) ----
   sku_38: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 1 DAY', duration: '1 DaYs', price: 383, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
-  sku_39: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 7 DAY', duration: '7 DaYs', price: 2380, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
-  sku_40: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 30 DAY', duration: '30 DaYs', price: 1275, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
+  sku_39: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 7 DAY', duration: '7 DaYs', price: 1275, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
+  sku_40: { pid: '84', row: 'FLUORITE IOS MLBB', name: 'FLUORITE MLBB 30 DAY', duration: '30 DaYs', price: 2400, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
   // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
   sku_41: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 714, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
