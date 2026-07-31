@@ -17,6 +17,7 @@
 // of failing.
 
 export const CATALOG_RESELLER = {
+ 
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
   sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 91, image: 'https://via.placeholder.com/300', external: true },
   sku_2: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 3 DAY', duration: '3 DaYs', price: 168, image: 'https://via.placeholder.com/300', external: true },
@@ -35,14 +36,6 @@ export const CATALOG_RESELLER = {
   sku_13: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 30 DAY', duration: '30 Days Pc Aim Silent', price: 875, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_14: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 30 DAY', duration: '30 Days Pc Bypass + Silent', price: 1015, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
-
-
-  // ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
-  sku_27: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY', duration: '1 DaYS PC AIMKILL', price: 140, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_28: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 15 DAY', duration: '15 DaYS PC AIMKILL', price: 630, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_29: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 30 DAY', duration: '30 DaYS PC AIMKILL', price: 1015, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_30: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY', duration: '7 DaYS PC AIMKILL', price: 455, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  
   // ---- BR MOD FF ROOT ANDROID (pid 67) ----
   sku_15: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 105, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
   sku_16: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 525, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
@@ -61,6 +54,11 @@ export const CATALOG_RESELLER = {
   sku_25: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 644, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
   sku_26: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 315, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
+  // ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
+  sku_27: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY', duration: '1 DaYS PC AIMKILL', price: 140, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_28: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 15 DAY', duration: '15 DaYS PC AIMKILL', price: 630, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_29: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 30 DAY', duration: '30 DaYS PC AIMKILL', price: 1015, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_30: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY', duration: '7 DaYS PC AIMKILL', price: 455, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
   sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 756, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
@@ -202,7 +200,6 @@ export const CATALOG_RESELLER = {
   sku_119: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 3 DAY', duration: '3 DaYs', price: 196, image: 'https://via.placeholder.com/300', external: true },
   sku_120: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 30 DAY', duration: '30 DaYs', price: 1400, image: 'https://via.placeholder.com/300', external: true },
 
-  
   // ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
   sku_121: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 84, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
   sku_122: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 15 DAY', duration: '15 Days', price: 315, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
@@ -210,5 +207,4 @@ export const CATALOG_RESELLER = {
   sku_124: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 30 DAY', duration: '30 Days', price: 595, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
   sku_125: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 7 DAY', duration: '7 Days', price: 168, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 };
-
 
