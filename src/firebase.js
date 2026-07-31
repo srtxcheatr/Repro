@@ -84,7 +84,7 @@ export function requireAdmin(req, res, next) {
 const ALLOWED_ORIGIN_SUFFIXES = ['.srt.hdhchbididjd'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
-  'https://bronzx.firebaseapp.com','https://srtstorev5.onrender.com','https://srtxcheats.free.nf','https://srtxcheats.site.je',
+  'https://bronzx.firebaseapp.com','https://srtstorev5.onrender.com','https://srtxcheats.free.nf','http://srtxcheats.site.je',
 ];
 
 export const userCors = cors({
