@@ -10,7 +10,7 @@ sku_126: {
   row: 'BALA XYZ CHEATS FF NONROOT',
   name: 'BALA XYZ 1 HOUR',
   duration: '1 Hour',
-  price: 50,           // set your actual price
+  price: 100,           // set your actual price
   image: 'https://i.postimg.cc/...', // add your image URL
   external: true,
   requiresAndroidId: true,
@@ -20,7 +20,7 @@ sku_127: {
   row: 'BALA XYZ CHEATS FF NONROOT',
   name: 'BALA XYZ 3 HOURS',
   duration: '3 Hours',
-  price: 100,
+  price: 250,
   image: 'https://i.postimg.cc/...',
   external: true,
   requiresAndroidId: true,
@@ -30,7 +30,7 @@ sku_128: {
   row: 'BALA XYZ CHEATS FF NONROOT',
   name: 'BALA XYZ 6 HOURS',
   duration: '6 Hours',
-  price: 150,
+  price: 450,
   image: 'https://i.postimg.cc/...',
   external: true,
   requiresAndroidId: true,
