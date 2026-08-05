@@ -1,36 +1,11 @@
 // Combined catalog of all SKUs (images replaced from new catalog)
 export const CATALOG_RESELLER = {
 
-// ---- BALA XYZ CHEATS FF NONROOT (pid 133) ----
-sku_126: {
-  pid: '133',
-  row: 'BALA XYZ CHEATS FF NONROOT',
-  name: 'BALA XYZ 1 HOUR',
-  duration: '1 Hour',
-  price: 80,           // placeholder – adjust to actual price
-  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', // add your image URL
-  external: true,
-  requiresAndroidId: true,
-},
-sku_127: {
-  pid: '133',
-  row: 'BALA XYZ CHEATS FF NONROOT',
-  name: 'BALA XYZ 3 HOURS',
-  duration: '3 Hours',
-  price: 200,
-  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png',
-  external: true,
-  requiresAndroidId: true,
-},
-sku_128: {
-  pid: '133',
-  row: 'BALA XYZ CHEATS FF NONROOT',
-  name: 'BALA XYZ 6 HOURS',
-  duration: '6 Hours',
-  price: 350,
-  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png',
-  external: true,
-  requiresAndroidId: true,
+sku_126: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 1 HOUR', duration: '1 Hour', price: 80, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
+sku_127: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 3 HOUR', duration: '3 Hour', price: 200, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
+sku_128: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 6 HOUR', duration: '6 Hour', price: 300, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
+
+
 },
 // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
   sku_129: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 647, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
