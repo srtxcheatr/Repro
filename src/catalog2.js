@@ -6,7 +6,7 @@ sku_127: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 3 HOUR
 sku_128: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 6 HOUR', duration: '6 Hour', price: 300, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
 
 
-},
+
 // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
   sku_129: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 647, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
   sku_130: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1232, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
