@@ -1,5 +1,38 @@
 // Combined catalog of all SKUs (images replaced from new catalog)
 export const CATALOG_RESELLER = {
+
+// ---- BALA XYZ CHEATS FF NONROOT (pid 133) ----
+sku_126: {
+  pid: '133',
+  row: 'BALA XYZ CHEATS FF NONROOT',
+  name: 'BALA XYZ 1 HOUR',
+  duration: '1 Hour',
+  price: 80,           // placeholder – adjust to actual price
+  image: 'https://i.postimg.cc/...', // add your image URL
+  external: true,
+  requiresAndroidId: true,
+},
+sku_127: {
+  pid: '133',
+  row: 'BALA XYZ CHEATS FF NONROOT',
+  name: 'BALA XYZ 3 HOURS',
+  duration: '3 Hours',
+  price: 220,
+  image: 'https://i.postimg.cc/...',
+  external: true,
+  requiresAndroidId: true,
+},
+sku_128: {
+  pid: '133',
+  row: 'BALA XYZ CHEATS FF NONROOT',
+  name: 'BALA XYZ 6 HOURS',
+  duration: '6 Hours',
+  price: 350,
+  image: 'https://i.postimg.cc/...',
+  external: true,
+  requiresAndroidId: true,
+},
+
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
   sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 100, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
   sku_2: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 3 DAY', duration: '3 DaYs', price: 185, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
