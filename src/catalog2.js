@@ -8,7 +8,7 @@ sku_126: {
   name: 'BALA XYZ 1 HOUR',
   duration: '1 Hour',
   price: 80,           // placeholder – adjust to actual price
-  image: 'https://i.postimg.cc/...', // add your image URL
+  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', // add your image URL
   external: true,
   requiresAndroidId: true,
 },
@@ -18,7 +18,7 @@ sku_127: {
   name: 'BALA XYZ 3 HOURS',
   duration: '3 Hours',
   price: 200,
-  image: 'https://i.postimg.cc/...',
+  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png',
   external: true,
   requiresAndroidId: true,
 },
@@ -28,10 +28,14 @@ sku_128: {
   name: 'BALA XYZ 6 HOURS',
   duration: '6 Hours',
   price: 350,
-  image: 'https://i.postimg.cc/...',
+  image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png',
   external: true,
   requiresAndroidId: true,
 },
+// ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
+  sku_41: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 647, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+  sku_42: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1232, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+
 
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
   sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 100, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
