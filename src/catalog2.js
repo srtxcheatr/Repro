@@ -17,7 +17,7 @@ sku_127: {
   row: 'BALA XYZ CHEATS FF NONROOT',
   name: 'BALA XYZ 3 HOURS',
   duration: '3 Hours',
-  price: 220,
+  price: 200,
   image: 'https://i.postimg.cc/...',
   external: true,
   requiresAndroidId: true,
