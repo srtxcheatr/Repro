@@ -33,8 +33,8 @@ sku_128: {
   requiresAndroidId: true,
 },
 // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
-  sku_41: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 647, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
-  sku_42: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1232, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+  sku_129: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 10 DAY', duration: '10 DaYs', price: 647, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
+  sku_130: { pid: '64', row: 'HAXX-CKER PRO FF NONROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1232, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
 
 
   // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
