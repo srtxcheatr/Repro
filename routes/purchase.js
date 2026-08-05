@@ -15,8 +15,12 @@ router.use(requireFirebaseUid);
  *   RESELLER_API_KEY      – your API key
  *   RESELLER_MASTER_KEY   – master key for the x‑master‑key header
  *   RESELLER_ENDPOINT     – (optional) API URL, defaults to https://xyzcheats.com/api/reseller_v1.php
+ * 
+ * @param {string} sku - The SKU identifier (unused in this function, but kept for consistency)
+ * @param {object} product - Product object from catalog (must contain pid, duration)
+ * @param {string|null} androidId - Optional Android ID (required for BALA_MOD products)
  */
-async function fetchRealKey(sku, product) {
+async function fetchRealKey(sku, product, androidId = null) {
   // ---- Load credentials from environment ----
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
@@ -36,7 +40,12 @@ async function fetchRealKey(sku, product) {
   formData.append('product_id', product.pid);
   formData.append('duration', product.duration);
 
-  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}`);
+  // ✅ Include android_id if provided (for BALA_MOD API)
+  if (androidId) {
+    formData.append('android_id', androidId);
+  }
+
+  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
   // ---- Make request ----
   let response;
@@ -115,6 +124,7 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
   const buyerWa = String(req.body?.waNum || '').trim();
+  const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null; // ✅ new field
 
   const product = catalogFind(sku);
   if (!product) {
@@ -123,14 +133,19 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
 
   const jobId = crypto.randomUUID();
   setJob(jobId, {
-    uid: req.uid, percent: 0, label: 'Queued...', done: false,
+    uid: req.uid,
+    percent: 0,
+    label: 'Queued...',
+    done: false,
     createdAt: Date.now(),
+    androidId, // store for later
   });
   setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
 
   res.json({ success: true, jobId });
 
-  runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa);
+  // Pass androidId to the background job
+  runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa, androidId);
 }));
 
 // GET /api/purchase/checkout/status/:jobId
@@ -153,7 +168,7 @@ router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
   });
 }));
 
-async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
+async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androidId) {
   const userRef = db().collection('users').doc(uid);
 
   setJob(jobId, { percent: 10, label: 'Verifying product...' });
@@ -171,6 +186,11 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
     }
     realPrice = Number(product.price);
 
+    // ✅ Check if the product requires an Android ID
+    if (product.requiresAndroidId && !androidId) {
+      throw new Error('Android ID is required for this product');
+    }
+
     telegramNotify(telegramFormat('Purchase attempt', {
       username: buyerName || email, email, product: product.name,
       duration: product.duration, price: realPrice, uid, status: 'attempt',
@@ -184,12 +204,12 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa) {
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
 
       if (currentBalance < realPrice) {
-        // ---- 🟢 Custom friendly message ----
         throw new Error('Please top up first then trying 🙏');
       }
 
       setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
-      const key = await fetchRealKey(sku, product);
+      // ✅ Pass androidId if present (may be null)
+      const key = await fetchRealKey(sku, product, androidId);
 
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
