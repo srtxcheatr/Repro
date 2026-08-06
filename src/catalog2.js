@@ -2,7 +2,7 @@
 export const CATALOG_RESELLER = {
 
 
-sku_131: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 1 HOUR', duration: '1 Hour', price: 100, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+sku_131: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 1 HOUR', duration: '1 Hour', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 sku_132: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 3 HOUR', duration: '3 Hour', price: 250, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 sku_133: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 6 HOUR', duration: '6 Hour', price: 350, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 
