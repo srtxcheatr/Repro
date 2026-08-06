@@ -4,6 +4,16 @@
 
 export const CATALOG = {
 
+
+A,XYZ MAIN ID FF NONROOT	135	1 Hours [Stock: 192]3 Hours [Stock: 99]6 Hours [Stock: 98]
+
+
+
+
+sku_131: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 1 HOUR', duration: '1 Hour', price: 100, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+sku_132: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 3 HOUR', duration: '3 Hour', price: 350, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+sku_133: { pid: '135', row: ' XYZ CHEATS FF NONROOT', name: 'XYZ 6 HOUR', duration: '6 Hour', price: 300, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+
 sku_126: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 1 HOUR', duration: '1 Hour', price: 100, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
 sku_127: { pid: '133', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 3 HOUR', duration: '3 Hour', price: 350, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
 sku_128: { pid: '450', row: 'BALA XYZ CHEATS FF NONROOT', name: 'BALA XYZ 6 HOUR', duration: '6 Hour', price: 300, image: 'https://i.postimg.cc/v80BBj0b/file-000000001864820bbc9fa4acd79301df.png', external: true },
