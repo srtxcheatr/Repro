@@ -14,7 +14,7 @@ const DEFAULTS = (email) => ({
   profileName: '',
   profilePhone: '',
   requestStatus: 'Active',
-  adminMessage: 'Welcome! Pay via esewa  and top up 1000RS for unlock reseller roll for lower price or key 🔑',
+  adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
   balance: 0,
   purchaseHistory: [],
 });
@@ -116,15 +116,6 @@ router.post('/topup', asyncHandler(async (req, res) => {
       const existing = snap.exists ? (snap.data().topupRequests || []) : [];
       if (existing.some((t) => String(t.txCode).toUpperCase() === txCode)) {
         throw new Error('This transaction ID was already submitted');
-      }
-
-      // First-time top-up is locked at exactly Rs 1000 — enforced
-      // here, not just in the UI, since a UI-only lock is trivially
-      // bypassed by editing the request (same lesson as everything
-      // else in this backend).
-      const hasCompletedFirstTopup = existing.some((t) => t.status === 'APPROVED');
-      if (!hasCompletedFirstTopup && amount !== 1000) {
-        throw new Error('Your first top-up must be exactly Rs 1000');
       }
 
       const e = {
