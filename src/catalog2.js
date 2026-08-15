@@ -45,11 +45,11 @@ sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', durat
   sku_21: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 30 DAY', duration: '30 DaYs', price: 708, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
-  sku_22: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY', duration: '1 DaYS NONROOT', price: 100, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_23: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', duration: '15 DaYS NONROOT', price: 541, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_24: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 3 DAY', duration: '3 DaYS NONROOT', price: 182, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_25: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 765, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_26: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 375, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_22: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY', duration: '1 DaYS NONROOT', price: 80, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_23: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', duration: '15 DaYS NONROOT', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_24: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 3 DAY', duration: '3 DaYS NONROOT', price: 150, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_25: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 700, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_26: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY', duration: '7 DaYS NONROOT', price: 300, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
   sku_27: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY', duration: '1 DaYS PC AIMKILL', price: 166, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
