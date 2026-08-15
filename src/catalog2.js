@@ -18,12 +18,7 @@ sku_148: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 
 sku_149: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 7 DAY', duration: '7 DaYs', price: 3050, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
 
 
-  // ---- APK MC PANEL FF ROOT ANDROID (pid 124) ----
-  sku_1: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 1 DAY', duration: '1 DaYs', price: 108, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
-  sku_2: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 3 DAY', duration: '3 DaYs', price: 200, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
-  sku_3: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 7 DAY', duration: '7 DaYs', price: 375, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
-  sku_4: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 15 DAY', duration: '15 DaYs', price: 541, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
-  sku_5: { pid: '124', row: 'APK MC PANEL FF ROOT ANDROID', name: 'APK MC PANEL 30 DAY', duration: '30 DaYs', price: 708, image: 'https://i.postimg.cc/Znxb1WYr/Screenshot-20260723-144925.jpg', external: true },
+  
 
   // ---- BR MOD FF PC VERSION (pid 49) ----
   sku_6: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 150, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
@@ -37,10 +32,12 @@ sku_149: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 
   sku_14: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 30 DAY', duration: '30 Days Pc Bypass + Silent', price: 1208, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
 
   // ---- BR MOD FF ROOT ANDROID (pid 67) ----
-  sku_15: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 125, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_16: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 625, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_17: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 DaYs', price: 1041, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
-  sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 375, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_15: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 110, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+
+sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 300, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_16: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 600, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  sku_17: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 DaYs', price: 800, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true },
+  
 
   // ---- DRIPCLIENT 8BP NONROOT ANDROID (pid 59) ----
   sku_19: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 1 DAY', duration: '1 DaYs', price: 100, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
