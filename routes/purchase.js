@@ -10,24 +10,6 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 // ============================================================
-//  Normalise duration strings to API‑expected format
-// ============================================================
-function normalizeDuration(raw) {
-  if (!raw) return '';
-  const lower = raw.toLowerCase().trim();
-
-  if (lower.includes('hour')) {
-    const num = parseInt(lower, 10);
-    return `${num} ${num === 1 ? 'Hour' : 'Hours'}`;
-  }
-  if (lower.includes('day')) {
-    const num = parseInt(lower, 10);
-    return `${num} ${num === 1 ? 'Day' : 'Days'}`;
-  }
-  return raw;
-}
-
-// ============================================================
 //  Fetch key from reseller API – reads from environment
 // ============================================================
 async function fetchRealKey(sku, product, androidId = null) {
@@ -38,7 +20,10 @@ async function fetchRealKey(sku, product, androidId = null) {
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  const duration = normalizeDuration(product.duration);
+  // === यहाँ परिवर्तन गरियो ===
+  // normalizeDuration(product.duration) हटाएर सिधै product.duration पठाउँदा,
+  // API लाई चाहिएको ढाँचा (जस्तै "1 DaYs", "1 Hours") ठ्याक्कै पठाइन्छ।
+  const duration = product.duration; 
 
   const formData = new URLSearchParams();
   formData.append('api_key', API_KEY);
