@@ -20,10 +20,8 @@ async function fetchRealKey(sku, product, androidId = null) {
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // === यहाँ परिवर्तन गरियो ===
-  // normalizeDuration(product.duration) हटाएर सिधै product.duration पठाउँदा,
-  // API लाई चाहिएको ढाँचा (जस्तै "1 DaYs", "1 Hours") ठ्याक्कै पठाइन्छ।
-  const duration = product.duration; 
+  // ✅ CRITICAL FIX: Uses the exact text from your catalog (e.g. "1 DaYs", "1 Hours")
+  const duration = product.duration;
 
   const formData = new URLSearchParams();
   formData.append('api_key', API_KEY);
@@ -53,6 +51,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   let response;
   try {
+    // Sending to API_URL (which now points to your Cloudflare Worker)
     response = await fetch(API_URL, {
       method: 'POST',
       headers,
@@ -70,7 +69,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   // ---- Detect Cloudflare challenge ----
   if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
-    throw new Error('The reseller API is protected by Cloudflare. Please contact support to whitelist our server IP.');
+    throw new Error('The target reseller API is still blocking Cloudflare IPs. Contact their support or try a different Worker region.');
   }
 
   let data;
