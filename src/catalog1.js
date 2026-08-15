@@ -95,13 +95,7 @@ sku_149: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 
   sku_49: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 10 DAY', duration: '10 DaYs Root+Nonroot', price: 440, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 30 DAY', duration: '30 DaYs Root+Nonroot', price: 734, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
 
-  // ---- HIKARI MOD FF ROOT ANDROID (pid 72) ----
-  sku_51: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_52: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 3 DAY', duration: '3 Days', price: 196, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_53: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 7 DAY', duration: '7 Days', price: 343, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_54: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 15 DAY', duration: '15 Days', price: 489, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_55: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 30 DAY', duration: '30 Days', price: 831, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-
+  
   // ---- IOS CLOUD CODM (pid 87) ----
   sku_56: { pid: '87', row: 'IOS CLOUD CODM', name: 'CLOUD CODM 30 DAY', duration: '30 DaYs', price: 2737, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
