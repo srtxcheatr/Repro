@@ -83,23 +83,17 @@ sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY', dura
 
   // ---- HG CHEATS ANDROID PROXY FF NONROOT (pid 123) ----
   sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY', duration: '1 DaYs', price: 90, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
-  sku_44: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 10 DAY', duration: '10 DaYs', price: 375, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_44: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 10 DAY', duration: '10 DaYs', price: 260, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_45: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 30 DAY', duration: '30 DaYs', price: 625, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_46: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 7 DAY', duration: '7 DaYs', price: 240, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
 
   // ---- HG CHEATS FF APKMOD NONROOT+ROOT (pid 65) ----
-  sku_47: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 1 DAY', duration: '1 DaYs Root + Nonroot', price: 108, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
-  sku_48: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 10 DAY', duration: '10 DaYs Root+Nonroot', price: 375, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_47: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 1 DAY', duration: '1 DaYs Root + Nonroot', price: 90, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_48: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 10 DAY', duration: '10 DaYs Root+Nonroot', price: 260, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_49: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 30 DAY', duration: '30 DaYs Root+Nonroot', price: 625, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
-  sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 7 DAY', duration: '7 DaYs Root+Nonroot', price: 292, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 7 DAY', duration: '7 DaYs Root+Nonroot', price: 240, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
 
-  // ---- HIKARI MOD FF ROOT ANDROID (pid 72) ----
-  sku_51: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 1 DAY', duration: '1 Days', price: 100, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_52: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 15 DAY', duration: '15 Days', price: 416, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_53: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 3 DAY', duration: '3 Days', price: 166, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_54: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 30 DAY', duration: '30 Days', price: 708, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-  sku_55: { pid: '72', row: 'HIKARI MOD FF ROOT ANDROID', name: 'HIKARI 7 DAY', duration: '7 Days', price: 292, image: 'https://i.postimg.cc/k5kH3wM4/Screenshot-20260605-083930.jpg', external: true },
-
+ 
   // ---- IOS CLOUD CODM (pid 87) ----
   sku_56: { pid: '87', row: 'IOS CLOUD CODM', name: 'CLOUD CODM 30 DAY', duration: '30 DaYs', price: 2330, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
