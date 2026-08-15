@@ -58,12 +58,14 @@ sku_18: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', durat
   sku_30: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY', duration: '7 DaYS PC AIMKILL', price: 541, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
-  sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 900, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 700, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- DRIPCLIENT PROXY FF NONROOT ANDROID (pid 91) ----
-  sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY', duration: '3 DaYs', price: 182, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_33: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', duration: '30 DaYs', price: 765, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
-  sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 7 DAY', duration: '7 DaYs', price: 375, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_150: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 1 DAY', duration: '1 DaYs', price: 80, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+
+sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY', duration: '3 DaYs', price: 150, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_33: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', duration: '30 DaYs', price: 705, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
+  sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 7 DAY', duration: '7 DaYs', price: 300, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true },
 
   // ---- FLUORITE IOS FF (pid 58) ----
   sku_35: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 1 DAY', duration: '1 DAYs FluoRite FF', price: 459, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
