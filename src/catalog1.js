@@ -5,7 +5,7 @@
 export const CATALOG = {
   // ... (all existing SKUs up to sku_125) ...
 
-  // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 131) ----
+
   // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
 sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 90, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
 sku_141: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 160, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
