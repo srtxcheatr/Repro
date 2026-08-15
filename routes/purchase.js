@@ -10,7 +10,7 @@ router.use(userCors);
 router.use(requireFirebaseUid);
 
 // ============================================================
-//  Normalize duration strings to match API expectations
+//  Normalise duration strings to API‑expected format
 // ============================================================
 function normalizeDuration(raw) {
   if (!raw) return '';
@@ -24,14 +24,13 @@ function normalizeDuration(raw) {
     const num = parseInt(lower, 10);
     return `${num} ${num === 1 ? 'Day' : 'Days'}`;
   }
-  return raw; // fallback
+  return raw;
 }
 
 // ============================================================
-//  Fetch key from reseller API – reads env vars
+//  Fetch key from reseller API – reads from environment
 // ============================================================
 async function fetchRealKey(sku, product, androidId = null) {
-  // ---- Load from environment (exactly like your old code) ----
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
   const API_URL = process.env.RESELLER_ENDPOINT || 'https://xyzcheats.com/api/reseller_v1.php';
@@ -52,16 +51,29 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   console.log(`[Reseller] Request: pid=${product.pid}, duration=${duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'x-master-key': MASTER_KEY,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://xyzcheats.com/',
+    'Origin': 'https://xyzcheats.com',
+    'Connection': 'keep-alive',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+  };
+
   let response;
   try {
     response = await fetch(API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'x-master-key': MASTER_KEY,
-      },
+      headers,
       body: formData.toString(),
       signal: AbortSignal.timeout(15000),
+      redirect: 'follow',
     });
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('Request timed out. Please try again.');
@@ -69,7 +81,12 @@ async function fetchRealKey(sku, product, androidId = null) {
   }
 
   const text = await response.text();
-  console.log('[Reseller] Raw response:', text);
+  console.log('[Reseller] Raw response (first 500 chars):', text.slice(0, 500));
+
+  // ---- Detect Cloudflare challenge ----
+  if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
+    throw new Error('The reseller API is protected by Cloudflare. Please contact support to whitelist our server IP.');
+  }
 
   let data;
   try {
