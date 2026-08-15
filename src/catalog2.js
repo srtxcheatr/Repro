@@ -7,7 +7,7 @@ export const CATALOG_RESELLER = {
 
 
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
-sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hour', price: 70, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
+sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 70, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
 sku_141: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 130, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
 sku_142: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 220, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
 sku_143: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 430, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/u4dqtnfnxwetnyf/BALA+MODS+XYZ+FIX+V2.zip/file' },
