@@ -82,10 +82,10 @@ sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY', dura
   sku_42: { pid: '64', row: 'HAXX-CKER PRO FF ROOT ANDROID', name: 'HAXX-CKER 20 DAY', duration: '20 DaYs', price: 1332, image: 'https://i.postimg.cc/HLxmsSCy/Screenshot-20260425-150832.jpg', external: true },
 
   // ---- HG CHEATS ANDROID PROXY FF NONROOT (pid 123) ----
-  sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY', duration: '1 DaYs', price: 108, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY', duration: '1 DaYs', price: 90, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_44: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 10 DAY', duration: '10 DaYs', price: 375, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
   sku_45: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 30 DAY', duration: '30 DaYs', price: 625, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
-  sku_46: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 7 DAY', duration: '7 DaYs', price: 292, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
+  sku_46: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 7 DAY', duration: '7 DaYs', price: 240, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
 
   // ---- HG CHEATS FF APKMOD NONROOT+ROOT (pid 65) ----
   sku_47: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 1 DAY', duration: '1 DaYs Root + Nonroot', price: 108, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true },
