@@ -7,15 +7,15 @@ export const CATALOG_RESELLER = {
 
 
   // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 131) ----
-  sku_126: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hour', price: 70, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_127: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 130, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_128: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 220, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_129: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 430, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_130: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1 DAY', duration: '1 DaYs', price: 800, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_131: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 2 DAY', duration: '2 DaYs', price: 1200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_132: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3 DAY', duration: '3 DaYs', price: 1600, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_133: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 5 DAY', duration: '5 DaYs', price: 2550, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-  sku_134: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 7 DAY', duration: '7 DaYs', price: 3200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_140: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hour', price: 70, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_141: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 130, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_142: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 220, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_143: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 430, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_144: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1 DAY', duration: '1 DaYs', price: 800, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_145: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 2 DAY', duration: '2 DaYs', price: 1200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_146: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3 DAY', duration: '3 DaYs', price: 1600, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_147: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 5 DAY', duration: '5 DaYs', price: 2550, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+  sku_148: { pid: '131', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 7 DAY', duration: '7 DaYs', price: 3200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 },
 
 // ---- HAXX-CKER PRO FF ROOT ANDROID (pid 64) ----
