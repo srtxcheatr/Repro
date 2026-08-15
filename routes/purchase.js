@@ -9,45 +9,49 @@ const router = express.Router();
 router.use(userCors);
 router.use(requireFirebaseUid);
 
-/**
- * Fetch a real product key from the reseller API.
- * Uses environment variables:
- *   RESELLER_API_KEY      – your API key
- *   RESELLER_MASTER_KEY   – master key for the x‑master‑key header
- *   RESELLER_ENDPOINT     – (optional) API URL, defaults to https://xyzcheats.com/api/reseller_v1.php
- * 
- * @param {string} sku - The SKU identifier (unused in this function, but kept for consistency)
- * @param {object} product - Product object from catalog (must contain pid, duration)
- * @param {string|null} androidId - Optional Android ID (required for BALA_MOD products)
- */
+// ============================================================
+//  Normalize duration strings to match API expectations
+// ============================================================
+function normalizeDuration(raw) {
+  if (!raw) return '';
+  const lower = raw.toLowerCase().trim();
+
+  if (lower.includes('hour')) {
+    const num = parseInt(lower, 10);
+    return `${num} ${num === 1 ? 'Hour' : 'Hours'}`;
+  }
+  if (lower.includes('day')) {
+    const num = parseInt(lower, 10);
+    return `${num} ${num === 1 ? 'Day' : 'Days'}`;
+  }
+  return raw; // fallback
+}
+
+// ============================================================
+//  Fetch key from reseller API – reads env vars
+// ============================================================
 async function fetchRealKey(sku, product, androidId = null) {
-  // ---- Load credentials from environment ----
+  // ---- Load from environment (exactly like your old code) ----
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
   const API_URL = process.env.RESELLER_ENDPOINT || 'https://xyzcheats.com/api/reseller_v1.php';
 
-  if (!API_KEY) {
-    throw new Error('Reseller API key not configured (RESELLER_API_KEY missing)');
-  }
-  if (!MASTER_KEY) {
-    throw new Error('Reseller master key not configured (RESELLER_MASTER_KEY missing)');
-  }
+  if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
+  if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // ---- Build form data ----
+  const duration = normalizeDuration(product.duration);
+
   const formData = new URLSearchParams();
   formData.append('api_key', API_KEY);
   formData.append('action', 'buy');
   formData.append('product_id', product.pid);
-  formData.append('duration', product.duration);
-
-  // ✅ Include android_id if provided (for BALA_MOD API)
+  formData.append('duration', duration);
   if (androidId) {
     formData.append('android_id', androidId);
   }
 
-  console.log(`[Reseller] Requesting key for pid=${product.pid}, duration=${product.duration}${androidId ? `, android_id=${androidId}` : ''}`);
+  console.log(`[Reseller] Request: pid=${product.pid}, duration=${duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
-  // ---- Make request ----
   let response;
   try {
     response = await fetch(API_URL, {
@@ -57,60 +61,48 @@ async function fetchRealKey(sku, product, androidId = null) {
         'x-master-key': MASTER_KEY,
       },
       body: formData.toString(),
-      signal: AbortSignal.timeout(15000), // 15 seconds
+      signal: AbortSignal.timeout(15000),
     });
   } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Reseller API request timed out. Please try again.');
-    }
-    throw new Error(`Failed to connect to reseller API: ${err.message}`);
+    if (err.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+    throw new Error(`Connection failed: ${err.message}`);
   }
 
-  // ---- Read raw response ----
   const text = await response.text();
   console.log('[Reseller] Raw response:', text);
 
-  // ---- Try to parse JSON ----
   let data;
   try {
     data = JSON.parse(text);
-    console.log('[Reseller] Parsed JSON:', JSON.stringify(data, null, 2));
   } catch (_) {
-    // Not JSON – treat as plain text (maybe a key)
     if (text.trim().length > 0 && text.trim().length < 100) {
-      return text.trim(); // likely a key
+      return text.trim();
     }
-    throw new Error(`Reseller API returned invalid response: ${text.slice(0, 200)}`);
+    throw new Error(`Invalid response: ${text.slice(0, 200)}`);
   }
 
-  // ---- Check HTTP status ----
   if (!response.ok) {
     const msg = data?.message || data?.error || `HTTP ${response.status}`;
-    throw new Error(`Reseller API error: ${msg}`);
+    throw new Error(`API error: ${msg}`);
   }
 
-  // ---- Check explicit failure flag ----
   if (data.success === false) {
-    throw new Error(data.message || 'Reseller API reported failure');
+    throw new Error(data.message || 'API reported failure');
   }
 
-  // ---- Extract key from various structures ----
-  const key =
-    data.key ||
-    (data.data && data.data.key) ||
-    (data.result && data.result.key) ||
-    (typeof data === 'string' ? data : null);
-
+  const key = data.key || data.data?.key || data.result?.key || null;
   if (!key) {
     console.error('[Reseller] No key in response:', JSON.stringify(data));
-    throw new Error('Reseller API returned no key. Please contact support.');
+    throw new Error('No key returned. Contact support.');
   }
 
   console.log('[Reseller] Key fetched successfully');
   return key;
 }
 
-// ---- In-memory job tracker ----
+// ============================================================
+//  In‑memory job tracker
+// ============================================================
 const jobs = new Map();
 const JOB_TTL_MS = 3 * 60 * 1000;
 
@@ -119,16 +111,22 @@ function setJob(jobId, patch) {
   jobs.set(jobId, { ...existing, ...patch });
 }
 
-// POST /api/purchase/checkout/start
+// ============================================================
+//  POST /checkout/start
+// ============================================================
 router.post('/checkout/start', asyncHandler(async (req, res) => {
   const sku = String(req.body?.sku || '');
   const buyerName = String(req.body?.name || '').trim();
   const buyerWa = String(req.body?.waNum || '').trim();
-  const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null; // ✅ new field
+  const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null;
 
   const product = catalogFind(sku);
   if (!product) {
     return res.status(400).json({ success: false, error: 'Unknown product' });
+  }
+
+  if (product.requiresAndroidId && !androidId) {
+    return res.status(400).json({ success: false, error: 'Android ID is required for this product' });
   }
 
   const jobId = crypto.randomUUID();
@@ -138,17 +136,18 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
     label: 'Queued...',
     done: false,
     createdAt: Date.now(),
-    androidId, // store for later
+    androidId,
   });
   setTimeout(() => jobs.delete(jobId), JOB_TTL_MS);
 
   res.json({ success: true, jobId });
 
-  // Pass androidId to the background job
   runCheckoutJob(jobId, req.uid, req.email, sku, buyerName, buyerWa, androidId);
 }));
 
-// GET /api/purchase/checkout/status/:jobId
+// ============================================================
+//  GET /checkout/status/:jobId
+// ============================================================
 router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
   const job = jobs.get(req.params.jobId);
   if (!job) {
@@ -168,6 +167,9 @@ router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
   });
 }));
 
+// ============================================================
+//  Background job runner
+// ============================================================
 async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androidId) {
   const userRef = db().collection('users').doc(uid);
 
@@ -186,7 +188,6 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     }
     realPrice = Number(product.price);
 
-    // ✅ Check if the product requires an Android ID
     if (product.requiresAndroidId && !androidId) {
       throw new Error('Android ID is required for this product');
     }
@@ -208,7 +209,6 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       }
 
       setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
-      // ✅ Pass androidId if present (may be null)
       const key = await fetchRealKey(sku, product, androidId);
 
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
