@@ -31,12 +31,6 @@ sku_13: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 30 DAY
 sku_14: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC BYPASS 30 DAY',     duration: '30 Days', price: 1418, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
 sku_12: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 30 DAY',    duration: '30 Days', price: 1320, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
 
-// ---- DRIPCLIENT FF PC AIMKILL (pid 44) ----
-// Sorted: 1, 7, 15, 30
-sku_15: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 1 DAY',  duration: '1 Day', price: 196, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_16: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 7 DAY',  duration: '7 Days', price: 636, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_17: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 15 DAY', duration: '15 Days', price: 880, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_18: { pid: '44', row: 'DRIPCLIENT FF PC AIMKILL', name: 'DRIP PC 30 DAY', duration: '30 Days', price: 1418, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- BR MOD FF ROOT ANDROID (pid 67) ----
 // Sorted: 1, 7, 15, 30
@@ -45,11 +39,6 @@ sku_20: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY',  dura
 sku_21: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 Days', price: 734, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 sku_22: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 Days', price: 1222, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 
-// ---- DRIPCLIENT 8BP NONROOT ANDROID (pid 59) ----
-// Sorted: 1, 7, 30
-sku_23: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 1 DAY',  duration: '1 Day', price: 117, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_24: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 7 DAY',  duration: '7 Days', price: 215, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_25: { pid: '59', row: 'DRIP 8BP', name: 'DRIP 8BP 30 DAY', duration: '30 Days', price: 831, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
 // Sorted: 1, 3, 7, 15, 30
