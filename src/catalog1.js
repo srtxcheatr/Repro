@@ -13,9 +13,7 @@ sku_142: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 
 sku_143: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 520, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
 sku_144: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1 DAY', duration: '1 DaYs', price: 1050, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
 sku_145: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 2 DAY', duration: '2 DaYs', price: 1450, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
-sku_146: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3 DAY', duration: '3 DaYs', price: 1900, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
-sku_148: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 5 DAY', duration: '5 DaYs', price: 2900, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
-sku_149: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 7 DAY', duration: '7 DaYs', price: 3500, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
+
 
 
 
