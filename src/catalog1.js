@@ -42,11 +42,11 @@ sku_22: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', dura
 
 // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
 // Sorted: 1, 3, 7, 15, 30
-sku_26: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY',  duration: '1 Day', price: 117, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_27: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 3 DAY',  duration: '3 Days', price: 215, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_28: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY',  duration: '7 Days', price: 440, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_29: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', duration: '15 Days', price: 636, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_30: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 Days', price: 899, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_26: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 1 DAY',  duration: '1 Day', price: 120, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_27: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 3 DAY',  duration: '3 Days', price: 250, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_28: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 7 DAY',  duration: '7 Days', price: 480, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_29: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', duration: '15 Days', price: 696, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_30: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 Days', price: 999, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
 // Only 30 days
@@ -54,9 +54,9 @@ sku_31: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', durati
 
 // ---- DRIPCLIENT PROXY FF NONROOT ANDROID (pid 91) ----
 // Sorted: 3, 7, 30 (only these durations are available in your block)
-sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY',  duration: '3 Days', price: 215, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_33: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 7 DAY',  duration: '7 Days', price: 440, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
-sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', duration: '30 Days', price: 899, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_32: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 3 DAY',  duration: '3 Days', price: 240, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_33: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 7 DAY',  duration: '7 Days', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', duration: '30 Days', price: 999, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
   
 
@@ -76,17 +76,17 @@ sku_34: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 30 DAY', dur
 
   // ---- HG CHEATS ANDROID PROXY FF NONROOT (pid 123) ----
 // Sorted: 1, 7, 10, 30
-sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY',  duration: '1 Day', price: 128, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_44: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 7 DAY',  duration: '7 Days', price: 343, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_45: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 10 DAY', duration: '10 Days', price: 440, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_46: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 30 DAY', duration: '30 Days', price: 734, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_43: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 1 DAY',  duration: '1 Day', price: 138, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_44: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 7 DAY',  duration: '7 Days', price: 363, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_45: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 10 DAY', duration: '10 Days', price: 480, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_46: { pid: '123', row: 'HG CHEATS ANDROID PROXY FF NONROOT', name: 'HG PROXY 30 DAY', duration: '30 Days', price: 834, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
 
 // ---- HG CHEATS FF APKMOD NONROOT+ROOT (pid 65) ----
 // Sorted: 1, 7, 10, 30
-sku_47: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 1 DAY',  duration: '1 Day', price: 128, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_48: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 7 DAY',  duration: '7 Days', price: 343, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_49: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 10 DAY', duration: '10 Days', price: 440, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
-sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 30 DAY', duration: '30 Days', price: 734, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_47: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 1 DAY',  duration: '1 Day', price: 138, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_48: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 7 DAY',  duration: '7 Days', price: 383, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_49: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 10 DAY', duration: '10 Days', price: 480, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 30 DAY', duration: '30 Days', price: 834, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
   
   // ---- IOS CLOUD CODM (pid 87) ----
   sku_56: { pid: '87', row: 'IOS CLOUD CODM', name: 'CLOUD CODM 30 DAY', duration: '30 DaYs', price: 2737, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
