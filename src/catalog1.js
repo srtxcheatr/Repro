@@ -137,10 +137,10 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_87: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1516, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
 
   // ---- PRIME HOOK FF NONROOT ANDROID (pid 48) ----
-  sku_88: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 120, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
-  sku_89: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 3 DAY', duration: '3 Days Nonroot', price: 180, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
-  sku_90: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 353, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
-  sku_91: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 559, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
+  sku_88: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
+  sku_89: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 3 DAY', duration: '3 Days Nonroot', price: 250, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
+  sku_90: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 553, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
+  sku_91: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 759, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 
   // ---- RAPID CORE FF ROOT ANDROID (pid 130) ----
   sku_92: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 1 DAY', duration: '1 DaYs', price: 117, image: 'https://i.postimg.cc/bNqV8ZNP/file-000000002dfc8208b6b91dac50139402.png', external: true },
