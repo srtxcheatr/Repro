@@ -4,7 +4,11 @@
 export const CATALOG_RESELLER = {
 
 
-
+// ---- HG CHEATS PRIME PROXY FF NONROOT (pid 141) ----
+// Sorted: 1, 7, 10 Days
+sku_151: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 1 DAY',  duration: '1 Day', price: 117, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_152: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 7 DAY',  duration: '7 Days', price: 240, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
+sku_153: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 10 DAY', duration: '10 Days', price: 260, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0443376301.html' },
 
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
 sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
