@@ -5,9 +5,9 @@
 export const CATALOG = {
   // ... (all existing SKUs up to sku_125) ...
 
-sku_154: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 12H', duration: '12 Hours', price: 95, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
-sku_155: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 24H', duration: '24 Hours', price: 220, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
-sku_156: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 3 Day', duration: '3 DaYs', price: 390, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
+sku_154: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 12H', duration: '12 Hours', price: 95, image: 'https://i.postimg.cc/8zSj9bjx/file-00000000d83881faafee566a8dc84a43.png', external: true, apkUrl: 'https://www.mediafire.com/file/fsywps7dxft25xy/ABCD+PANEL+V2+.apk/file' },
+sku_155: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 24H', duration: '24 Hours', price: 220, image: 'https://i.postimg.cc/8zSj9bjx/file-00000000d83881faafee566a8dc84a43.png', external: true, apkUrl: 'https://www.mediafire.com/file/fsywps7dxft25xy/ABCD+PANEL+V2+.apk/file' },
+sku_156: { pid: '143', row: 'ABCD PANEL PROXY', name: 'ABCD PANEL PROXY 3 Day', duration: '3 DaYs', price: 390, image: 'https://i.postimg.cc/8zSj9bjx/file-00000000d83881faafee566a8dc84a43.png', external: true, apkUrl: 'https://www.mediafire.com/file/fsywps7dxft25xy/ABCD+PANEL+V2+.apk/file' },
 
 
 
