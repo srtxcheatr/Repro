@@ -15,13 +15,12 @@ router.use(requireFirebaseUid);
 async function fetchRealKey(sku, product, androidId = null) {
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
-  // ✅ सिधै adminpanels.shop प्रयोग गरिन्छ (Cloudflare हटाइयो)
-  const API_URL = 'https://adminpanels.shop/api/reseller_v1.php';
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://adminpanels.shop/api/reseller_v1.php'; // Default if env missing
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // ✅ CRITICAL FIX: Uses the exact text from your catalog (e.g. "1 DaYs", "1 Hours")
+  // ✅ Uses the exact text from your catalog (e.g. "1 DaYs", "1 Hours")
   const duration = product.duration;
 
   const formData = new URLSearchParams();
@@ -52,7 +51,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   let response;
   try {
-    // Sending directly to the API
+    // Sending to API_URL (which now points to your Cloudflare Worker)
     response = await fetch(API_URL, {
       method: 'POST',
       headers,
@@ -68,9 +67,9 @@ async function fetchRealKey(sku, product, androidId = null) {
   const text = await response.text();
   console.log('[Reseller] Raw response (first 500 chars):', text.slice(0, 500));
 
-  // ---- Detect Cloudflare challenge (फेरि पनि आयो भने थाहा पाउन) ----
+  // ---- Detect Cloudflare challenge (just in case the worker fails) ----
   if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
-    throw new Error('The reseller API is currently protected by Cloudflare and blocking this request. Please contact API support to whitelist your IP address or wait.');
+    throw new Error('Cloudflare challenge bypass via Worker failed. Check Worker logs.');
   }
 
   let data;
