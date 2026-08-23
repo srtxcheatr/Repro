@@ -15,7 +15,8 @@ router.use(requireFirebaseUid);
 async function fetchRealKey(sku, product, androidId = null) {
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://adminpanels.shop/api/reseller_v1.php';
+  // ✅ सिधै adminpanels.shop प्रयोग गरिन्छ (Cloudflare हटाइयो)
+  const API_URL = 'https://adminpanels.shop/api/reseller_v1.php';
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
@@ -51,7 +52,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   let response;
   try {
-    // Sending to API_URL (which now points to your Cloudflare Worker)
+    // Sending directly to the API
     response = await fetch(API_URL, {
       method: 'POST',
       headers,
@@ -67,9 +68,9 @@ async function fetchRealKey(sku, product, androidId = null) {
   const text = await response.text();
   console.log('[Reseller] Raw response (first 500 chars):', text.slice(0, 500));
 
-  // ---- Detect Cloudflare challenge ----
+  // ---- Detect Cloudflare challenge (फेरि पनि आयो भने थाहा पाउन) ----
   if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
-    throw new Error('The target reseller API is still blocking Cloudflare IPs. Contact their support or try a different Worker region.');
+    throw new Error('The reseller API is currently protected by Cloudflare and blocking this request. Please contact API support to whitelist your IP address or wait.');
   }
 
   let data;
@@ -94,7 +95,7 @@ async function fetchRealKey(sku, product, androidId = null) {
   const key = data.key || data.data?.key || data.result?.key || null;
   if (!key) {
     console.error('[Reseller] No key in response:', JSON.stringify(data));
-    throw new Error('NO KEY 🔐 OUT OF STUCK PRODUCD OR UNDER MAINTENANCE 🤟');
+    throw new Error('NO KEY 🔐 OUT OF STOCK PRODUCT OR UNDER MAINTENANCE 🤟');
   }
 
   console.log('[Reseller] Key fetched successfully');
