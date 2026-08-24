@@ -17,7 +17,7 @@ async function fetchRealKey(sku, product, androidId = null) {
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
   
   // ✅ यहाँ आफ्नो नयाँ Worker को URL राख्नुहोस्
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://bot-bypass.your-name.workers.dev';
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://mycuteeyyyypie.your-username.workers.dev';
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
