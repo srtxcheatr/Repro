@@ -16,13 +16,13 @@ async function fetchRealKey(sku, product, androidId = null) {
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
   
-  // ✅ नयाँ Endpoint: adminpanels.shop (तपाईंको बोसको निर्देशन अनुसार)
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://adminpanels.shop/api/reseller_v1.php';
+  // ✅ यहाँ आफ्नो नयाँ Worker को URL राख्नुहोस्
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://bot-bypass.your-name.workers.dev';
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // ✅ Duration ठ्याक्कै क्याटलगबाट लिइन्छ (जस्तै "1 Day", "3 Hours", "1 DaYs")
+  // ✅ Duration ठ्याक्कै क्याटलगबाट लिइन्छ
   const duration = product.duration;
 
   const formData = new URLSearchParams();
@@ -31,14 +31,13 @@ async function fetchRealKey(sku, product, androidId = null) {
   formData.append('product_id', product.pid);
   formData.append('duration', duration);
   
-  // ✅ Android ID (आवश्यक परेको खण्डमा मात्र)
   if (androidId) {
     formData.append('android_id', androidId);
   }
 
   console.log(`[Reseller] Request: pid=${product.pid}, duration=${duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
-  // ✅ बोसको PHP ले जस्तै हेडरहरू ठ्याक्कै मिलाइयो
+  // ✅ हेडरहरू जहाँ x-master-key हुन्छ
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'x-master-key': MASTER_KEY,
@@ -56,7 +55,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   let response;
   try {
-    // Sending directly to adminpanels.shop API
+    // Sending to the Worker
     response = await fetch(API_URL, {
       method: 'POST',
       headers,
@@ -72,7 +71,7 @@ async function fetchRealKey(sku, product, androidId = null) {
   const text = await response.text();
   console.log('[Reseller] Raw response (first 500 chars):', text.slice(0, 500));
 
-  // ---- Detect Cloudflare challenge (यदि आयो भने यही एरर देखिनेछ) ----
+  // ---- Detect Cloudflare challenge ----
   if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
     throw new Error('Cloudflare challenge detected. Please set RESELLER_ENDPOINT to your Worker URL.');
   }
