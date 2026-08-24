@@ -15,14 +15,12 @@ router.use(requireFirebaseUid);
 async function fetchRealKey(sku, product, androidId = null) {
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
-  
-  // ✅ यहाँ आफ्नो नयाँ Worker को URL राख्नुहोस्
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://mycuteeyyyypie.your-username.workers.dev';
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://adminpanels.shop/api/reseller_v1.php';
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // ✅ Duration ठ्याक्कै क्याटलगबाट लिइन्छ
+  // ✅ CRITICAL FIX: Uses the exact text from your catalog (e.g. "1 DaYs", "1 Hours")
   const duration = product.duration;
 
   const formData = new URLSearchParams();
@@ -30,14 +28,12 @@ async function fetchRealKey(sku, product, androidId = null) {
   formData.append('action', 'buy');
   formData.append('product_id', product.pid);
   formData.append('duration', duration);
-  
   if (androidId) {
     formData.append('android_id', androidId);
   }
 
   console.log(`[Reseller] Request: pid=${product.pid}, duration=${duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
-  // ✅ हेडरहरू जहाँ x-master-key हुन्छ
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'x-master-key': MASTER_KEY,
@@ -55,7 +51,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   let response;
   try {
-    // Sending to the Worker
+    // Sending to API_URL (which now points to your Cloudflare Worker)
     response = await fetch(API_URL, {
       method: 'POST',
       headers,
@@ -73,7 +69,7 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   // ---- Detect Cloudflare challenge ----
   if (text.includes('Just a moment') || text.includes('challenges.cloudflare.com')) {
-    throw new Error('Cloudflare challenge detected. Please set RESELLER_ENDPOINT to your Worker URL.');
+    throw new Error('The target reseller API is still blocking Cloudflare IPs. Contact their support or try a different Worker region.');
   }
 
   let data;
@@ -98,7 +94,7 @@ async function fetchRealKey(sku, product, androidId = null) {
   const key = data.key || data.data?.key || data.result?.key || null;
   if (!key) {
     console.error('[Reseller] No key in response:', JSON.stringify(data));
-    throw new Error('NO KEY 🔐 OUT OF STOCK PRODUCT OR UNDER MAINTENANCE 🤟');
+    throw new Error('No key returned. Contact support.');
   }
 
   console.log('[Reseller] Key fetched successfully');
