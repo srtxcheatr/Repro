@@ -5,13 +5,13 @@ export const CATALOG_RESELLER = {
 
 
 // ---- AIM HACK FF NONROOT (pid 133) ----
-sku_146: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hour', price: 66, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_147: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 123, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_148: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 180, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_149: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 246, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_150: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 Day', price: 344, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_151: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 Days', price: 590, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
-sku_152: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 Days', price: 1476, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_150: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hour', price: 66, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_151: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 123, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_152: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 180, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_153: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 246, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_154: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 Day', price: 344, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_155: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 Days', price: 590, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_156: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 Days', price: 1476, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
 
 
 
