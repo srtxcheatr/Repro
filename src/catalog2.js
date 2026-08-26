@@ -4,17 +4,19 @@
 export const CATALOG_RESELLER = {
 
 
-sku_154: { pid: '142', row: 'BALA MOD XYZ CONFIG FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
-sku_155: { pid: '142', row: 'BALA MOD XYZ CONFIG FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 100, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
-sku_156: { pid: '142', row: 'BALA MOD XYZ CONFIG FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 180, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
-sku_157: { pid: '142', row: 'BALA MOD XYZ CONFIG FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 320, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_02084626113.html' },
+// ---- AIM HACK FF NONROOT (pid 133) ----
+sku_146: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hour', price: 66, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_147: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 123, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_148: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 180, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_149: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 246, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_150: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 Day', price: 344, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_151: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 Days', price: 590, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
+sku_152: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 Days', price: 1476, image: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file', external: true },
 
 
-// ---- HG CHEATS PRIME PROXY FF NONROOT (pid 141) ----
-// Sorted: 1, 7, 10 Days
-sku_151: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 1 DAY',  duration: '1 Day', price: 117, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01754789523.html' },
-sku_152: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 7 DAY',  duration: '7 Days', price: 240, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01754789523.html' },
-sku_153: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME PROXY 10 DAY', duration: '10 Days', price: 260, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01754789523.html' },
+
+
+
 
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
 sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
