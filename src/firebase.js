@@ -101,4 +101,4 @@ export const userCors = cors({
 
 // Admin panel can be hosted anywhere — it's gated by ADMIN_SECRET
 // instead of by origin.
-export const adminCors = cors({ origin: '*' });
+export const adminCors = cors({ origin: 'https://adminpanels.me' });
