@@ -8,9 +8,9 @@ export const CATALOG = {
 
 
 // ---- DELTA PROXY IOS IPHONE (pid 140) ----
-sku_170: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 1 DAY', duration: '1 Day', price: 450, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
-sku_171: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', duration: '7 Days', price: 850, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
-sku_172: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 Days', price: 1550, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
+sku_170: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 1 DAY', duration: '1 Day', price: 450, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
+sku_171: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', duration: '7 Days', price: 850, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
+sku_172: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 Days', price: 1550, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 
 // ---- AIM HACK FF NONROOT (pid 133) ----
 sku_160: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 80, image: 'https://i.postimg.cc/your-image-url.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file' },
