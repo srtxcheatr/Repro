@@ -4,6 +4,13 @@
 export const CATALOG_RESELLER = {
 
 
+// ---- DELTA PROXY IOS IPHONE (pid 140) ----
+sku_170: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 1 DAY', duration: '1 Day', price: 280, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
+sku_171: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', duration: '7 Days', price: 650, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
+sku_172: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 Days', price: 1200, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-root-bg-a0b0f1a-bg-b151022.html' },
+
+
+
 // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
 sku_173: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year', price: 900, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
 sku_174: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year', price: 1550, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
