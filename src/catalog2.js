@@ -4,6 +4,11 @@
 export const CATALOG_RESELLER = {
 
 
+// ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
+sku_173: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year', price: 900, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
+sku_174: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year', price: 1550, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
+
+
 // ---- AIM HACK FF NONROOT (pid 133) ----
 sku_160: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 66, image: 'https://i.postimg.cc/your-image-url.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file' },
 sku_161: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 123, image: 'https://i.postimg.cc/your-image-url.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file' },
