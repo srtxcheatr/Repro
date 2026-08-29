@@ -117,21 +117,9 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_58: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 7 DAY', duration: '7 DaYs', price: 1466, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
   sku_59: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 30 DAY', duration: '30 DaYs', price: 2737, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
-  // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
-  sku_60: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year Ios Esign Gbox Certificate', price: 978, image: 'https://i.postimg.cc/xdCjJjf3/1780587437-img-6a219badcb5b1.png', external: true },
-  sku_61: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year Ios Signer Gbox Certificate', price: 1955, image: 'https://i.postimg.cc/xdCjJjf3/1780587437-img-6a219badcb5b1.png', external: true },
+  
 
-  // ---- KOS 8 BALL POOL NONROOT ANDROID (pid 76) ----
-  sku_62: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 1 DAY', duration: '1 DaYs Premium Access', price: 215, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_63: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 7 DAY', duration: '7 DaYs Mod', price: 538, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_64: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 7 DAY', duration: '7 DaYs Premium Access', price: 587, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_65: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP MOD 30 DAY', duration: '30 DaYs Mod', price: 1466, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_66: { pid: '76', row: 'KOS 8 BALL POOL NONROOT ANDROID', name: 'KOS 8BP PREMIUM 30 DAY', duration: '30 DaYs Premium Access', price: 2151, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-
-  // ---- KOS CARROM POOL NONROOT ANDROID (pid 75) ----
-  sku_67: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 1 DAY', duration: '1 DaYs', price: 196, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_68: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 7 DAY', duration: '7 DaYs', price: 440, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
-  sku_69: { pid: '75', row: 'KOS CARROM POOL NONROOT ANDROID', name: 'KOS CARROM 30 DAY', duration: '30 DaYs', price: 1418, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
+  
 
   // ---- KOS FF ROOT ANDROID (pid 74) ----
   sku_70: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 156, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
@@ -146,13 +134,7 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_77: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL BASIC 30 DAY', duration: '30 DaYs Basic', price: 1760, image: 'https://i.postimg.cc/MHhPrSwQ/file-00000000b7bc7208b6362b0658f64e7e.png', external: true },
   sku_78: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL PRO 30 DAY', duration: '30 DaYs PRO', price: 3128, image: 'https://i.postimg.cc/MHhPrSwQ/file-00000000b7bc7208b6362b0658f64e7e.png', external: true },
 
-  // ---- NEO STRIKE FF ROOT ANDROID (pid 70) ----
-  sku_79: { pid: '70', row: 'NEO STRIKE FF ROOT ANDROID', name: 'NEO STRIKE 1 DAY', duration: '1 DaYs', price: 117, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-  sku_80: { pid: '70', row: 'NEO STRIKE FF ROOT ANDROID', name: 'NEO STRIKE 3 DAY', duration: '3 DaYs', price: 293, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-  sku_81: { pid: '70', row: 'NEO STRIKE FF ROOT ANDROID', name: 'NEO STRIKE 7 DAY', duration: '7 DaYs', price: 489, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-  sku_82: { pid: '70', row: 'NEO STRIKE FF ROOT ANDROID', name: 'NEO STRIKE 14 DAY', duration: '14 DaYs', price: 636, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-  sku_83: { pid: '70', row: 'NEO STRIKE FF ROOT ANDROID', name: 'NEO STRIKE 28 DAY', duration: '28 DaYs', price: 831, image: 'https://i.postimg.cc/fbjGtJN9/file-00000000f5b47208b97547f7d5746409.png', external: true },
-
+  
   // ---- PATO TEAM FF ALL ANDROID (pid 54) ----
   sku_84: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 3 DAY', duration: '3 DaYs All Colours Mix', price: 538, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
   sku_85: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 831, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
@@ -165,14 +147,7 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_90: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 553, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
   sku_91: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 759, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 
-  // ---- RAPID CORE FF ROOT ANDROID (pid 130) ----
-  sku_92: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 1 DAY', duration: '1 DaYs', price: 117, image: 'https://i.postimg.cc/bNqV8ZNP/file-000000002dfc8208b6b91dac50139402.png', external: true },
-  sku_93: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 7 DAY', duration: '7 DaYs', price: 343, image: 'https://i.postimg.cc/bNqV8ZNP/file-000000002dfc8208b6b91dac50139402.png', external: true },
-  sku_94: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 14 DAY', duration: '14 DaYs', price: 636, image: 'https://i.postimg.cc/bNqV8ZNP/file-000000002dfc8208b6b91dac50139402.png', external: true },
-  sku_95: { pid: '130', row: 'RAPID CORE FF ROOT ANDROID', name: 'RAPID 30 DAY', duration: '30 DaYs', price: 978, image: 'https://i.postimg.cc/bNqV8ZNP/file-000000002dfc8208b6b91dac50139402.png', external: true },
-
-  // ---- REAPER X PRO FF ROOT ANDROID (pid 81) ----
-  sku_96: { pid: '81', row: 'REAPER X PRO FF ROOT ANDROID', name: 'REAPER X 10 DAY', duration: '10 DaYs', price: 343, image: 'https://i.postimg.cc/qgfkh2mS/file-000000006478820786e1e476ae599197.png', external: true },
+  
 
   // ---- SILENT CHEAT FF NONROOT APKMOD (pid 127) ----
   sku_97: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 98, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
@@ -193,21 +168,7 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_110: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT BRUTAL 28 DAY', duration: '28 DaYs BRUTAL', price: 1075, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
   sku_111: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 28 DAY', duration: '28 DaYs SAFE', price: 8876, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 
-  // ---- SNAKE 8 BALL POOL NONROOT ANDROID (pid 79) ----
-  sku_112: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 3 DAY', duration: '3 DaYs', price: 782, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_113: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 10 DAY', duration: '10 DaYs', price: 1955, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_114: { pid: '79', row: 'SNAKE 8 BALL POOL NONROOT ANDROID', name: 'SNAKE 8BP 30 DAY', duration: '30 DaYs', price: 3715, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-
-  // ---- SNAKE CARROM POOL NONROOT ANDROID (pid 77) ----
-  sku_115: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 3 DAY', duration: '3 DaYs', price: 274, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_116: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 10 DAY', duration: '10 DaYs', price: 831, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_117: { pid: '77', row: 'SNAKE CARROM POOL NONROOT ANDROID', name: 'SNAKE CARROM 30 DAY', duration: '30 DaYs', price: 1955, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-
-  // ---- SNAKE SOCCER STARS NONROOT ANDROID (pid 78) ----
-  sku_118: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 3 DAY', duration: '3 DaYs', price: 274, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_119: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 10 DAY', duration: '10 DaYs', price: 831, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-  sku_120: { pid: '78', row: 'SNAKE SOCCER STARS NONROOT ANDROID', name: 'SNAKE SOCCER 30 DAY', duration: '30 DaYs', price: 1955, image: 'https://i.postimg.cc/BvvkcX1X/file-0000000062588207835abbb01131c577.png', external: true },
-
+  
   // ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
   sku_121: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
   sku_122: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 137, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
