@@ -23,7 +23,9 @@ sku_166: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', dura
 
 
 
-
+// ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
+sku_173: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year', price: 1200, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
+sku_174: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year', price: 2000, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
 
 
 
