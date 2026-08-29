@@ -94,7 +94,7 @@ async function fetchRealKey(sku, product, androidId = null) {
   const key = data.key || data.data?.key || data.result?.key || null;
   if (!key) {
     console.error('[Reseller] No key in response:', JSON.stringify(data));
-    throw new Error('No key returned. Contact support.');
+    throw new Error('maintenance .or. out of stock');
   }
 
   console.log('[Reseller] Key fetched successfully');
