@@ -47,7 +47,7 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ ok: true, service: 'srtx-backend' });
+  res.json({ success: false, error: 'Internal server error. Please try again.' });
 });
 
 // Public — just the RETAIL display catalog (sku/name/duration/price/row).
