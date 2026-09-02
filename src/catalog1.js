@@ -17,6 +17,7 @@ export const CATALOG = {
   sku_87: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1516, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 
 
+
 // ---- DELTA PROXY IOS IPHONE (pid 140) ----
 sku_170: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 1 DAY', duration: '1 Day', price: 450, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 sku_171: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', duration: '7 Days', price: 850, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
