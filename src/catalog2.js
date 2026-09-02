@@ -5,6 +5,12 @@ export const CATALOG_RESELLER = {
 
 
 // ---- PATO TEAM FF ALL ANDROID (pid 54) ----
+  sku_84: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 1041, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
+  sku_85: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 3 DAY', duration: '3 DaYs All Colours Mix', price: 459, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
+  sku_86: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1291, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
+  sku_87: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 708, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
+
+// ---- PATO TEAM FF ALL ANDROID (pid 54) ----
 sku_84: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 793, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 sku_85: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 1166, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 sku_86: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1446, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
