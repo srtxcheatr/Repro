@@ -7,6 +7,11 @@ export const CATALOG = {
 
 
 
+// ---- PATO TEAM FF ALL ANDROID (pid 54) ----
+sku_85: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 931, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
+sku_86: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 1369, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
+sku_87: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1698, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
+
 // ---- DELTA PROXY IOS IPHONE (pid 140) ----
 sku_170: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 1 DAY', duration: '1 Day', price: 450, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 sku_171: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', duration: '7 Days', price: 850, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
@@ -135,11 +140,7 @@ sku_50: { pid: '65', row: 'HG CHEATS FF APKMOD NONROOT+ROOT', name: 'HG APKMOD 3
   sku_78: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL PRO 30 DAY', duration: '30 DaYs PRO', price: 3128, image: 'https://i.postimg.cc/MHhPrSwQ/file-00000000b7bc7208b6362b0658f64e7e.png', external: true },
 
   
-  // ---- PATO TEAM FF ALL ANDROID (pid 54) ----
-  sku_84: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 3 DAY', duration: '3 DaYs All Colours Mix', price: 538, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
-  sku_85: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 831, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
-  sku_86: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 1222, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
-  sku_87: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1516, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true },
+  
 
   // ---- PRIME HOOK FF NONROOT ANDROID (pid 48) ----
   sku_88: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
