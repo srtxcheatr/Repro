@@ -178,6 +178,3 @@ sku_103: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 15 DAY', dur
 sku_104: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 30 DAY', duration: '30 Days', price: 831, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 };
 
-export function catalogFind(sku) {
-  return CATALOG[sku] ?? null;
-}
