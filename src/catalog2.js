@@ -1,3 +1,7 @@
+
+export const CATALOG_RESELLER = {
+
+
 // ---- SILENT CHEAT FF NONROOT PROXY (pid 148) ----
 sku_105: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '1 Hours Apk Silent', duration: '1 Hours Apk Silent', price: 60, image: 'https://i.postimg.cc/BbtmmMt3/Chat-GPT-Image-Sep-3-2026-08-30-35-PM.png', external: true, apkUrl: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file' },
 sku_106: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '3 Hours Apk Silent', duration: '3 Hours Apk Silent', price: 100, image: 'https://i.postimg.cc/BbtmmMt3/Chat-GPT-Image-Sep-3-2026-08-30-35-PM.png', external: true, apkUrl: 'https://www.mediafire.com/file/25g8nhx1ir9yupu/AIM+HACK+NONROOT+MAIN+ID+SAFE.zip/file' },
