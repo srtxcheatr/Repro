@@ -15,8 +15,8 @@ sku_116: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '12 Hours Con
 sku_117: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '1 DaYs Config Proxy', duration: '1 DaYs Config Proxy', price: 150, image: 'https://i.postimg.cc/BbtmmMt3/Chat-GPT-Image-Sep-3-2026-08-30-35-PM.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/blog-post.html' },
 
 // ---- AIM HACK FF PC/ios (pid 133) ----
-sku_120: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF PC 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_121: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF PC 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_120: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF ios 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_121: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF ios 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 sku_122: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF ios 6 Hours', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 sku_123: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF ios 12 Hours', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 sku_124: { pid: '133', row: 'AIM HACK FF ios', name: 'AIM HACK FF ios 1 DaYs', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
