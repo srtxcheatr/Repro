@@ -11,10 +11,9 @@
     "node": ">=18"
   },
   "dependencies": {
-  "cors": "^2.8.5",
-  "express": "^4.19.2",
-  "firebase-admin": "^12.1.0",
-  "nodemailer": "^7.0.6"
-}
-
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.1.0",
+    "nodemailer": "^7.0.6"
+  }
 }
