@@ -48,7 +48,9 @@ sku_22: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1
 sku_23: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX SIGNER 1 YEAR', duration: '1 Year', price: 1200, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
 
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
-sku_24: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 85, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
+sku_24: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 85, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html', maintenance: true,
+    maintenanceMessage: 'This product is temporarily under maintenance.'
+},
 sku_25: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 180, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
 sku_26: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 290, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
 sku_27: { pid: '136', row: 'BALA MOD XYZ ~ V2 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 520, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0.html' },
