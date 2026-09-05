@@ -69,10 +69,12 @@ sku_38: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'Day Pc Modmenu x86 30 D
 
 // ---- BR MOD FF ROOT ANDROID (pid 67) ----
 // Sorted: 1, 7, 15, 30
-sku_39: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY',  duration: '1 Day', price: 147, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
-sku_40: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY',  duration: '7 Days', price: 440, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
-sku_41: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 Days', price: 734, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
-sku_42: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 Days', price: 1222, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
+sku_39: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY',  duration: '1 DaYs', price: 147, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html', maintenance: true,
+    maintenanceMessage: 'This product is temporarily under maintenance.'
+},
+sku_40: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY',  duration: '7 DaYs', price: 440, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
+sku_41: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 734, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
+sku_42: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 DaYs', price: 1222, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 
 // ---- DRIPCLIENT FF NONROOT APKMOD (pid 62) ----
 // Sorted: 1, 3, 7, 15, 30
@@ -84,7 +86,9 @@ sku_47: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', 
 
 // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
 // Only 30 days
-sku_48: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 Days', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_48: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 Days', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d', maintenance: true,
+    maintenanceMessage: 'This product is temporarily under maintenance.'
+ },
 
 // ---- DRIPCLIENT PROXY FF NONROOT ANDROID (pid 91) ----
 // Sorted: 3, 7, 30 (only these durations are available in your block)
@@ -129,7 +133,9 @@ sku_70: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 7 DAY'
 sku_71: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 30 DAY', duration: '30 DaYs', price: 2737, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
 // ---- KOS FF ROOT ANDROID (pid 74) ----
-sku_72: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 156, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
+sku_72: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 156, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true, maintenance: true,
+    maintenanceMessage: 'This product is temporarily under maintenance.'
+ },
 sku_73: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 7 DAY', duration: '7 DaYs', price: 538, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
 sku_74: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 30 DAY', duration: '30 DaYs', price: 1516, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
 
@@ -148,7 +154,9 @@ sku_83: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', 
 sku_84: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 759, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 
 // ---- SILENT CHEAT FF NONROOT APKMOD (pid 127) ----
-sku_85: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 98, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
+sku_85: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 98, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true , maintenance: true,
+    maintenanceMessage: 'This product is temporarily under maintenance.'
+},
 sku_86: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 3 DAY', duration: '3 DaYs', price: 156, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 sku_87: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 7 DAY', duration: '7 DaYs', price: 343, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 sku_88: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 14 DAY', duration: '14 DaYs', price: 636, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
