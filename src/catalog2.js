@@ -39,9 +39,9 @@ sku_15: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration:
 sku_16: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 sku_17: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 sku_18: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_19: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 Day', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_20: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 Days', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_21: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 Days', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_19: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_20: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_21: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 
 // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
 sku_22: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year', price: 600, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
