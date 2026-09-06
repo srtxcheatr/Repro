@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import admin from 'firebase-admin';
-import { getFirebaseApp, db, userCors } from '../../src/firebase.js';
+import { getFirebaseApp, db, userCors } from '../src/firebase.js';
 
 const router = express.Router();
 router.use(userCors);
