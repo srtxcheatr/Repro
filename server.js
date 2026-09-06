@@ -2,7 +2,7 @@ import express from 'express';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
-import forgotPasswordRoutes from './routes/forgot-password.js';
+import authRoutes from './routes/auth.js';
 import { CATALOG } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -18,7 +18,6 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
-
 
 // ---- Connection logger ----
 // Always notifies on errors/unauthorized attempts (401/403/5xx) — the
@@ -49,7 +48,7 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ success: false, error: 'Internal server error. Please try again.' });
+  res.json({ success: false, error: 'Internal server error. Please try again.'});
 });
 
 // Public — just the RETAIL display catalog (sku/name/duration/price/row).
@@ -64,11 +63,10 @@ app.get('/api/catalog', userCors, (req, res) => {
   res.json({ success: true, catalog: CATALOG });
 });
 
-
+app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/purchase', purchaseRoutes);
-app.use('/api/auth', forgotPasswordRoutes);
 
 // Last-resort error handler — same job as firebase.php's shutdown
 // handler: never let a raw stack trace leak to the client, always
