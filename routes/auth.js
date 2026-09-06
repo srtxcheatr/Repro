@@ -1,6 +1,5 @@
 import express from 'express';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import admin from 'firebase-admin';
 import { getFirebaseApp, db, userCors } from '../src/firebase.js';
 
@@ -20,25 +19,33 @@ function randomOtp() { return String(crypto.randomInt(100000, 1000000)); }
 function randomToken() { return crypto.randomBytes(32).toString('hex'); }
 function docId(email) { return hash(`email:${email}`); }
 
-function mailer() {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || 465);
-  const secure = String(process.env.SMTP_SECURE || (port === 465)).toLowerCase() === 'true';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!user || !pass) throw new Error('SMTP_USER and SMTP_PASS are not configured');
-  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
-}
-
 async function sendOtpEmail(email, otp) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-  await mailer().sendMail({
-    from,
-    to: email,
-    subject: 'SRT X CHEATS — Password Reset OTP',
-    text: `Your SRT X CHEATS password reset OTP is: ${otp}\n\nThis OTP expires in 10 minutes.\n\nIf you did not request a password reset, ignore this email.`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;background:#111;color:#fff;border-radius:14px"><h2>SRT X CHEATS</h2><p>Your password reset OTP is:</p><div style="font-size:32px;font-weight:800;letter-spacing:8px;text-align:center;padding:18px;background:#1d1730;border-radius:12px">${otp}</div><p>This OTP expires in <b>10 minutes</b>.</p><p>If you did not request a password reset, ignore this email.</p></div>`
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || 'SRT X CHEATS';
+  if (!apiKey) throw new Error('BREVO_API_KEY is not configured');
+  if (!senderEmail) throw new Error('BREVO_SENDER_EMAIL is not configured');
+
+  const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'api-key': apiKey,
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email }],
+      subject: 'SRT X CHEATS — Password Reset OTP',
+      textContent: `Your SRT X CHEATS password reset OTP is: ${otp}\n\nThis OTP expires in 10 minutes.\n\nIf you did not request a password reset, ignore this email.`,
+      htmlContent: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;background:#111;color:#fff;border-radius:14px"><h2>SRT X CHEATS</h2><p>Your password reset OTP is:</p><div style="font-size:32px;font-weight:800;letter-spacing:8px;text-align:center;padding:18px;background:#1d1730;border-radius:12px">${otp}</div><p>This OTP expires in <b>10 minutes</b>.</p><p>If you did not request a password reset, ignore this email.</p></div>`,
+    }),
   });
+
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    throw new Error(`Brevo send failed (${r.status}): ${body.slice(0, 300)}`);
+  }
 }
 
 // POST /api/auth/forgot-password/send-otp
