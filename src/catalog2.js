@@ -23,18 +23,18 @@ sku_141: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 3 D
 sku_142: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 7 DAY', duration: '7 Days', price: 450, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
 
 // ---- XRAG FF ROOT+NONROOT+IOS IPHONE+PC (pid 149) ----
-sku_143: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 1H', duration: '1 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_144: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3H', duration: '3 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_145: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 6H', duration: '6 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_146: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 12H', duration: '12 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_147: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 24H', duration: '24 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_148: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3 DAY', duration: '3 Days', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
-sku_149: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 7 DAY', duration: '7 Days', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_143: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_144: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_145: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 6H', duration: '6 Hours', price: 100, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_146: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 12H', duration: '12 Hours', price: 140, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_147: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 24H', duration: '24 Hours', price: 160, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_148: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3 DAY', duration: '3 Days', price: 250, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_149: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 7 DAY', duration: '7 Days', price: 350, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
 
 // ---- HG CHEATS PRIME PROXY FF NONROOT (pid 141) ----
-sku_150: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 1 DAY', duration: '1 Day', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
-sku_151: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 7 DAY', duration: '7 Days', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
-sku_152: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 10 DAY', duration: '10 Days', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+sku_150: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 1 DAY', duration: '1 Day', price: 100, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+sku_151: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 7 DAY', duration: '7 Days', price: 200, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+sku_152: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 10 DAY', duration: '10 Days', price: 250, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
 
 
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
