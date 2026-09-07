@@ -1,4 +1,4 @@
-export const CATALOG_RESELLER = {
+ export const CATALOG_RESELLER = {
 
 // ---- BR MOD FF PC VERSION (pid 49) ----
 sku_1: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 176, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
@@ -26,13 +26,23 @@ sku_16: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', 
 sku_17: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 DaYs', price: 800, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 
 // ---- AIM HACK FF NONROOT (pid 133) ----
-sku_18: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_19: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_20: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_21: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_22: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_23: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_24: { pid: '133', row: 'AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_18: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_19: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_20: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_21: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_22: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_23: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_24: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+
+
+   // ---- AIM HACK FF NONROOT (pid 133) ----
+sku_132: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_133: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_134: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_135: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_136: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_137: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_138: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 
 // ---- BALA MOD XYZ ~ V4 FF NONROOT (pid 136) ----
 sku_25: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 85, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
