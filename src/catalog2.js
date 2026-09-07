@@ -153,7 +153,7 @@ sku_79: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL BASIC 30 DAY', dur
 sku_80: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL PRO 30 DAY', duration: '30 DaYs PRO', price: 1200, image: 'https://i.postimg.cc/MHhPrSwQ/file-00000000b7bc7208b6362b0658f64e7e.png', external: true },
 
 // ---- PRIME HOOK FF NONROOT ANDROID (pid 48) ----
-sku_81: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true , maintenance: true, 
+sku_81: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true
 },
 sku_82: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 3 DAY', duration: '3 Days Nonroot', price: 250, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 sku_83: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 553, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
