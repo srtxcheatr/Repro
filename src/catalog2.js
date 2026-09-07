@@ -3,7 +3,7 @@ export const CATALOG_RESELLER = {
 
 
 
-sku_140: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_140: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 85, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_141: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_142: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 6 Hours', duration: '6 Hours', price: 150, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_143: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 12 Hours', duration: '12 Hours', price: 250, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
