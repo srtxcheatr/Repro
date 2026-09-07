@@ -2,6 +2,17 @@
 export const CATALOG_RESELLER = {
 
 
+// ---- XRAG FF PC/ios (pid 133) ----
+sku_140: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_141: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_142: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 6 Hours', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_143: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 12 Hours', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_144: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 24 DaYs', duration: '24 Hours', price: 200, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_145: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3 DaYs', duration: '3 DaYs', price: 450, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_146: { pid: '149', row: 'XRAG  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 7 DaYs', duration: '7 DaYs', price: 1200, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+
+    
+
 // ---- SILENT CHEAT FF NONROOT PROXY (pid 148) ----
 sku_105: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '1 Hours Apk Silent', duration: '1 Hours Apk Silent', price: 40, image: 'https://i.postimg.cc/BbtmmMt3/Chat-GPT-Image-Sep-3-2026-08-30-35-PM.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/blog-post.html' },
 sku_106: { pid: '148', row: 'SILENT CHEAT FF NONROOT PROXY', name: '3 Hours Apk Silent', duration: '3 Hours Apk Silent', price: 60, image: 'https://i.postimg.cc/BbtmmMt3/Chat-GPT-Image-Sep-3-2026-08-30-35-PM.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/blog-post.html' },
@@ -35,13 +46,13 @@ sku_13: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', 
 sku_14: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 DaYs', price: 800, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 
 // ---- AIM HACK FF NONROOT (pid 133) ----
-sku_15: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_16: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_17: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_18: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_19: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_20: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_21: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_15: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_16: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_17: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_18: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_19: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_20: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_21: { pid: '133', row: 'AIM HACK  FF ROOT+NONROOT+IOS IPHONE+PC', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 
 // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
 sku_22: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year Ios Esign Gbox Certificate', price: 600, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
