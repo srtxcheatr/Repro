@@ -1,4 +1,4 @@
-export const CATALOG_RESELLER = {
+export const CATALOG = {
 
 // ---- BR MOD FF PC VERSION (pid 49) ----
 sku_1: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 246, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
