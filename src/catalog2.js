@@ -2,14 +2,18 @@
 export const CATALOG_RESELLER = {
 
 
-// ---- XRAG FF PC/ios (pid 133) ----
+// ---- XYZ FF PC/ios (pid 133) ----
 sku_140: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_141: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_142: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 6 Hours', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_143: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 12 Hours', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 sku_144: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 24 DaYs', duration: '24 Hours', price: 200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
-sku_145: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT ', name: 'XYZ CHEATS APK SILENT 3 DaYs', duration: '3 DaYs', price: 450, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
-sku_146: { pid: '153', row: 'XYZ CHEATS APK SILENT FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 7 DaYs', duration: '7 DaYs', price: 1200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+
+sku_145: { pid: '153', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 1 Hours', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_146: { pid: '153', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 3 Hours', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_147: { pid: '153', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 6 Hours', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_148: { pid: '153', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 12 Hours', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_149: { pid: '153', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT  ', name: 'XYZ CHEATS APK SILENT 24 DaYs', duration: '24 Hours', price: 200, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
 
     
 
