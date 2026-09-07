@@ -163,7 +163,7 @@ sku_109: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL BASIC 30 DAY', du
 sku_110: { pid: '69', row: 'MIGUL IPHONE IOS FF', name: 'MIGUL PRO 30 DAY', duration: '30 DaYs PRO', price: 1200, image: 'https://i.postimg.cc/MHhPrSwQ/file-00000000b7bc7208b6362b0658f64e7e.png', external: true },
 
 // ---- PRIME HOOK FF NONROOT ANDROID (pid 48) ----
-sku_111: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_111: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 1 DAY', duration: '1 Days Nonroot', price: 140, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 sku_112: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 3 DAY', duration: '3 Days Nonroot', price: 250, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 sku_113: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY', duration: '7 Days NonRoot', price: 553, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 sku_114: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 759, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
@@ -188,7 +188,8 @@ sku_128: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT B
 sku_129: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 28 DAY', duration: '28 DaYs SAFE', price: 1050, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 
 // ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
-sku_130: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
-sku_131: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 137, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+// ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
+sku_130: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_131: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 137, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
 
 };
