@@ -3,6 +3,40 @@ export const CATALOG_RESELLER = {
 
 
 
+// ---- XYZ CHEATS CONFIG PROXY FF NONROOT (pid 142) ----
+sku_130: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ PROXY 1H', duration: '1 Hours', price: 40, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE%5ETS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_131: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ PROXY 3H', duration: '3 Hours', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE%5ETS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_132: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ PROXY 6H', duration: '6 Hours', price: 150, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE%5ETS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_133: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ PROXY 12H', duration: '12 Hours', price: 250, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE%5ETS+APK+SILENT++CONFIG+PROXY.zip/file' },
+sku_134: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ PROXY 24H', duration: '24 Hours', price: 350, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE%5ETS+APK+SILENT++CONFIG+PROXY.zip/file' },
+
+// ---- DRIPCLIENT WIRE FF NONROOT ANDROID (pid 150) ----
+sku_135: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIP WIRE 6H', duration: '6 Hours', price: 60, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_136: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIP WIRE 12H', duration: '12 Hours', price: 100, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_137: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIP WIRE 1 DAY', duration: '1 Day', price: 160, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+sku_138: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIP WIRE 7 DAY', duration: '7 Days', price: 600, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
+
+// ---- ABCD PANEL PROXY FF NONROOT (pid 151) ----
+sku_139: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 12H', duration: '12 Hours', price: 80, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_140: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 1 DAY', duration: '1 Day', price: 150, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_141: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 3 DAY', duration: '3 Days', price: 280, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_142: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL 7 DAY', duration: '7 Days', price: 450, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+
+// ---- XRAG FF ROOT+NONROOT+IOS IPHONE+PC (pid 149) ----
+sku_143: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 1H', duration: '1 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_144: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3H', duration: '3 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_145: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 6H', duration: '6 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_146: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 12H', duration: '12 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_147: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 24H', duration: '24 Hours', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_148: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 3 DAY', duration: '3 Days', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+sku_149: { pid: '149', row: 'XRAG FF ROOT+NONROOT+IOS IPHONE+PC', name: 'XRAG 7 DAY', duration: '7 Days', price: 0, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
+
+// ---- HG CHEATS PRIME PROXY FF NONROOT (pid 141) ----
+sku_150: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 1 DAY', duration: '1 Day', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+sku_151: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 7 DAY', duration: '7 Days', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+sku_152: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 10 DAY', duration: '10 Days', price: 0, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
+
+
 // ---- BALA MOD XYZ ~ V2 FF NONROOT (pid 136) ----
 sku_24: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 40, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file', 
 sku_25: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://www.mediafire.com/file/5nhoulkx2rifnzo/XYZ+CHE^TS+APK+SILENT++CONFIG+PROXY.zip/file' },
