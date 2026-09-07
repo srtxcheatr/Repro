@@ -43,15 +43,14 @@ sku_13: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 7 DAY', 
 sku_14: { pid: '140', row: 'DELTA PROXY IOS IPHONE', name: 'DELTA PROXY 30 DAY', duration: '30 DaYs', price: 800, image: 'https://i.postimg.cc/766swCqh/file-000000002a9c82089f5e090601742428.png', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/ios-installation-hub-root-bg-a070910-bg.html' },
 
 // ---- AIM HACK FF NONROOT (pid 133) ----
-sku_15: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/', maintenance: true,
-    maintenanceMessage: 'This product is temporarily under maintenance.'
+sku_15: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1H', duration: '1 Hours', price: 30, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' 
  },
-sku_16: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_17: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_18: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_19: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_20: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
-sku_21: { pid: '133', row: 'AIM HACK FF NONROOT', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_16: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 3H', duration: '3 Hours', price: 60, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_17: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_18: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 12H', duration: '12 Hours', price: 150, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_19: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 1 DAY', duration: '1 DaYs', price: 200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_20: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 7 DAY', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
+sku_21: { pid: '133', row: 'AIM HACK FF android + iOS + pc', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 
 // ---- IOS IPHONE ALL GBOX CERTIFICATE (pid 85) ----
 sku_22: { pid: '85', row: 'IOS IPHONE ALL GBOX CERTIFICATE', name: 'GBOX ESIGN 1 YEAR', duration: '1 Year Ios Esign Gbox Certificate', price: 600, image: 'https://i.postimg.cc/MpwX4VYQ/GYOYVYi-Wo-AA0oj-J.jpg', external: true },
