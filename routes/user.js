@@ -13,21 +13,44 @@ const DEFAULTS = (email) => ({
   role: 'user', // 'user' (retail catalog) or 'reseller' (reseller catalog) - admin-only to change
   profileName: '',
   profilePhone: '',
+  tiktok: '',
   requestStatus: 'Active',
   adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
   balance: 0,
   purchaseHistory: [],
+  totalKeysBought: 0,
+  totalSpent: 0,
 });
 
 // POST /api/user/init — called once right after signup/Google sign-in.
+// Optionally accepts { name, phone, tiktok } collected on the
+// registration form, so a brand-new account is created with its
+// profile already filled in (Google sign-in doesn't send these, so
+// it just omits the body and profile stays blank until /profile is
+// called from the "complete your profile" prompt).
 router.post('/init', asyncHandler(async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const phone = String(req.body?.phone || '').trim();
+  const tiktok = String(req.body?.tiktok || '').trim();
+
   const userRef = db().collection('users').doc(req.uid);
   const snap = await userRef.get();
 
   if (!snap.exists) {
-    await userRef.set(DEFAULTS(req.email), { merge: true });
-  } else if (req.email && snap.data().email !== req.email) {
-    await userRef.set({ email: req.email }, { merge: true });
+    const data = DEFAULTS(req.email);
+    if (name) data.profileName = name;
+    if (phone) data.profilePhone = phone;
+    if (tiktok) data.tiktok = tiktok;
+    await userRef.set(data, { merge: true });
+  } else {
+    const patch = {};
+    if (req.email && snap.data().email !== req.email) patch.email = req.email;
+    // Only fill in fields that are still blank — never clobber values
+    // the user already saved from their profile page.
+    if (name && !snap.data().profileName) patch.profileName = name;
+    if (phone && !snap.data().profilePhone) patch.profilePhone = phone;
+    if (tiktok && !snap.data().tiktok) patch.tiktok = tiktok;
+    if (Object.keys(patch).length) await userRef.set(patch, { merge: true });
   }
   res.json({ success: true });
 }));
@@ -52,8 +75,11 @@ router.get('/balance', asyncHandler(async (req, res) => {
     requestStatus: data.requestStatus || 'Active',
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
+    tiktok: data.tiktok || '',
     email: data.email || req.email,
     role: data.role || 'user',
+    totalKeysBought: Number(data.totalKeysBought || 0),
+    totalSpent: Number(data.totalSpent || 0),
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
   });
 }));
@@ -75,15 +101,26 @@ router.get('/catalog', asyncHandler(async (req, res) => {
 router.post('/profile', asyncHandler(async (req, res) => {
   const name = String(req.body?.name || '').trim();
   const phone = String(req.body?.phone || '').trim();
+  const tiktok = String(req.body?.tiktok ?? '').trim();
   if (!name || !phone) {
     return res.status(400).json({ success: false, error: 'Please fill both fields' });
   }
   if (name.length > 60 || phone.length > 30) {
     return res.status(400).json({ success: false, error: 'Name or phone is too long' });
   }
-  await db().collection('users').doc(req.uid).set({
+  if (tiktok.length > 200) {
+    return res.status(400).json({ success: false, error: 'TikTok link is too long' });
+  }
+  const update = {
     profileName: name, profilePhone: phone, name, whatsapp: phone, email: req.email,
-  }, { merge: true });
+  };
+  // tiktok is optional — only touch it when the caller actually sent
+  // the field, so a bare {name, phone} save (e.g. from the "complete
+  // your profile" popup) doesn't wipe out a tiktok link saved earlier.
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'tiktok')) {
+    update.tiktok = tiktok;
+  }
+  await db().collection('users').doc(req.uid).set(update, { merge: true });
   res.json({ success: true });
 }));
 
@@ -174,6 +211,54 @@ router.post('/report', asyncHandler(async (req, res) => {
   );
 
   res.json({ success: true });
+}));
+
+// GET /api/user/leaderboard — top 10 users by lifetime keys bought.
+// Only ever exposes name + counts, never email/phone/balance, since
+// every logged-in user can see this list.
+router.get('/leaderboard', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users')
+    .orderBy('totalKeysBought', 'desc')
+    .limit(10)
+    .get();
+
+  const board = snap.docs
+    .map((doc) => {
+      const d = doc.data();
+      return {
+        uid: doc.id,
+        name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
+        totalKeysBought: Number(d.totalKeysBought || 0),
+        totalSpent: Number(d.totalSpent || 0),
+      };
+    })
+    .filter((row) => row.totalKeysBought > 0);
+
+  res.json({ success: true, leaderboard: board });
+}));
+
+// GET /api/user/public-profile?uid=... — the "view profile" card any
+// logged-in user can open from the leaderboard. Shows this platform's
+// own account fields (name/email/phone/tiktok/stats) — not sensitive
+// admin data like balance, adminLog or full purchase history.
+router.get('/public-profile', asyncHandler(async (req, res) => {
+  const uid = String(req.query.uid || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+
+  const snap = await db().collection('users').doc(uid).get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'User not found' });
+
+  const d = snap.data();
+  res.json({
+    success: true,
+    uid,
+    name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
+    email: d.email || '',
+    phone: d.profilePhone || '',
+    tiktok: d.tiktok || '',
+    totalKeysBought: Number(d.totalKeysBought || 0),
+    totalSpent: Number(d.totalSpent || 0),
+  });
 }));
 
 export default router;
