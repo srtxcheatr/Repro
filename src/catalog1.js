@@ -17,7 +17,7 @@ sku_10: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', dura
 // ---- PATO TEAM FF ALL ANDROID (pid 54) ----
 sku_11: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 3 DAY', duration: '3 DaYs All Colours Mix', price: 252, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 sku_12: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 7 DAY', duration: '7 DaYs All Colours Mix', price: 406, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
-sku_13: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 490, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
+sku_13: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 15 DAY', duration: '15 DaYs All Colours Mix', price: 850, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 sku_14: { pid: '54', row: 'PATO TEAM FF ALL ANDROID', name: 'PATO MIX 30 DAY', duration: '30 DaYs All Colours Mix', price: 1190, image: 'https://i.postimg.cc/RV2ypjJM/Screenshot-20260421-102813.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/09/pato.html' },
 
 // ---- DELTA PROXY IOS IPHONE (pid 140) ----
