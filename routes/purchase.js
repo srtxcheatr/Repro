@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'crypto';
+import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { catalogFind } from '../src/catalog.js';
@@ -221,7 +222,11 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
       purchaseHistory.push(historyEntry);
 
-      tx.set(userRef, { balance: newBalance, purchaseHistory }, { merge: true });
+      tx.set(userRef, {
+        balance: newBalance, purchaseHistory,
+        totalKeysBought: admin.firestore.FieldValue.increment(1),
+        totalSpent: admin.firestore.FieldValue.increment(realPrice),
+      }, { merge: true });
       return { key, newBalance };
     });
 
