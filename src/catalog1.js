@@ -2,11 +2,11 @@ export const CATALOG = {
 
 
 // ---- XYZ CHEATS BALA FF NONROOT (pid 155) ----
-sku_1550: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA 2 HOURS', duration: '2 Hours Nonroot', price: 50, resellerPrice: 35, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', download: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', external: true },
-sku_1551: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA 4 HOURS', duration: '4 Hours Nonroot', price: 80, resellerPrice: 56, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', download: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', external: true },
-sku_1552: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA 6 HOURS', duration: '6 Hours Nonroot', price: 100, resellerPrice: 70, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', download: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', external: true },
-sku_1553: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA 12 HOURS', duration: '12 Hours Nonroot', price: 120, resellerPrice: 84, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', download: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', external: true },
-sku_1554: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA 24 HOURS', duration: '24 Hours Nonroot', price: 220, resellerPrice: 154, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', download: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', external: true },
+sku_1550: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 2H', duration: '2 Hours', price: 50, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1551: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 4H', duration: '4 Hours', price: 80, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1552: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 6H', duration: '6 Hours', price: 100, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1553: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 12H', duration: '12 Hours', price: 120, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1554: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 24H', duration: '24 Hours', price: 220, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 
 // ---- BR MOD FF PC VERSION (pid 49) ----
 sku_1: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 246, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
