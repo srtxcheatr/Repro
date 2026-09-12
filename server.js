@@ -73,8 +73,6 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  // Keep the root health endpoint HTTP 200 so Render health checks/deploys
-  // do not treat the service as unhealthy.
   res.status(200).json({ success: true, status: 'online' });
 });
 
@@ -83,6 +81,7 @@ app.get('/', (req, res) => {
 // NOT the trust boundary because attackers can bypass browser JavaScript.
 // Sensitive APIs remain protected independently below.
 app.post('/api/security/verify',
+  userCors,
   rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
   async (req, res) => {
     const { verifyTurnstile } = await import('./src/turnstile.js');
