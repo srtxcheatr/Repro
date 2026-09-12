@@ -2,6 +2,8 @@ import express from 'express';
 import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { getFirebaseApp, db, userCors } from '../src/firebase.js';
+import { asyncHandler } from '../src/asyncHandler.js';
+import { verifyTurnstile } from '../src/turnstile.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -49,7 +51,13 @@ async function sendOtpEmail(email, otp) {
 }
 
 // POST /api/auth/forgot-password/send-otp
-router.post('/forgot-password/send-otp', async (req, res) => {
+// Turnstile-gated: this is the one unauthenticated, "free" action in
+// this whole backend (no login, no existing OTP/token needed) — just
+// an email address that triggers a real outbound send through Brevo.
+// That combination is exactly what bots and script kiddies target for
+// email-bombing or running up your send quota, so it's the endpoint
+// that most needed a human check in front of it.
+router.post('/forgot-password/send-otp', verifyTurnstile, asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   if (!validEmail(email)) return res.status(400).json({ success:false, error:'Enter a valid email address.' });
 
@@ -88,10 +96,10 @@ router.post('/forgot-password/send-otp', async (req, res) => {
   }
 
   res.json({ success:true, message:'OTP sent. Check your Gmail Inbox and Spam folder.' });
-});
+}));
 
 // POST /api/auth/forgot-password/verify-otp
-router.post('/forgot-password/verify-otp', async (req, res) => {
+router.post('/forgot-password/verify-otp', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const otp = String(req.body?.otp || '').trim();
   if (!validEmail(email) || !/^\d{6}$/.test(otp)) return res.status(400).json({ success:false, error:'Enter the email and 6-digit OTP.' });
@@ -114,10 +122,10 @@ router.post('/forgot-password/verify-otp', async (req, res) => {
   const resetToken = randomToken();
   await ref.set({ verifiedUntilMs:Date.now() + RESET_TTL_MS, resetTokenHash:hash(`reset:${resetToken}`), attempts:0 }, { merge:true });
   res.json({ success:true, resetToken });
-});
+}));
 
 // POST /api/auth/forgot-password/reset
-router.post('/forgot-password/reset', async (req, res) => {
+router.post('/forgot-password/reset', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const resetToken = String(req.body?.resetToken || '');
   const password = String(req.body?.password || '');
@@ -141,6 +149,6 @@ router.post('/forgot-password/reset', async (req, res) => {
     console.error('[forgot-password] reset failed:', e);
     res.status(500).json({ success:false, error:'Could not change the password. Please try again.' });
   }
-});
+}));
 
 export default router;
