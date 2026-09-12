@@ -73,7 +73,9 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.status(404).json({ success: false, error: 'Not found' });
+  // Keep the root health endpoint HTTP 200 so Render health checks/deploys
+  // do not treat the service as unhealthy.
+  res.status(200).json({ success: true, status: 'online' });
 });
 
 // POST /api/security/verify — verifies the Turnstile gate used by the
