@@ -80,8 +80,7 @@ app.get('/', (req, res) => {
 // frontend boot/loading screen. This is UX + an extra abuse layer; it is
 // NOT the trust boundary because attackers can bypass browser JavaScript.
 // Sensitive APIs remain protected independently below.
-app.post('/api/security/verify',
-  userCors,
+app.post('/api/security/verify', userCors,
   rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
   async (req, res) => {
     const { verifyTurnstile } = await import('./src/turnstile.js');
