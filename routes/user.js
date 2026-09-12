@@ -142,10 +142,14 @@ router.post('/history-clear', asyncHandler(async (req, res) => {
 router.post('/topup', asyncHandler(async (req, res) => {
   const amount = parseInt(req.body?.amount, 10);
   const esewaId = String(req.body?.esewaId || '').trim();
+  const paymentAccount = String(req.body?.paymentAccount || '').trim();
   const txCode = String(req.body?.txCode || '').trim().toUpperCase();
+  const allowedPaymentAccounts = ['SRT X CHEATS (OWNER)', 'NK GAMING (ADMIN)'];
 
   if (!amount || amount < 50) return res.status(400).json({ success: false, error: 'Enter a valid amount' });
-  if (!esewaId || !txCode) return res.status(400).json({ success: false, error: 'eSewa ID and transaction code are required' });
+  if (!paymentAccount || !allowedPaymentAccounts.includes(paymentAccount)) return res.status(400).json({ success: false, error: 'Invalid payment account' });
+  if (!txCode) return res.status(400).json({ success: false, error: 'Transaction code is required' });
+  if (txCode.length > 120) return res.status(400).json({ success: false, error: 'Transaction code is too long' });
 
   const userRef = db().collection('users').doc(req.uid);
   try {
@@ -157,7 +161,7 @@ router.post('/topup', asyncHandler(async (req, res) => {
       }
 
       const e = {
-        date: new Date().toISOString(), amount, esewaId, txCode,
+        date: new Date().toISOString(), amount, esewaId, paymentAccount, txCode,
         status: 'PENDING', uid: req.uid, email: req.email,
       };
       tx.set(userRef, { topupRequests: [...existing, e] }, { merge: true });
@@ -165,10 +169,14 @@ router.post('/topup', asyncHandler(async (req, res) => {
     });
     res.json({ success: true, request: entry });
 
-    telegramNotify(telegramFormat('Top-up request', {
-      username: req.email, email: req.email, product: `eSewa top-up (${esewaId})`,
-      price: amount, uid: req.uid, status: 'pending', others: `txCode: ${txCode}`,
-    }));
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() : {};
+    telegramNotify(telegramFormat('Balance add request', {
+      username: userData.profileName || req.email, email: userData.email || req.email,
+      product: `Balance load → ${paymentAccount}`,
+      price: amount, uid: req.uid, status: 'pending',
+      others: `txCode: ${txCode} | name: ${userData.profileName || ''} | number: ${userData.profilePhone || ''}`,
+    }), 'balance');
   } catch (e) {
     res.status(409).json({ success: false, error: e.message });
   }
@@ -209,7 +217,7 @@ router.post('/report', asyncHandler(async (req, res) => {
     `🌐 IP: <code>${esc(req.ip)}</code>\n` +
     `📅 ${esc(new Date().toISOString())}\n` +
     `📝 ${esc(problem)}`
-  );
+  , 'bug');
 
   res.json({ success: true });
 }));
