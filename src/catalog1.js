@@ -78,7 +78,7 @@ sku_48: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ CHEA
 sku_49: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ CHEATS APK SILENT 24 hours', duration: '24 Hours', price: 490, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 
 // ---- NINE X FF NONROOT (pid 144) ----
-sku_50: { pid: '144', row: 'NINE X FF NONROOT', name: 'NINE X 10 DAY', duration: '10 DaYs', price: 770, image: 'https://i.postimg.cc/D00Z9fx2/file-00000000a27c8211b71c9a3ae30e6514.png', external: true },
+sku_50: { pid: '144', row: 'NINE X FF NONROOT', name: 'NINE X 10 DAY', duration: '10 DaYs', price: 770, image: 'https://i.postimg.cc/D00Z9fx2/file-00000000a27c8211b71c9a3ae30e6514.png', external: true' maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
 
 // ---- DRIPCLIENT WIRE FF NONROOT ANDROID (pid 150) ----
 sku_51: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIPCLIENT WIRE 6 Hours', duration: '6 Hours', price: 84, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
