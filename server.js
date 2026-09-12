@@ -80,7 +80,26 @@ app.get('/', (req, res) => {
 // frontend boot/loading screen. This is UX + an extra abuse layer; it is
 // NOT the trust boundary because attackers can bypass browser JavaScript.
 // Sensitive APIs remain protected independently below.
-app.post('/api/security/verify', userCors,
+const TURNSTILE_FRONTEND_ORIGIN = 'https://srtxcheats.ct.ws';
+
+// Dedicated CORS handling for the pre-login Turnstile verification call.
+// This endpoint is public by design, but only the real frontend origin may
+// call it from a browser. No Firebase login is required at this stage.
+function turnstileCors(req, res, next) {
+  const origin = req.headers.origin;
+  if (origin && origin !== TURNSTILE_FRONTEND_ORIGIN) {
+    return res.status(403).json({ success: false, error: 'Origin not allowed' });
+  }
+  if (origin === TURNSTILE_FRONTEND_ORIGIN) {
+    res.setHeader('Access-Control-Allow-Origin', TURNSTILE_FRONTEND_ORIGIN);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  }
+  next();
+}
+app.options('/api/security/verify', turnstileCors, (req, res) => res.sendStatus(204));
+app.post('/api/security/verify', turnstileCors,
   rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
   async (req, res) => {
     const { verifyTurnstile } = await import('./src/turnstile.js');
