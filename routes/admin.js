@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
+import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -95,6 +96,7 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
 
   const userRef = db().collection('users').doc(uid);
   try {
+    let approvedAmount = 0;
     const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const current = snap.exists ? Number(snap.data().balance || 0) : 0;
@@ -151,6 +153,7 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
   }
 
   const userRef = db().collection('users').doc(uid);
+  let approvedAmount = 0;
   try {
     const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
@@ -164,6 +167,7 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
         if (!found && r.txCode === txCode && r.status === 'PENDING') {
           found = true;
           amount = Number(r.amount || 0);
+          approvedAmount = amount;
           return { ...r, status: action === 'approve' ? 'APPROVED' : 'REJECTED', reviewedAt: new Date().toISOString() };
         }
         return r;
@@ -189,6 +193,7 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
       return balance;
     });
     res.json({ success: true, newBalance });
+    telegramNotify(telegramFormat(`Balance Load ${action === 'approve' ? 'Approved' : 'Rejected'}`, { username: uid, product: 'SRT X CHEATS (OWNER)', price: action === 'approve' ? approvedAmount : 0, uid, status: action === 'approve' ? 'success' : 'failed', others: `TX code: ${txCode}` }), 'balance');
   } catch (e) {
     res.status(400).json({ success: false, error: e.message });
   }
