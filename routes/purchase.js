@@ -198,7 +198,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       username: buyerName || email, email, product: product.name,
       duration: product.duration, price: realPrice, uid, status: 'attempt',
       others: `role: ${role}`,
-    }), role === 'reseller' ? 'reseller' : 'user');
+    }));
 
     setJob(jobId, { percent: 30, label: 'Checking balance...' });
 
@@ -235,7 +235,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     telegramNotify(telegramFormat('Purchase success', {
       username: buyerName || email, email, product: product.name,
       duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
-      }), role === 'reseller' ? 'reseller' : 'user');
+    }));
   } catch (e) {
     setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
 
@@ -243,7 +243,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       username: buyerName || email, email, product: product ? product.name : sku,
       duration: product ? product.duration : '', price: realPrice, uid, status: 'failed',
       others: `${e.message} (role: ${role})`,
-      }), role === 'reseller' ? 'reseller' : 'user');
+    }));
   }
 }
 
