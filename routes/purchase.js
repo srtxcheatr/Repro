@@ -16,7 +16,7 @@ router.use(requireFirebaseUid);
 async function fetchRealKey(sku, product, androidId = null) {
   const API_KEY = process.env.RESELLER_API_KEY;
   const MASTER_KEY = process.env.RESELLER_MASTER_KEY;
-  const API_URL = process.env.RESELLER_ENDPOINT || 'https://adminpanels.shop/api/reseller_v1.php';
+  const API_URL = process.env.RESELLER_ENDPOINT || 'https://bantibhaiya.com/api/reseller_v1.php';
 
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
@@ -42,8 +42,8 @@ async function fetchRealKey(sku, product, androidId = null) {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
-    'Referer': 'https://adminpanels.shop/',
-    'Origin': 'https://adminpanels.shop',
+    'Referer': 'https://bantibhaiya.com/',
+    'Origin': 'https://bantibhaiya.com',
     'Connection': 'keep-alive',
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
