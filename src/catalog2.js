@@ -1,5 +1,13 @@
 export const CATALOG_RESELLER = {
 
+// ---- XYZ CHEATS BALA FF NONROOT (pid 155) ----
+sku_1550: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 2H', duration: '2 Hours', price: 40, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1551: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 4H', duration: '4 Hours', price: 60, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1552: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 6H', duration: '6 Hours', price: 80, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1553: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 12H', duration: '12 Hours', price: 100, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_1554: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 24H', duration: '24 Hours', price: 180, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+
+
 // ---- BR MOD FF PC VERSION (pid 49) ----
 sku_1: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 176, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
 sku_2: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 10 DAY', duration: '10 Days Pc Aim Silent', price: 245, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
