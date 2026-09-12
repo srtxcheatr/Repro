@@ -1,84 +1,64 @@
-// src/telegram.js — admin notifications via a Telegram bot.
+// Telegram notification router.
+// Configure four bot tokens on Render:
+// TELEGRAM_RESELLER_BOT_TOKEN
+// TELEGRAM_USER_BOT_TOKEN
+// TELEGRAM_BALANCE_BOT_TOKEN
+// TELEGRAM_BUG_BOT_TOKEN
+// And two destination chat IDs:
+// TELEGRAM_CHAT_ID_1
+// TELEGRAM_CHAT_ID_2
 //
-// SETUP:
-// 1. Message @BotFather on Telegram → /newbot → follow the prompts.
-//    You get a token that looks like 123456:ABC-DEF...
-// 2. Add the bot to the group/channel you want alerts in (or just
-//    message it directly for a personal chat).
-// 3. Get the chat id: message the bot, then open
-//    https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates in a browser
-//    and read "chat":{"id": ...} from the response.
-// 4. On Render: add environment variables TELEGRAM_BOT_TOKEN and
-//    TELEGRAM_CHAT_ID with those two values.
-//
-// If those env vars aren't set, or the Telegram API call fails for
-// any reason, this silently does nothing — a notification failing
-// must never block or fail the actual purchase/top-up it's reporting
-// on.
+// Every notification is sent only to the selected bot(s) and both chat IDs.
+// Notifications are best-effort and never block the actual API operation.
 
-export async function telegramNotify(text) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+const BOT_ENV = {
+  reseller: 'TELEGRAM_RESELLER_BOT_TOKEN',
+  user: 'TELEGRAM_USER_BOT_TOKEN',
+  balance: 'TELEGRAM_BALANCE_BOT_TOKEN',
+  bug: 'TELEGRAM_BUG_BOT_TOKEN',
+  security: 'TELEGRAM_USER_BOT_TOKEN',
+  legacy: 'TELEGRAM_BOT_TOKEN',
+};
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // never hang a real request
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-  } catch (e) {
-    // Swallow — notifications are best-effort only.
-  }
+function botToken(purpose='user') {
+  return process.env[BOT_ENV[purpose] || BOT_ENV.user] || process.env.TELEGRAM_BOT_TOKEN || '';
+}
+function chatIds() {
+  return [process.env.TELEGRAM_CHAT_ID_1, process.env.TELEGRAM_CHAT_ID_2, process.env.TELEGRAM_CHAT_ID].filter(Boolean);
+}
+
+export async function telegramNotify(text, purpose='user') {
+  const token = botToken(purpose);
+  const ids = chatIds();
+  if (!token || !ids.length) return;
+  await Promise.all(ids.map(async (chatId) => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({chat_id:chatId,text,parse_mode:'HTML',disable_web_page_preview:true}),
+        signal:controller.signal,
+      });
+      clearTimeout(timeout);
+    } catch (_) {}
+  }));
 }
 
 export function esc(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-const STATUS_EMOJI = {
-  success: '✅', failed: '❌', cancelled: '🚫', pending: '⏳', attempt: '🛒',
-};
-
-/**
- * Builds one consistently-formatted message from the fields you asked
- * for: username, email, product, price, date, uid, status, others.
- */
-export function telegramFormat(title, f = {}) {
-  const status = String(f.status || '').toLowerCase();
-  const emoji = STATUS_EMOJI[status] || 'ℹ️';
-
-  const lines = [
-    `${emoji} <b>${esc(title)}</b>`,
-    `👤 ${esc(f.username || '—')}`,
-    `✉️ ${esc(f.email || '—')}`,
-    `📦 ${esc(f.product || '—')}`,
-  ];
-  if (f.duration) lines.push(`⏱ ${esc(f.duration)}`);
-  lines.push(`💰 Rs ${esc(f.price ?? '0')}`);
-  if (f.key) lines.push(`🔑 <code>${esc(f.key)}</code>`);
-  lines.push(
-    `📅 ${esc(f.date || new Date().toISOString())}`,
-    `🆔 <code>${esc(f.uid || '—')}</code>`,
-  );
-  if (status !== '') {
-    lines.push(`📊 Status: <b>${esc(status.charAt(0).toUpperCase() + status.slice(1))}</b>`);
-  }
-  if (f.others) {
-    lines.push(`📝 ${esc(f.others)}`);
-  }
+const STATUS_EMOJI={success:'✅',failed:'❌',cancelled:'🚫',pending:'⏳',attempt:'🛒'};
+export function telegramFormat(title,f={}) {
+  const status=String(f.status||'').toLowerCase();
+  const emoji=STATUS_EMOJI[status]||'ℹ️';
+  const lines=[`${emoji} <b>${esc(title)}</b>`,`👤 ${esc(f.username||'—')}`,`✉️ ${esc(f.email||'—')}`,`📦 ${esc(f.product||'—')}`];
+  if(f.duration)lines.push(`⏱ ${esc(f.duration)}`);
+  lines.push(`💰 Rs ${esc(f.price??'0')}`);
+  if(f.key)lines.push(`🔑 <code>${esc(f.key)}</code>`);
+  lines.push(`📅 ${esc(f.date||new Date().toISOString())}`,`🆔 <code>${esc(f.uid||'—')}</code>`);
+  if(status)lines.push(`📊 Status: <b>${esc(status.charAt(0).toUpperCase()+status.slice(1))}</b>`);
+  if(f.others)lines.push(`📝 ${esc(f.others)}`);
   return lines.join('\n');
 }
