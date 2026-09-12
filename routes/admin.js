@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 
@@ -191,6 +192,104 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
   } catch (e) {
     res.status(400).json({ success: false, error: e.message });
   }
+}));
+
+// POST /api/admin/backfill-stats — one-time (safe to re-run) job that
+// recomputes totalKeysBought/totalSpent for every user from their
+// existing purchaseHistory array, for users who bought keys before
+// the leaderboard feature started tracking these fields going forward.
+router.post('/backfill-stats', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').get();
+  let updated = 0;
+  const batchSize = 400;
+  let batch = db().batch();
+  let inBatch = 0;
+
+  for (const doc of snap.docs) {
+    const history = doc.data().purchaseHistory || [];
+    const totalKeysBought = history.length;
+    const totalSpent = history.reduce((sum, h) => sum + (Number(h.price) || 0), 0);
+    batch.set(doc.ref, { totalKeysBought, totalSpent }, { merge: true });
+    inBatch++;
+    updated++;
+    if (inBatch >= batchSize) {
+      await batch.commit();
+      batch = db().batch();
+      inBatch = 0;
+    }
+  }
+  if (inBatch > 0) await batch.commit();
+
+  res.json({ success: true, usersUpdated: updated });
+}));
+
+// ---------------------------------------------------------------
+// Redeem codes — admin creates gift/promo codes worth a fixed Rs
+// amount, optionally capped by an expiry date and/or a max number
+// of redemptions. Stored in the `redeemCodes` collection, doc ID =
+// the code itself. Redemption itself happens via POST /api/user/redeem.
+// ---------------------------------------------------------------
+
+function generateRedeemCode() {
+  // Groups of 5-6 random uppercase letters/digits, e.g. SRT_AB3F9-K72QRT-8ZXPL
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  const group = (n) => Array.from({ length: n }, () => chars[crypto.randomInt(chars.length)]).join('');
+  return `SRT_${group(5)}-${group(6)}-${group(5)}`;
+}
+
+// POST /api/admin/redeem-codes
+// Body: { amount, maxUses (1-300, or null/omit for unlimited), expiresAt (ISO date string, or null/omit for unlimited), code (optional custom code) }
+router.post('/redeem-codes', asyncHandler(async (req, res) => {
+  const amount = Number(req.body?.amount);
+  if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Amount must be a positive number' });
+
+  let maxUses = req.body?.maxUses;
+  if (maxUses === '' || maxUses === undefined || maxUses === null || String(maxUses).toLowerCase() === 'unlimited') {
+    maxUses = null;
+  } else {
+    maxUses = Number(maxUses);
+    if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 300) {
+      return res.status(400).json({ success: false, error: 'Max uses must be a whole number between 1 and 300, or unlimited' });
+    }
+  }
+
+  let expiresAt = null;
+  if (req.body?.expiresAt && String(req.body.expiresAt).toLowerCase() !== 'unlimited') {
+    const t = new Date(req.body.expiresAt).getTime();
+    if (Number.isNaN(t)) return res.status(400).json({ success: false, error: 'Invalid expiry date' });
+    expiresAt = t;
+  }
+
+  const custom = String(req.body?.code || '').trim().toUpperCase();
+  const code = custom || generateRedeemCode();
+  const ref = db().collection('redeemCodes').doc(code);
+  const existing = await ref.get();
+  if (existing.exists) return res.status(409).json({ success: false, error: 'That code already exists' });
+
+  await ref.set({
+    code, amount, maxUses, expiresAt,
+    active: true, usedCount: 0, redeemedBy: [],
+    createdAt: Date.now(),
+  });
+
+  res.json({ success: true, code, amount, maxUses, expiresAt });
+}));
+
+// GET /api/admin/redeem-codes — list all codes, newest first
+router.get('/redeem-codes', asyncHandler(async (req, res) => {
+  const snap = await db().collection('redeemCodes').orderBy('createdAt', 'desc').limit(200).get();
+  const codes = snap.docs.map((d) => d.data());
+  res.json({ success: true, codes });
+}));
+
+// POST /api/admin/redeem-codes/:code/deactivate — stop a code from being used again
+router.post('/redeem-codes/:code/deactivate', asyncHandler(async (req, res) => {
+  const code = String(req.params.code || '').trim().toUpperCase();
+  const ref = db().collection('redeemCodes').doc(code);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'Code not found' });
+  await ref.set({ active: false }, { merge: true });
+  res.json({ success: true });
 }));
 
 export default router;
