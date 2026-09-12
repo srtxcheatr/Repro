@@ -6,10 +6,21 @@ import authRoutes from './routes/auth.js';
 import { CATALOG } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
+import { rateLimit, securityHeaders } from './src/security.js';
 
 const app = express();
-app.set('trust proxy', true); // Render sits behind a proxy — this makes req.ip the real client IP
-app.use(express.json());
+app.disable('x-powered-by');
+// Render sits behind a proxy. Trust only the first proxy hop so attackers
+// cannot freely spoof X-Forwarded-For and defeat IP-based rate limiting.
+app.set('trust proxy', 1);
+
+app.use(securityHeaders);
+// Keep request bodies tiny. This API only accepts small JSON payloads.
+app.use(express.json({ limit: '16kb' }));
+
+// Baseline abuse protection for every API endpoint. Route-specific limits
+// below are stricter for expensive/sensitive operations.
+app.use('/api', rateLimit({ windowMs: 60_000, max: 180, name: 'api' }));
 
 // Catch bad JSON bodies with a clean response instead of a stack trace.
 app.use((err, req, res, next) => {
@@ -27,12 +38,26 @@ app.use((err, req, res, next) => {
 // store polls /api/user/balance every 20s per visitor, which would
 // otherwise flood your phone with routine traffic, not just problems.
 const NOTIFY_ALL_REQUESTS = process.env.NOTIFY_ALL_REQUESTS === 'true';
+const securityAlertSeen = new Map();
+const SECURITY_ALERT_TTL = 60_000;
 
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    const isProblem = res.statusCode === 401 || res.statusCode === 403 || res.statusCode >= 500;
+    const isProblem = res.statusCode === 401 || res.statusCode === 403 || res.statusCode === 429 || res.statusCode >= 500;
     if (!isProblem && !NOTIFY_ALL_REQUESTS) return;
+
+    // Never let an attacker turn the alert logger into a Telegram spam cannon.
+    const alertKey = `${req.ip}|${req.method}|${req.path}|${res.statusCode}`;
+    const now = Date.now();
+    if (isProblem) {
+      const last = securityAlertSeen.get(alertKey) || 0;
+      if (now - last < SECURITY_ALERT_TTL) return;
+      securityAlertSeen.set(alertKey, now);
+      for (const [k, t] of securityAlertSeen) {
+        if (now - t > SECURITY_ALERT_TTL * 2) securityAlertSeen.delete(k);
+      }
+    }
 
     const origin = req.headers.origin || req.headers.referer || '—';
     const emoji = isProblem ? '🚨' : '📡';
@@ -48,8 +73,20 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ success: false, error: 'Internal server error. Please try again.'});
+  res.status(404).json({ success: false, error: 'Not found' });
 });
+
+// POST /api/security/verify — verifies the Turnstile gate used by the
+// frontend boot/loading screen. This is UX + an extra abuse layer; it is
+// NOT the trust boundary because attackers can bypass browser JavaScript.
+// Sensitive APIs remain protected independently below.
+app.post('/api/security/verify',
+  rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
+  async (req, res) => {
+    const { verifyTurnstile } = await import('./src/turnstile.js');
+    return verifyTurnstile(req, res, () => res.json({ success: true }));
+  }
+);
 
 // Public — just the RETAIL display catalog (sku/name/duration/price/row).
 // This always returns retail prices regardless of who's asking, since
