@@ -84,7 +84,7 @@ export function requireAdmin(req, res, next) {
 const ALLOWED_ORIGIN_SUFFIXES = ['.onrender.com'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
-  'https://bronzx.firebaseapp.com','https://srtstorev5.onrender.com','https://srtxcheats.ct.ws','https://srtxcheats.ct.ws','http://cheats.xo.je/',
+  'https://bronzx.firebaseapp.com','https://srtstorev5.onrender.com','https://srtxcheats.ct.ws','https://srtxcheats.ct.ws','https://cheats.xo.je',
 ];
 
 export const userCors = cors({
