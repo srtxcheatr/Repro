@@ -138,48 +138,38 @@ router.post('/history-clear', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
-// POST /api/user/topup
-router.post('/topup', asyncHandler(async (req, res) => {
-  const amount = parseInt(req.body?.amount, 10);
-  const esewaId = String(req.body?.esewaId || '').trim();
-  const paymentAccount = String(req.body?.paymentAccount || '').trim();
-  const txCode = String(req.body?.txCode || '').trim().toUpperCase();
-  const allowedPaymentAccounts = ['SRT X CHEATS (OWNER)', 'NK GAMING (ADMIN)'];
-
-  if (!amount || amount < 50) return res.status(400).json({ success: false, error: 'Enter a valid amount' });
-  if (!paymentAccount || !allowedPaymentAccounts.includes(paymentAccount)) return res.status(400).json({ success: false, error: 'Invalid payment account' });
-  if (!txCode) return res.status(400).json({ success: false, error: 'Transaction code is required' });
-  if (txCode.length > 120) return res.status(400).json({ success: false, error: 'Transaction code is too long' });
-
-  const userRef = db().collection('users').doc(req.uid);
+// POST /api/user/topup { amount, txCode, paymentAccount }
+router.post('/topup', asyncHandler(async (req,res)=>{
+  const amount=parseInt(req.body?.amount,10);
+  const txCode=String(req.body?.txCode||'').trim().toUpperCase();
+  const paymentAccount=String(req.body?.paymentAccount||'').trim();
+  if(!amount||amount<50) return res.status(400).json({success:false,error:'Enter a valid amount (minimum Rs 50)'});
+  if(amount>1000000) return res.status(400).json({success:false,error:'Amount is too large'});
+  if(paymentAccount!=='SRT X CHEATS (OWNER)') return res.status(400).json({success:false,error:'Invalid payment account'});
+  if(!txCode) return res.status(400).json({success:false,error:'Transaction code is required'});
+  if(txCode.length>120) return res.status(400).json({success:false,error:'Transaction code is too long'});
+  const userRef=db().collection('users').doc(req.uid);
   try {
-    const entry = await db().runTransaction(async (tx) => {
-      const snap = await tx.get(userRef);
-      const existing = snap.exists ? (snap.data().topupRequests || []) : [];
-      if (existing.some((t) => String(t.txCode).toUpperCase() === txCode)) {
-        throw new Error('This transaction ID was already submitted');
-      }
-
-      const e = {
-        date: new Date().toISOString(), amount, esewaId, paymentAccount, txCode,
-        status: 'PENDING', uid: req.uid, email: req.email,
-      };
-      tx.set(userRef, { topupRequests: [...existing, e] }, { merge: true });
-      return e;
+    const entry=await db().runTransaction(async tx=>{
+      const snap=await tx.get(userRef); const existing=snap.exists?(snap.data().topupRequests||[]):[];
+      if(existing.some(t=>String(t.txCode||'').toUpperCase()===txCode)) throw new Error('This transaction ID was already submitted');
+      const e={date:new Date().toISOString(),amount,paymentAccount,txCode,status:'PENDING',uid:req.uid,email:req.email};
+      tx.set(userRef,{topupRequests:[...existing,e]},{merge:true}); return e;
     });
-    res.json({ success: true, request: entry });
-
-    const userSnap = await userRef.get();
-    const userData = userSnap.exists ? userSnap.data() : {};
-    telegramNotify(telegramFormat('Balance add request', {
-      username: userData.profileName || req.email, email: userData.email || req.email,
-      product: `Balance load → ${paymentAccount}`,
-      price: amount, uid: req.uid, status: 'pending',
-      others: `txCode: ${txCode} | name: ${userData.profileName || ''} | number: ${userData.profilePhone || ''}`,
-    }), 'balance');
-  } catch (e) {
-    res.status(409).json({ success: false, error: e.message });
-  }
+    const profileSnap = await userRef.get();
+    const profile = profileSnap.exists ? profileSnap.data() : {};
+    const notifyText = telegramFormat('Balance Load Request',{
+      username: profile.profileName || req.email,
+      email: profile.email || req.email,
+      product: paymentAccount,
+      price: amount,
+      uid: req.uid,
+      status:'pending',
+      others:`TX code: ${txCode}\nNumber: ${profile.profilePhone || '—'}`
+    });
+    await telegramNotify(notifyText,'balance');
+    return res.json({success:true,request:entry});
+  } catch(e) { res.status(409).json({success:false,error:e.message}); }
 }));
 
 // GET /api/user/balance-history — the user's own deposit/adjustment
@@ -191,35 +181,15 @@ router.get('/balance-history', asyncHandler(async (req, res) => {
   res.json({ success: true, log: [...log].reverse() });
 }));
 
-// POST /api/user/report — "Report a Problem" form. Notifies you on
-// Telegram with full context so you don't have to ask the user for
-// their UID/balance/etc. — it's all pulled server-side from their
-// actual account, not from anything the client claims.
-router.post('/report', asyncHandler(async (req, res) => {
-  const problem = String(req.body?.problem || '').trim();
-  if (!problem) {
-    return res.status(400).json({ success: false, error: 'Please describe the problem' });
-  }
-  if (problem.length > 1000) {
-    return res.status(400).json({ success: false, error: 'Please keep it under 1000 characters' });
-  }
-
-  const snap = await db().collection('users').doc(req.uid).get();
-  const data = snap.exists ? snap.data() : {};
-
-  telegramNotify(
-    `🐛 <b>Problem Report</b>\n` +
-    `👤 ${esc(data.profileName || '—')}\n` +
-    `✉️ ${esc(data.email || req.email)}\n` +
-    `📱 ${esc(data.profilePhone || '—')}\n` +
-    `💰 Rs ${esc(data.balance ?? 0)}\n` +
-    `🆔 <code>${esc(req.uid)}</code>\n` +
-    `🌐 IP: <code>${esc(req.ip)}</code>\n` +
-    `📅 ${esc(new Date().toISOString())}\n` +
-    `📝 ${esc(problem)}`
-  , 'bug');
-
-  res.json({ success: true });
+// POST /api/user/report { category, problem }
+router.post('/report', asyncHandler(async(req,res)=>{
+  const category=String(req.body?.category||'').trim(); const problem=String(req.body?.problem||'').trim();
+  if(!['Balance','Unknown product','Others'].includes(category)) return res.status(400).json({success:false,error:'Choose a valid bug category'});
+  if(!problem) return res.status(400).json({success:false,error:'Please describe the problem'});
+  if(problem.length>1000) return res.status(400).json({success:false,error:'Please keep it under 1000 characters'});
+  const snap=await db().collection('users').doc(req.uid).get(); const data=snap.exists?snap.data():{};
+  telegramNotify(`🐛 <b>BUG REPORT</b>\n📌 Category: <b>${esc(category)}</b>\n👤 ${esc(data.profileName||'—')}\n✉️ ${esc(data.email||req.email)}\n📱 ${esc(data.profilePhone||'—')}\n💰 Rs ${esc(data.balance??0)}\n🆔 <code>${esc(req.uid)}</code>\n🌐 IP: <code>${esc(req.ip)}</code>\n📅 ${esc(new Date().toISOString())}\n📝 ${esc(problem)}`,'bug');
+  res.json({success:true});
 }));
 
 // GET /api/user/leaderboard — top 10 users by lifetime keys bought.
