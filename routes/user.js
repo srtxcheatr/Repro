@@ -1,4 +1,5 @@
 import express from 'express';
+import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
@@ -256,9 +257,50 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
     email: d.email || '',
     phone: d.profilePhone || '',
     tiktok: d.tiktok || '',
+    role: d.role || 'user',
     totalKeysBought: Number(d.totalKeysBought || 0),
     totalSpent: Number(d.totalSpent || 0),
   });
+}));
+
+// POST /api/user/redeem — redeem an admin-created gift/promo code.
+// Body: { code }. Credits the code's Rs amount to the caller's balance,
+// once per user per code, respecting the code's expiry and max-uses
+// limit (both set by the admin when the code was created).
+router.post('/redeem', asyncHandler(async (req, res) => {
+  const raw = String(req.body?.code || '').trim().toUpperCase();
+  if (!raw) return res.status(400).json({ success: false, error: 'Enter a code' });
+
+  const codeRef = db().collection('redeemCodes').doc(raw);
+  const userRef = db().collection('users').doc(req.uid);
+
+  const result = await db().runTransaction(async (tx) => {
+    const codeSnap = await tx.get(codeRef);
+    if (!codeSnap.exists) return { ok: false, error: 'Invalid code' };
+
+    const c = codeSnap.data();
+    if (c.active === false) return { ok: false, error: 'This code is no longer active' };
+    if (c.expiresAt && Date.now() > c.expiresAt) return { ok: false, error: 'This code has expired' };
+    const redeemedBy = c.redeemedBy || [];
+    if (redeemedBy.includes(req.uid)) return { ok: false, error: 'You have already redeemed this code' };
+    if (c.maxUses && (c.usedCount || 0) >= c.maxUses) return { ok: false, error: 'This code has reached its usage limit' };
+
+    const userSnap = await tx.get(userRef);
+    const currentBalance = Number(userSnap.data()?.balance || 0);
+    const amount = Number(c.amount || 0);
+    const newBalance = currentBalance + amount;
+
+    tx.set(userRef, { balance: newBalance }, { merge: true });
+    tx.set(codeRef, {
+      usedCount: admin.firestore.FieldValue.increment(1),
+      redeemedBy: admin.firestore.FieldValue.arrayUnion(req.uid),
+    }, { merge: true });
+
+    return { ok: true, amount, newBalance };
+  });
+
+  if (!result.ok) return res.status(400).json({ success: false, error: result.error });
+  res.json({ success: true, amountCredited: result.amount, newBalance: result.newBalance });
 }));
 
 export default router;
