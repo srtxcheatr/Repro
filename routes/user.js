@@ -281,4 +281,34 @@ router.post('/redeem', asyncHandler(async (req, res) => {
   res.json({ success: true, amountCredited: result.amount, newBalance: result.newBalance });
 }));
 
+// GET /api/user/announcement — the current active broadcast, if this
+// user hasn't seen it yet (tracked via users/{uid}.lastSeenAnnouncementId,
+// not a growing array on the announcement itself). Returns
+// { announcement: null } once seen or if nothing is active.
+router.get('/announcement', asyncHandler(async (req, res) => {
+  const annSnap = await db().collection('announcements')
+    .where('active', '==', true)
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get();
+  if (annSnap.empty) return res.json({ success: true, announcement: null });
+
+  const ann = annSnap.docs[0].data();
+  const userSnap = await db().collection('users').doc(req.uid).get();
+  const lastSeen = userSnap.exists ? userSnap.data().lastSeenAnnouncementId : null;
+  if (lastSeen === ann.id) return res.json({ success: true, announcement: null });
+
+  res.json({ success: true, announcement: { id: ann.id, message: ann.message, giftCode: ann.giftCode || null, giftAmount: ann.giftAmount || null } });
+}));
+
+// POST /api/user/announcement/seen — Body: { id }. Called once the popup
+// has been shown (whether or not the gift was claimed) so it doesn't
+// come back on the next login.
+router.post('/announcement/seen', asyncHandler(async (req, res) => {
+  const id = String(req.body?.id || '').trim();
+  if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
+  await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
+  res.json({ success: true });
+}));
+
 export default router;
