@@ -84,7 +84,7 @@ export function requireAdmin(req, res, next) {
 const ALLOWED_ORIGIN_SUFFIXES = ['.onrender.com'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
-  'https://bronzx.firebaseapp.com','https://srtadmin.freehosting.dev','https://srtxcheats.ct.ws','https://srtxcheats.ct.ws','https://cheats.xo.je',
+  'https://bronzx.firebaseapp.com','https://srtstorev5.onrender.com','https://srtxcheats.ct.ws','https://srtxcheats.ct.ws','https://cheats.xo.je',
 ];
 
 export const userCors = cors({
@@ -99,6 +99,7 @@ export const userCors = cors({
   },
 });
 
-// Admin panel can be hosted anywhere — it's gated by ADMIN_SECRET
-// instead of by origin.
-export const adminCors = cors({ origin: 'https://srtadmin.freehosting.dev' });
+// Admin panel can be hosted anywhere — including a local dev server —
+// it's gated by ADMIN_SECRET instead of by origin, so CORS here just
+// reflects whatever origin asks rather than maintaining an allowlist.
+export const adminCors = cors({ origin: true });
