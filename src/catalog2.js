@@ -17,7 +17,7 @@ sku_5: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 10 DAY', d
 sku_6: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC MODMENU 30 DAY', duration: '30 Day Pc Modmenu x86', price: 1320, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
 
 // ---- BR MOD FF ROOT ANDROID (pid 67) ----
-sku_7: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 147, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html', maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_7: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 1 DAY', duration: '1 DaYs', price: 147, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 sku_8: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 7 DAY', duration: '7 DaYs', price: 440, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 sku_9: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 15 DAY', duration: '15 DaYs', price: 734, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
 sku_10: { pid: '67', row: 'BR MOD FF ROOT ANDROID', name: 'BR ROOT 30 DAY', duration: '30 DaYs', price: 1222, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_0111104596.html' },
@@ -52,7 +52,7 @@ sku_30: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 7 DAY', 
 sku_31: { pid: '133', row: 'AIM HACK FF IOS IPHONE+PC', name: 'AIM HACK 30 DAY', duration: '30 DaYs', price: 1200, image: 'https://i.postimg.cc/KY1vygj3/Screenshot-20260903-225612.jpg', external: true, apkUrl: 'https://client.aimhack.shop/' },
 
 // ---- BALA MOD XYZ ~ V4 FF NONROOT (pid 136) ----
-sku_32: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 40, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a', maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_32: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 1H', duration: '1 Hours', price: 40, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_33: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 3H', duration: '3 Hours', price: 80, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_34: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 6H', duration: '6 Hours', price: 160, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_35: { pid: '136', row: 'BALA MOD XYZ ~ V4 FF NONROOT', name: 'BALA MOD XYZ 12H', duration: '12 Hours', price: 250, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
@@ -78,7 +78,7 @@ sku_48: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ CHEA
 sku_49: { pid: '142', row: 'XYZ CHEATS CONFIG PROXY FF NONROOT', name: 'XYZ CHEATS APK SILENT 24 hours', duration: '24 Hours', price: 350, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 
 // ---- NINE X FF NONROOT (pid 144) ----
-sku_50: { pid: '144', row: 'NINE X FF NONROOT', name: 'NINE X 10 DAY', duration: '10 DaYs', price: 550, image: 'https://i.postimg.cc/D00Z9fx2/file-00000000a27c8211b71c9a3ae30e6514.png', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_50: { pid: '144', row: 'NINE X FF NONROOT', name: 'NINE X 10 DAY', duration: '10 DaYs', price: 550, image: 'https://i.postimg.cc/D00Z9fx2/file-00000000a27c8211b71c9a3ae30e6514.png', external: true },
 
 // ---- DRIPCLIENT WIRE FF NONROOT ANDROID (pid 150) ----
 sku_51: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIPCLIENT WIRE 6 Hours', duration: '6 Hours', price: 60, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
@@ -87,10 +87,10 @@ sku_53: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIPCLIE
 sku_54: { pid: '150', row: 'DRIPCLIENT WIRE FF NONROOT ANDROID', name: 'DRIPCLIENT WIRE 7 DaYs', duration: '7 DaYs', price: 450, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- ABCD PANEL PROXY FF NONROOT (pid 151) ----
-sku_55: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 12 Hours', duration: '12 Hours', price: 80, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/i373kuut29v0gbc/ABCD+WIRE+FIX.apk/file' },
-sku_56: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 1 DaYs', duration: '1 DaYs', price: 150, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/i373kuut29v0gbc/ABCD+WIRE+FIX.apk/file' },
-sku_57: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 3 DaYs', duration: '3 DaYs', price: 260, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/i373kuut29v0gbc/ABCD+WIRE+FIX.apk/file' },
-sku_58: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 7 DaYs', duration: '7 DaYs', price: 400, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/i373kuut29v0gbc/ABCD+WIRE+FIX.apk/file' },
+sku_55: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 12 Hours', duration: '12 Hours', price: 80, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_56: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 1 DaYs', duration: '1 DaYs', price: 150, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_57: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 3 DaYs', duration: '3 DaYs', price: 260, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
+sku_58: { pid: '151', row: 'ABCD PANEL PROXY FF NONROOT', name: 'ABCD PANEL PROXY 7 DaYs', duration: '7 DaYs', price: 400, image: 'https://i.postimg.cc/L5JgkWTS/file-0000000080488211ad4f75206132fb39.png', external: true, apkUrl: 'https://www.mediafire.com/file/n82zwv1d8mxdf2h/ABCD+PANEL+V9.apk/file' },
 
 // ---- HG CHEATS PRIME PROXY FF NONROOT (pid 141) ----
 sku_59: { pid: '141', row: 'HG CHEATS PRIME PROXY FF NONROOT', name: 'HG PRIME 1 DaYs', duration: '1 DaYs', price: 100, image: 'https://i.postimg.cc/fRGsXVfy/Screenshot-20260421-102611.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb6FTtpGE56fIpK5p00E' },
@@ -105,7 +105,7 @@ sku_65: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 15 DAY', 
 sku_66: { pid: '62', row: 'DRIP CLIENT FF GLOBAL', name: 'DRIP NONROOT 30 DAY', duration: '30 DaYS NONROOT', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- DRIPCLIENT FF ROOT ANDROID (pid 63) ----
-sku_67: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d', maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_67: { pid: '63', row: 'DRIPCLIENT FF ROOT', name: 'DRIP ROOT 30 DAY', duration: '30 DaYS ROOT', price: 500, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
 
 // ---- DRIPCLIENT PROXY FF NONROOT ANDROID (pid 91) ----
 sku_68: { pid: '91', row: 'DRIP GLOBAL PROXY FF', name: 'DRIP PROXY 1 DAY', duration: '1 DaYs', price: 60, image: 'https://i.postimg.cc/Jnwh1T2q/Screenshot-20260421-102516.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029Vb64YaE0wajtRtbjXq1d' },
@@ -143,7 +143,7 @@ sku_93: { pid: '149', row: 'XRAG FF IOS IPHONE+PC', name: 'XREG 3 DaYs', duratio
 sku_94: { pid: '149', row: 'XRAG FF IOS IPHONE+PC', name: 'XREG 7 DaYs', duration: '7 DaYs', price: 1200, image: 'https://i.postimg.cc/26Mhtm3f/file-000000003c908211a357a7958904f78d.png', external: true, apkUrl: 'https://client.xreg.store/' },
 
 // ---- FLUORITE IOS FF (pid 58) ----
-sku_95: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 1 DAY', duration: '1 DAYs FluoRite FF', price: 538, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_95: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 1 DAY', duration: '1 DAYs FluoRite FF', price: 538, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
 sku_96: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 7 DAY', duration: '7 DAYs FluoRite FF', price: 1516, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
 sku_97: { pid: '58', row: 'FLUORITE IOS FF', name: 'FLUORITE FF 30 DAY', duration: '30 DAYs FluoRite FF', price: 3128, image: 'https://i.postimg.cc/R07kHX0k/fluorite-ios-ff-og-1765886845.webp', external: true },
 
@@ -179,7 +179,7 @@ sku_115: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 7 DAY
 sku_116: { pid: '86', row: 'IOS FLUORITE 8 BALL POOL', name: 'FLUORITE 8BP 30 DAY', duration: '30 DaYs', price: 2737, image: 'https://i.postimg.cc/025K9vgP/images.jpg', external: true },
 
 // ---- KOS FF ROOT ANDROID (pid 74) ----
-sku_117: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 156, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_117: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 1 DAY', duration: '1 DaYs', price: 156, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
 sku_118: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 7 DAY', duration: '7 DaYs', price: 538, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
 sku_119: { pid: '74', row: 'KOS FF ROOT ANDROID', name: 'KOS ROOT 30 DAY', duration: '30 DaYs', price: 1516, image: 'https://i.postimg.cc/R098B4HF/file-0000000031fc720886d5eb5b766c5d0b.png', external: true },
 
@@ -198,7 +198,7 @@ sku_128: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 7 DAY',
 sku_129: { pid: '48', row: 'PRIME HOOK FF NONROOT ANDROID', name: 'PRIME 10 DAY', duration: '10 Days Nonroot', price: 280, image: 'https://i.postimg.cc/x8ChBQPd/IMG-20260421-102934-585.jpg', external: true },
 
 // ---- SILENT CHEAT FF NONROOT APKMOD (pid 127) ----
-sku_130: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 98, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_130: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 1 DAY', duration: '1 DaYs', price: 98, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 sku_131: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 3 DAY', duration: '3 DaYs', price: 156, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 sku_132: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 7 DAY', duration: '7 DaYs', price: 343, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 sku_133: { pid: '127', row: 'SILENT CHEAT FF NONROOT APKMOD', name: 'SILENT NONROOT 14 DAY', duration: '14 DaYs', price: 636, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
@@ -217,7 +217,7 @@ sku_143: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT B
 sku_144: { pid: '128', row: 'SILENT CHEAT FF ROOT ANDROID', name: 'SILENT ROOT SAFE 28 DAY', duration: '28 DaYs SAFE', price: 1050, image: 'https://i.postimg.cc/XYP0pfpd/file-00000000569c8243892fde75447cce30.png', external: true },
 
 // ---- XYZ CHEATS FF ROOT ANDROID (pid 66) ----
-sku_145: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
-sku_146: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 137, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, maintenance: true, maintenanceMessage: 'This product is temporarily under maintenance.' },
+sku_145: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 1 DAY', duration: '1 Days', price: 117, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
+sku_146: { pid: '66', row: 'XYZ CHEATS FF ROOT ANDROID', name: 'XYZ 3 DAY', duration: '3 Days', price: 137, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true },
 
 };
