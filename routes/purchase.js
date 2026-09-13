@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { catalogFind } from '../src/catalog.js';
+import { catalogFind, getMaintenanceForSku } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -127,6 +127,14 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Unknown product' });
   }
 
+  const liveStatus = await getMaintenanceForSku(sku);
+  if (product.maintenance || liveStatus.maintenance) {
+    return res.status(409).json({
+      success: false,
+      error: liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.',
+    });
+  }
+
   if (product.requiresAndroidId && !androidId) {
     return res.status(400).json({ success: false, error: 'Android ID is required for this product' });
   }
@@ -189,6 +197,11 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       throw new Error('Unknown product');
     }
     realPrice = Number(product.price);
+
+    const liveStatus = await getMaintenanceForSku(sku);
+    if (product.maintenance || liveStatus.maintenance) {
+      throw new Error(liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.');
+    }
 
     if (product.requiresAndroidId && !androidId) {
       throw new Error('Android ID is required for this product');
