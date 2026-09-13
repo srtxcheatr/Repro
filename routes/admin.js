@@ -236,48 +236,58 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 // ---------------------------------------------------------------
 
 function generateRedeemCode() {
-  // Groups of 5-6 random uppercase letters/digits, e.g. SRT_AB3F9-K72QRT-8ZXPL
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  // SRT_XXXXX_YYYYYCHEATS — two 5-char groups, no 0/O/1/I to avoid confusion
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const group = (n) => Array.from({ length: n }, () => chars[crypto.randomInt(chars.length)]).join('');
-  return `SRT_${group(5)}-${group(6)}-${group(5)}`;
+  return `SRT_${group(5)}_${group(5)}CHEATS`;
 }
 
-// POST /api/admin/redeem-codes
-// Body: { amount, maxUses (1-300, or null/omit for unlimited), expiresAt (ISO date string, or null/omit for unlimited), code (optional custom code) }
-router.post('/redeem-codes', asyncHandler(async (req, res) => {
-  const amount = Number(req.body?.amount);
-  if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Amount must be a positive number' });
+// Shared by POST /redeem-codes and the announcement gift flow below, so a
+// gift attached to a broadcast is a completely normal redeem code — same
+// validation, same collection, same redemption path.
+async function createRedeemCodeDoc({ amount, maxUses, expiresAt, code }) {
+  amount = Number(amount);
+  if (!amount || amount <= 0) throw Object.assign(new Error('Amount must be a positive number'), { status: 400 });
 
-  let maxUses = req.body?.maxUses;
   if (maxUses === '' || maxUses === undefined || maxUses === null || String(maxUses).toLowerCase() === 'unlimited') {
     maxUses = null;
   } else {
     maxUses = Number(maxUses);
-    if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 300) {
-      return res.status(400).json({ success: false, error: 'Max uses must be a whole number between 1 and 300, or unlimited' });
+    if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 100) {
+      throw Object.assign(new Error('Max uses must be a whole number between 1 and 100, or unlimited'), { status: 400 });
     }
   }
 
-  let expiresAt = null;
-  if (req.body?.expiresAt && String(req.body.expiresAt).toLowerCase() !== 'unlimited') {
-    const t = new Date(req.body.expiresAt).getTime();
-    if (Number.isNaN(t)) return res.status(400).json({ success: false, error: 'Invalid expiry date' });
-    expiresAt = t;
+  let expiresAtMs = null;
+  if (expiresAt && String(expiresAt).toLowerCase() !== 'unlimited') {
+    const t = new Date(expiresAt).getTime();
+    if (Number.isNaN(t)) throw Object.assign(new Error('Invalid expiry date'), { status: 400 });
+    expiresAtMs = t;
   }
 
-  const custom = String(req.body?.code || '').trim().toUpperCase();
-  const code = custom || generateRedeemCode();
-  const ref = db().collection('redeemCodes').doc(code);
+  const finalCode = String(code || '').trim().toUpperCase() || generateRedeemCode();
+  const ref = db().collection('redeemCodes').doc(finalCode);
   const existing = await ref.get();
-  if (existing.exists) return res.status(409).json({ success: false, error: 'That code already exists' });
+  if (existing.exists) throw Object.assign(new Error('That code already exists'), { status: 409 });
 
-  await ref.set({
-    code, amount, maxUses, expiresAt,
+  const docData = {
+    code: finalCode, amount, maxUses, expiresAt: expiresAtMs,
     active: true, usedCount: 0, redeemedBy: [],
     createdAt: Date.now(),
-  });
+  };
+  await ref.set(docData);
+  return docData;
+}
 
-  res.json({ success: true, code, amount, maxUses, expiresAt });
+// POST /api/admin/redeem-codes
+// Body: { amount, maxUses (1-100, or null/omit for unlimited), expiresAt (ISO date string, or null/omit for unlimited), code (optional custom code) }
+router.post('/redeem-codes', asyncHandler(async (req, res) => {
+  try {
+    const result = await createRedeemCodeDoc(req.body || {});
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(e.status || 400).json({ success: false, error: e.message });
+  }
 }));
 
 // GET /api/admin/redeem-codes — list all codes, newest first
@@ -293,6 +303,103 @@ router.post('/redeem-codes/:code/deactivate', asyncHandler(async (req, res) => {
   const ref = db().collection('redeemCodes').doc(code);
   const snap = await ref.get();
   if (!snap.exists) return res.status(404).json({ success: false, error: 'Code not found' });
+  await ref.set({ active: false }, { merge: true });
+  res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------
+// Stats + rankings — both read only the fields purchase.js actually
+// keeps up to date (balance, totalSpent, totalKeysBought via
+// FieldValue.increment), not the older per-order `history` array the
+// admin panel used to scan directly. 185 users is nothing for a plain
+// full-collection read, same approach /backfill-stats already uses.
+// ---------------------------------------------------------------
+
+// GET /api/admin/stats — headline numbers for the dashboard cards
+router.get('/stats', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').get();
+  let totalRevenue = 0, totalKeysSold = 0;
+  snap.forEach((d) => {
+    const data = d.data();
+    totalRevenue += Number(data.totalSpent || 0);
+    totalKeysSold += Number(data.totalKeysBought || 0);
+  });
+  res.json({ success: true, totalUsers: snap.size, totalRevenue, totalKeysSold });
+}));
+
+// GET /api/admin/rankings — top users by spend
+router.get('/rankings', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').orderBy('totalSpent', 'desc').limit(100).get();
+  const rankings = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      uid: d.id,
+      email: data.email || '',
+      profileName: data.profileName || '',
+      role: data.role || 'user',
+      balance: Number(data.balance || 0),
+      totalSpent: Number(data.totalSpent || 0),
+      totalKeysBought: Number(data.totalKeysBought || 0),
+    };
+  });
+  res.json({ success: true, rankings });
+}));
+
+// ---------------------------------------------------------------
+// Announcements — a broadcast message shown to every user as a popup
+// on their next login, optionally bundled with a gift redeem code.
+// "Seen" is tracked per-user (users/{uid}.lastSeenAnnouncementId), not
+// as a growing array on the announcement doc, so this stays cheap
+// regardless of user count. See GET/POST /api/user/announcement*.
+// ---------------------------------------------------------------
+
+// POST /api/admin/announcements
+// Body: { message, giftAmount?, giftMaxUses?, giftExpiresAt? }
+// If giftAmount is provided, a normal redeem code is created (default
+// unlimited uses, since it's meant for every user) and attached.
+router.post('/announcements', asyncHandler(async (req, res) => {
+  const message = String(req.body?.message || '').trim();
+  if (!message) return res.status(400).json({ success: false, error: 'Write a message first' });
+  if (message.length > 500) return res.status(400).json({ success: false, error: 'Keep the message under 500 characters' });
+
+  let gift = null;
+  const giftAmount = req.body?.giftAmount;
+  if (giftAmount !== undefined && giftAmount !== null && giftAmount !== '') {
+    try {
+      gift = await createRedeemCodeDoc({
+        amount: giftAmount,
+        maxUses: req.body?.giftMaxUses ?? null,
+        expiresAt: req.body?.giftExpiresAt ?? null,
+      });
+    } catch (e) {
+      return res.status(e.status || 400).json({ success: false, error: `Gift code: ${e.message}` });
+    }
+  }
+
+  const id = `ann_${Date.now()}`;
+  const docData = {
+    id, message,
+    giftCode: gift?.code || null,
+    giftAmount: gift?.amount || null,
+    active: true,
+    createdAt: Date.now(),
+  };
+  await db().collection('announcements').doc(id).set(docData);
+  res.json({ success: true, announcement: docData });
+}));
+
+// GET /api/admin/announcements — list, newest first
+router.get('/announcements', asyncHandler(async (req, res) => {
+  const snap = await db().collection('announcements').orderBy('createdAt', 'desc').limit(50).get();
+  res.json({ success: true, announcements: snap.docs.map((d) => d.data()) });
+}));
+
+// POST /api/admin/announcements/:id/deactivate
+router.post('/announcements/:id/deactivate', asyncHandler(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const ref = db().collection('announcements').doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'Announcement not found' });
   await ref.set({ active: false }, { merge: true });
   res.json({ success: true });
 }));
