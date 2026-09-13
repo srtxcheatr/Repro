@@ -3,7 +3,7 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
-import { CATALOG } from './src/catalog.js';
+import { getLiveCatalog } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
 import { rateLimit, securityHeaders } from './src/security.js';
@@ -115,8 +115,9 @@ app.post('/api/security/verify', turnstileCors,
 // checkout endpoint always re-derives price server-side from the
 // buyer's actual role in Firestore — never from either of these — so
 // exposing this for display isn't a trust boundary.
-app.get('/api/catalog', userCors, (req, res) => {
-  res.json({ success: true, catalog: CATALOG });
+app.get('/api/catalog', userCors, async (req, res) => {
+  const catalog = await getLiveCatalog('user');
+  res.json({ success: true, catalog });
 });
 
 app.use('/api/auth', authRoutes);
