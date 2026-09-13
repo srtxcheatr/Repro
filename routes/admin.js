@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
+import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -229,6 +230,59 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------
+// Products / maintenance — catalog1.js and catalog2.js describe the
+// same physical products at two price tiers (retail vs reseller), so
+// maintenance is tracked once per sku, not once per catalog, and
+// applies to both automatically. The override lives in Firestore
+// (productStatus/{sku}) so toggling it never needs a code deploy —
+// see src/catalog.js for how it's merged into what the storefront sees.
+// ---------------------------------------------------------------
+
+// GET /api/admin/products — every sku with its current live maintenance
+// status, for the admin panel's product manager.
+router.get('/products', asyncHandler(async (req, res) => {
+  const overrides = await getMaintenanceOverrides();
+  const skus = Object.keys(CATALOG); // catalog1.js/catalog2.js share the same sku set
+
+  const products = skus.map((sku) => {
+    const p = CATALOG[sku];
+    const pr = CATALOG_RESELLER[sku] || p;
+    const o = overrides[sku];
+    const maintenance = o ? !!o.maintenance : !!p.maintenance;
+    const maintenanceMessage = maintenance
+      ? (o?.maintenanceMessage || p.maintenanceMessage || 'This product is temporarily under maintenance.')
+      : null;
+    return {
+      sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
+      price: p.price, priceReseller: pr.price,
+      maintenance, maintenanceMessage,
+    };
+  });
+
+  res.json({ success: true, products });
+}));
+
+// POST /api/admin/products/:sku/maintenance
+// Body: { maintenance: boolean, message?: string }
+router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
+  const sku = String(req.params.sku || '').trim();
+  if (!CATALOG[sku]) return res.status(404).json({ success: false, error: 'Unknown sku' });
+
+  const maintenance = !!req.body?.maintenance;
+  const message = String(req.body?.message || '').trim();
+  if (message.length > 300) return res.status(400).json({ success: false, error: 'Keep the message under 300 characters' });
+
+  await db().collection('productStatus').doc(sku).set({
+    maintenance,
+    maintenanceMessage: maintenance ? (message || 'This product is temporarily under maintenance.') : null,
+    updatedAt: Date.now(),
+  }, { merge: true });
+
+  invalidateMaintenanceCache(); // so this takes effect immediately, not after the 30s cache TTL
+  res.json({ success: true, sku, maintenance });
+}));
+
+// ---------------------------------------------------------------
 // Redeem codes — admin creates gift/promo codes worth a fixed Rs
 // amount, optionally capped by an expiry date and/or a max number
 // of redemptions. Stored in the `redeemCodes` collection, doc ID =
@@ -384,6 +438,17 @@ router.post('/announcements', asyncHandler(async (req, res) => {
     active: true,
     createdAt: Date.now(),
   };
+
+  // Deactivate any previously-active announcements first, so there's
+  // only ever one live at a time (also keeps the /announcement read
+  // above cheap — it only ever has to scan a handful of docs).
+  const prevActive = await db().collection('announcements').where('active', '==', true).limit(20).get();
+  if (!prevActive.empty) {
+    const batch = db().batch();
+    prevActive.docs.forEach((d) => batch.set(d.ref, { active: false }, { merge: true }));
+    await batch.commit();
+  }
+
   await db().collection('announcements').doc(id).set(docData);
   res.json({ success: true, announcement: docData });
 }));
