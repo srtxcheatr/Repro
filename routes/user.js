@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
-import { catalogForRole } from '../src/catalog.js';
+import { getLiveCatalog } from '../src/catalog.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -95,7 +95,7 @@ router.get('/balance', asyncHandler(async (req, res) => {
 router.get('/catalog', asyncHandler(async (req, res) => {
   const snap = await db().collection('users').doc(req.uid).get();
   const role = snap.exists ? (snap.data().role || 'user') : 'user';
-  res.json({ success: true, role, catalog: catalogForRole(role) });
+  res.json({ success: true, role, catalog: await getLiveCatalog(role) });
 }));
 
 // POST /api/user/profile
@@ -285,15 +285,23 @@ router.post('/redeem', asyncHandler(async (req, res) => {
 // user hasn't seen it yet (tracked via users/{uid}.lastSeenAnnouncementId,
 // not a growing array on the announcement itself). Returns
 // { announcement: null } once seen or if nothing is active.
+//
+// Deliberately NOT using .where('active','==',true).orderBy('createdAt')
+// together — Firestore requires a manually-deployed composite index for
+// that combination, which was never created, so every call 500'd.
+// Filtering on just `active` needs no composite index (single-field
+// equality is auto-indexed); the newest one is picked in memory instead.
 router.get('/announcement', asyncHandler(async (req, res) => {
   const annSnap = await db().collection('announcements')
     .where('active', '==', true)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
+    .limit(20)
     .get();
   if (annSnap.empty) return res.json({ success: true, announcement: null });
 
-  const ann = annSnap.docs[0].data();
+  const ann = annSnap.docs
+    .map((d) => d.data())
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+
   const userSnap = await db().collection('users').doc(req.uid).get();
   const lastSeen = userSnap.exists ? userSnap.data().lastSeenAnnouncementId : null;
   if (lastSeen === ann.id) return res.json({ success: true, announcement: null });
