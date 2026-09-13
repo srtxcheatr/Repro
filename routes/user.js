@@ -85,6 +85,30 @@ router.get('/balance', asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /api/user/announcement — returns the newest active announcement
+// this user has not seen yet, then marks it as seen for this user.
+router.get('/announcement', asyncHandler(async (req, res) => {
+  const snap = await db().collection('announcements')
+    .where('active', '==', true)
+    .orderBy('createdAt', 'desc')
+    .limit(20)
+    .get();
+
+  const userRef = db().collection('users').doc(req.uid);
+  const userSnap = await userRef.get();
+  const seen = userSnap.exists ? (userSnap.data().seenAnnouncements || []) : [];
+
+  const announcementDoc = snap.docs.find((d) => !seen.includes(d.id));
+  if (!announcementDoc) {
+    return res.json({ success: true, announcement: null });
+  }
+
+  const announcement = { id: announcementDoc.id, ...announcementDoc.data() };
+  await userRef.set({ seenAnnouncements: admin.firestore.FieldValue.arrayUnion(announcementDoc.id) }, { merge: true });
+
+  res.json({ success: true, announcement });
+}));
+
 // GET /api/user/catalog — same shape as the public /api/catalog, but
 // returns the RESELLER catalog if this uid's role is 'reseller',
 // otherwise the normal retail catalog. This is what the storefront
@@ -156,19 +180,8 @@ router.post('/topup', asyncHandler(async (req,res)=>{
       const e={date:new Date().toISOString(),amount,paymentAccount,txCode,status:'PENDING',uid:req.uid,email:req.email};
       tx.set(userRef,{topupRequests:[...existing,e]},{merge:true}); return e;
     });
-    const profileSnap = await userRef.get();
-    const profile = profileSnap.exists ? profileSnap.data() : {};
-    const notifyText = telegramFormat('Balance Load Request',{
-      username: profile.profileName || req.email,
-      email: profile.email || req.email,
-      product: paymentAccount,
-      price: amount,
-      uid: req.uid,
-      status:'pending',
-      others:`TX code: ${txCode}\nNumber: ${profile.profilePhone || '—'}`
-    });
-    await telegramNotify(notifyText,'balance');
-    return res.json({success:true,request:entry});
+    res.json({success:true,request:entry});
+    telegramNotify(telegramFormat('Balance Load Request',{username:req.email,email:req.email,product:paymentAccount,price:amount,uid:req.uid,status:'pending',others:`TX code: ${txCode}`}),'balance');
   } catch(e) { res.status(409).json({success:false,error:e.message}); }
 }));
 
@@ -279,36 +292,6 @@ router.post('/redeem', asyncHandler(async (req, res) => {
 
   if (!result.ok) return res.status(400).json({ success: false, error: result.error });
   res.json({ success: true, amountCredited: result.amount, newBalance: result.newBalance });
-}));
-
-// GET /api/user/announcement — the current active broadcast, if this
-// user hasn't seen it yet (tracked via users/{uid}.lastSeenAnnouncementId,
-// not a growing array on the announcement itself). Returns
-// { announcement: null } once seen or if nothing is active.
-router.get('/announcement', asyncHandler(async (req, res) => {
-  const annSnap = await db().collection('announcements')
-    .where('active', '==', true)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
-    .get();
-  if (annSnap.empty) return res.json({ success: true, announcement: null });
-
-  const ann = annSnap.docs[0].data();
-  const userSnap = await db().collection('users').doc(req.uid).get();
-  const lastSeen = userSnap.exists ? userSnap.data().lastSeenAnnouncementId : null;
-  if (lastSeen === ann.id) return res.json({ success: true, announcement: null });
-
-  res.json({ success: true, announcement: { id: ann.id, message: ann.message, giftCode: ann.giftCode || null, giftAmount: ann.giftAmount || null } });
-}));
-
-// POST /api/user/announcement/seen — Body: { id }. Called once the popup
-// has been shown (whether or not the gift was claimed) so it doesn't
-// come back on the next login.
-router.post('/announcement/seen', asyncHandler(async (req, res) => {
-  const id = String(req.body?.id || '').trim();
-  if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
-  await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
-  res.json({ success: true });
 }));
 
 export default router;
