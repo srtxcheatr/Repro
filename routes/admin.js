@@ -2,11 +2,18 @@ import express from 'express';
 import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
+import { rateLimit } from '../src/security.js';
 import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
 router.use(adminCors);
+// Tighter than the generic 180/min API-wide limit — this whole router
+// moves money and account state, so it's worth its own ceiling. The
+// real defense is still ADMIN_SECRET's own entropy (no rate limit makes
+// guessing a long random secret feasible); this mainly bounds the blast
+// radius of a leaked/compromised admin client going haywire.
+router.use(rateLimit({ windowMs: 60_000, max: 90, name: 'admin' }));
 router.use(requireAdmin);
 
 const EMPTY_USER = (uid, email = '') => ({
