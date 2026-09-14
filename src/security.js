@@ -52,6 +52,10 @@ export function securityHeaders(req, res, next) {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // Now that http is redirected to https everywhere, tell browsers to
+  // never even try http:// for this host again (skips the redirect
+  // round-trip and closes the window for a downgrade attack).
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   // Do not cache API responses containing account information.
   if (req.path.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-store');
