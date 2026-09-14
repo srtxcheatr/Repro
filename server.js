@@ -7,6 +7,7 @@ import { getLiveCatalog } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
 import { rateLimit, securityHeaders } from './src/security.js';
+import { asyncHandler } from './src/asyncHandler.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -101,10 +102,10 @@ function turnstileCors(req, res, next) {
 app.options('/api/security/verify', turnstileCors, (req, res) => res.sendStatus(204));
 app.post('/api/security/verify', turnstileCors,
   rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { verifyTurnstile } = await import('./src/turnstile.js');
     return verifyTurnstile(req, res, () => res.json({ success: true }));
-  }
+  })
 );
 
 // Public — just the RETAIL display catalog (sku/name/duration/price/row).
@@ -115,10 +116,10 @@ app.post('/api/security/verify', turnstileCors,
 // checkout endpoint always re-derives price server-side from the
 // buyer's actual role in Firestore — never from either of these — so
 // exposing this for display isn't a trust boundary.
-app.get('/api/catalog', userCors, async (req, res) => {
+app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
   const catalog = await getLiveCatalog('user');
   res.json({ success: true, catalog });
-});
+}));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
