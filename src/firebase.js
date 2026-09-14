@@ -15,6 +15,7 @@
 
 import admin from 'firebase-admin';
 import cors from 'cors';
+import crypto from 'crypto';
 
 let app = null;
 
@@ -65,15 +66,33 @@ export async function requireFirebaseUid(req, res, next) {
 
 /**
  * Express middleware — checks the X-Admin-Secret header against
- * ADMIN_SECRET. Used on every /api/admin/* route.
+ * ADMIN_SECRET. Used on every /api/admin/* route. Uses a constant-time
+ * comparison so a mismatch can't be timed character-by-character —
+ * naive string !== returns faster the earlier the first wrong
+ * character is, which is a real (if slow) side channel over a network.
  */
 export function requireAdmin(req, res, next) {
   const expected = process.env.ADMIN_SECRET;
-  const given = req.headers['x-admin-secret'] || '';
-  if (!expected || given !== expected) {
+  const given = String(req.headers['x-admin-secret'] || '');
+
+  if (!expected || !timingSafeStringEqual(given, expected)) {
     return res.status(401).json({ success: false, error: 'Not authorized' });
   }
   next();
+}
+
+function timingSafeStringEqual(a, b) {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  // Buffers of different lengths would throw in timingSafeEqual; padding
+  // one to match keeps the whole check constant-time (the length check
+  // itself is a much weaker signal than a per-character compare, and
+  // still gated behind the full buffer comparison below).
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, Buffer.alloc(bufA.length));
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 // Your frontend has moved between different Render service names
@@ -85,7 +104,7 @@ const ALLOWED_ORIGIN_SUFFIXES = ['.onrender.com'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
   'https://bronzx.firebaseapp.com', 'https://srtstorev5.onrender.com',
-  'https://srtxcheats.ct.ws', 'http://srtxcheats.ct.ws', // your host doesn't force https for every visitor — see note below
+  'https://srtxcheats.ct.ws', 'https://srtxcheats.ct.ws', // your host doesn't force https for every visitor — see note below
   'https://cheats.xo.je',
 ];
 
