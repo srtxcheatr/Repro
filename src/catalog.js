@@ -76,10 +76,22 @@ export function invalidateMaintenanceCache() {
  * A role's catalog with maintenance overrides merged on top. Never
  * mutates the underlying static objects (they're shared module-level
  * state) — returns a shallow copy with only the overridden skus replaced.
+ *
+ * Fails OPEN to the static catalog: if the Firestore override lookup
+ * has any problem (network blip, cold start, etc.), the storefront
+ * should still show products rather than break entirely over what is,
+ * for display purposes, a nice-to-have layer on top of a base that has
+ * zero external dependencies of its own.
  */
 export async function getLiveCatalog(role = 'user') {
   const base = catalogForRole(role);
-  const overrides = await getMaintenanceOverrides();
+  let overrides;
+  try {
+    overrides = await getMaintenanceOverrides();
+  } catch (e) {
+    console.error('[catalog] maintenance override lookup failed — showing the catalog without overrides:', e);
+    return base;
+  }
   if (Object.keys(overrides).length === 0) return base;
 
   const merged = { ...base };
