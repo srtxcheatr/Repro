@@ -101,8 +101,12 @@ router.post('/chat', asyncHandler(async (req, res) => {
       if (result.cards) cards = result.cards;
       if (result.action) action = result.action;
       contents.push({
-        role: 'function',
-        parts: [{ functionResponse: { name: functionCall.name, response: result.data } }],
+        role: 'user',
+        parts: [{ functionResponse: {
+          name: functionCall.name,
+          response: result.data,
+          ...(functionCall.id ? { id: functionCall.id } : {}),
+        } }],
       });
     }
     return res.status(502).json({ success: false, error: 'AI took too many steps — try rephrasing' });
