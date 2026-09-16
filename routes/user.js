@@ -56,6 +56,25 @@ router.post('/init', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+// GET /api/user/me — a lean account summary. uid/email/role come
+// straight off the verified token or Firestore — never client-supplied.
+router.get('/me', asyncHandler(async (req, res) => {
+  const userRef = db().collection('users').doc(req.uid);
+  const snap = await userRef.get();
+  const data = snap.exists ? snap.data() : DEFAULTS(req.email);
+
+  res.json({
+    success: true,
+    uid: req.uid,
+    email: data.email || req.email,
+    role: data.role || 'user',
+    balance: Number(data.balance || 0),
+    totalSpent: Number(data.totalSpent || 0),
+    totalKeysBought: Number(data.totalKeysBought || 0),
+    requestStatus: data.requestStatus || 'Active',
+  });
+}));
+
 // GET /api/user/balance — the single state call the frontend polls.
 router.get('/balance', asyncHandler(async (req, res) => {
   const userRef = db().collection('users').doc(req.uid);
