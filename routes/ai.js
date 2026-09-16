@@ -70,7 +70,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ success: false, error: 'AI is not configured' });
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   let card = null, cards = null, action = null;
 
@@ -78,7 +78,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     for (let round = 0; round < MAX_FUNCTION_ROUNDS; round++) {
       const gr = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({ contents, tools: TOOLS, systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] } }),
       });
       if (!gr.ok) {
