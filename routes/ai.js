@@ -81,7 +81,11 @@ router.post('/chat', asyncHandler(async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents, tools: TOOLS, systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] } }),
       });
-      if (!gr.ok) return res.status(502).json({ success: false, error: 'AI request failed' });
+      if (!gr.ok) {
+        const errBody = await gr.text().catch(() => '(no body)');
+        console.error(`[ai/chat] Gemini API returned ${gr.status}:`, errBody.slice(0, 500));
+        return res.status(502).json({ success: false, error: 'AI request failed' });
+      }
       const gd = await gr.json();
       const parts = gd?.candidates?.[0]?.content?.parts || [];
       const functionCall = parts.find((p) => p.functionCall)?.functionCall;
@@ -103,6 +107,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     }
     return res.status(502).json({ success: false, error: 'AI took too many steps — try rephrasing' });
   } catch (e) {
+    console.error('[ai/chat] request threw:', e);
     return res.status(502).json({ success: false, error: 'AI request failed' });
   }
 }));
