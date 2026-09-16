@@ -3,6 +3,7 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
+import aiRoutes from './routes/ai.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -125,6 +126,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/purchase', purchaseRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Last-resort error handler — same job as firebase.php's shutdown
 // handler: never let a raw stack trace leak to the client, always
