@@ -5,7 +5,7 @@ import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
 import aiRoutes from './routes/ai.js';
 import { getLiveCatalog } from './src/catalog.js';
-import { userCors, db } from './src/firebase.js';
+import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
 import { rateLimit, securityHeaders } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
@@ -120,19 +120,6 @@ app.post('/api/security/verify', turnstileCors,
 app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
   const catalog = await getLiveCatalog('user');
   res.json({ success: true, catalog });
-}));
-
-// Public — recent customer reviews for /feedback.php. Only ever
-// returns displayName (the reviewer's chosen profile name, or a
-// generic fallback) — never uid or email, since this is a public page
-// reachable by guests too.
-app.get('/api/feedback', userCors, asyncHandler(async (req, res) => {
-  const snap = await db().collection('productReviews').orderBy('updatedAt', 'desc').limit(100).get();
-  const feedback = snap.docs.map((d) => {
-    const r = d.data();
-    return { displayName: r.displayName || 'SRT Customer', row: r.row, stars: r.stars, comment: r.comment || '', updatedAt: r.updatedAt };
-  });
-  res.json({ success: true, feedback });
 }));
 
 app.use('/api/auth', authRoutes);
