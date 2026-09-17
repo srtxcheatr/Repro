@@ -15,7 +15,6 @@
 
 import admin from 'firebase-admin';
 import cors from 'cors';
-import crypto from 'crypto';
 
 let app = null;
 
@@ -65,34 +64,39 @@ export async function requireFirebaseUid(req, res, next) {
 }
 
 /**
- * Express middleware — checks the X-Admin-Secret header against
- * ADMIN_SECRET. Used on every /api/admin/* route. Uses a constant-time
- * comparison so a mismatch can't be timed character-by-character —
- * naive string !== returns faster the earlier the first wrong
- * character is, which is a real (if slow) side channel over a network.
+ * Express middleware — verifies the Firebase ID token from the
+ * Authorization header (same as requireFirebaseUid), then additionally
+ * checks users/{uid}.isAdmin === true in Firestore. Used on every
+ * /api/admin/* route. Attaches req.uid and req.adminEmail for audit
+ * trails (who actually did this), not just "someone with the secret").
+ *
+ * There is deliberately no shared secret anymore — access is tied to
+ * a real, individually-revocable Firebase account. To grant the first
+ * admin: register normally on the site, then run
+ *   node scripts/set-admin.js you@example.com
+ * locally (needs FIREBASE_SERVICE_ACCOUNT_JSON in your env, same value
+ * as on Render).
  */
-export function requireAdmin(req, res, next) {
-  const expected = process.env.ADMIN_SECRET;
-  const given = String(req.headers['x-admin-secret'] || '');
-
-  if (!expected || !timingSafeStringEqual(given, expected)) {
-    return res.status(401).json({ success: false, error: 'Not authorized' });
+export async function requireAdminAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return res.status(401).json({ success: false, error: 'Not logged in' });
   }
-  next();
-}
-
-function timingSafeStringEqual(a, b) {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  // Buffers of different lengths would throw in timingSafeEqual; padding
-  // one to match keeps the whole check constant-time (the length check
-  // itself is a much weaker signal than a per-character compare, and
-  // still gated behind the full buffer comparison below).
-  if (bufA.length !== bufB.length) {
-    crypto.timingSafeEqual(bufA, Buffer.alloc(bufA.length));
-    return false;
+  try {
+    getFirebaseApp();
+    const decoded = await admin.auth().verifyIdToken(match[1]);
+    const snap = await db().collection('users').doc(decoded.uid).get();
+    const isAdmin = snap.exists && snap.data().isAdmin === true;
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: 'This account is not flagged as admin.' });
+    }
+    req.uid = decoded.uid;
+    req.adminEmail = decoded.email || '';
+    next();
+  } catch (e) {
+    return res.status(401).json({ success: false, error: 'Invalid or expired login. Please log in again.' });
   }
-  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 // Your frontend has moved between different Render service names
@@ -104,7 +108,7 @@ const ALLOWED_ORIGIN_SUFFIXES = ['.onrender.com'];
 const ALLOWED_EXACT_ORIGINS = [
   'https://bronzx.web.app',
   'https://bronzx.firebaseapp.com', 'https://srtstorev5.onrender.com',
-  'https://srtxcheats.ct.ws', 'https://srtxcheats.ct.ws', // your host doesn't force https for every visitor — see note below
+  'https://srtxcheats.ct.ws', 'http://srtxcheats.ct.ws', // your host doesn't force https for every visitor — see note below
   'https://cheats.xo.je',
 ];
 
