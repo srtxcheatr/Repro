@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
-import { getLiveCatalog, findProductLive, invalidateRatingsCache } from '../src/catalog.js';
+import { getLiveCatalog } from '../src/catalog.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -335,58 +335,6 @@ router.post('/announcement/seen', asyncHandler(async (req, res) => {
   const id = String(req.body?.id || '').trim();
   if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
   await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
-  res.json({ success: true });
-}));
-
-// POST /api/user/rate — Body: { sku, stars (1-5), comment? }
-// Only lets someone rate a product they've actually bought (checked
-// against their real purchase history, not trusted from the client).
-// Re-rating the same purchase updates the existing review rather than
-// counting twice. Feeds /feedback.php and the store's star display.
-router.post('/rate', asyncHandler(async (req, res) => {
-  const sku = String(req.body?.sku || '').trim();
-  const stars = Math.round(Number(req.body?.stars));
-  const comment = String(req.body?.comment || '').trim().slice(0, 300);
-
-  if (!sku) return res.status(400).json({ success: false, error: 'Missing sku' });
-  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
-    return res.status(400).json({ success: false, error: 'Rating must be between 1 and 5' });
-  }
-
-  const userSnap = await db().collection('users').doc(req.uid).get();
-  const userData = userSnap.exists ? userSnap.data() : {};
-  const purchaseHistory = userData.purchaseHistory || [];
-  const bought = purchaseHistory.some((h) => h.sku === sku);
-  if (!bought) return res.status(403).json({ success: false, error: 'You can only rate products you have purchased.' });
-
-  const product = await findProductLive(sku);
-  if (!product) return res.status(404).json({ success: false, error: 'Unknown product' });
-  const row = product.row;
-
-  const displayName = (userData.profileName && userData.profileName.trim()) || 'SRT Customer';
-  const reviewRef = db().collection('productReviews').doc(`${req.uid}_${sku}`);
-  const ratingRef = db().collection('productRatings').doc(row);
-
-  await db().runTransaction(async (tx) => {
-    const [reviewSnap, ratingSnap] = await Promise.all([tx.get(reviewRef), tx.get(ratingRef)]);
-    const prevStars = reviewSnap.exists ? Number(reviewSnap.data().stars || 0) : 0;
-    const isNew = !reviewSnap.exists;
-
-    const prevTotal = ratingSnap.exists ? Number(ratingSnap.data().totalStars || 0) : 0;
-    const prevCount = ratingSnap.exists ? Number(ratingSnap.data().count || 0) : 0;
-
-    tx.set(reviewRef, {
-      uid: req.uid, sku, row, stars, comment, displayName,
-      createdAt: reviewSnap.exists ? reviewSnap.data().createdAt : Date.now(),
-      updatedAt: Date.now(),
-    });
-    tx.set(ratingRef, {
-      totalStars: prevTotal - prevStars + stars,
-      count: isNew ? prevCount + 1 : prevCount,
-    }, { merge: true });
-  });
-
-  invalidateRatingsCache();
   res.json({ success: true });
 }));
 
