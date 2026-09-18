@@ -1,28 +1,20 @@
 import express from 'express';
 import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
-import { db, requireAdminAuth, adminCors } from '../src/firebase.js';
+import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
-import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getCustomProductDocs, invalidateCustomProductsCache } from '../src/catalog.js';
+import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
 router.use(adminCors);
 // Tighter than the generic 180/min API-wide limit — this whole router
 // moves money and account state, so it's worth its own ceiling. The
-// real defense is still requireAdminAuth itself (a rate limit alone
-// can't stop someone who's actually logged into a real admin account);
-// this mainly bounds the blast radius of a compromised/malfunctioning
-// admin client going haywire.
+// real defense is still ADMIN_SECRET's own entropy (no rate limit makes
+// guessing a long random secret feasible); this mainly bounds the blast
+// radius of a leaked/compromised admin client going haywire.
 router.use(rateLimit({ windowMs: 60_000, max: 90, name: 'admin' }));
-router.use(requireAdminAuth);
-
-// GET /api/admin/whoami — called right after login to confirm this
-// account is actually recognized as admin on this backend, and to
-// show a real identity in the panel instead of a generic label.
-router.get('/whoami', (req, res) => {
-  res.json({ success: true, uid: req.uid, email: req.adminEmail });
-});
+router.use(requireAdmin);
 
 const EMPTY_USER = (uid, email = '') => ({
   success: true, uid, found: false,
@@ -245,24 +237,21 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------
-// Products / maintenance / stock — catalog1.js and catalog2.js describe
-// the same physical products at two price tiers (retail vs reseller),
-// so maintenance/stock are tracked once per sku, not once per catalog,
-// and apply to both automatically. Overrides live in Firestore
-// (productStatus/{sku}) so toggling either never needs a code deploy —
-// see src/catalog.js for how they're merged into what the storefront
-// sees. Admin-created products live in Firestore (customProducts/{sku})
-// rather than the static files, for the same reason.
+// Products / maintenance — catalog1.js and catalog2.js describe the
+// same physical products at two price tiers (retail vs reseller), so
+// maintenance is tracked once per sku, not once per catalog, and
+// applies to both automatically. The override lives in Firestore
+// (productStatus/{sku}) so toggling it never needs a code deploy —
+// see src/catalog.js for how it's merged into what the storefront sees.
 // ---------------------------------------------------------------
 
-// GET /api/admin/products — every sku (static + custom) with its
-// current live maintenance/stock status, for the admin panel.
+// GET /api/admin/products — every sku with its current live maintenance
+// status, for the admin panel's product manager.
 router.get('/products', asyncHandler(async (req, res) => {
   const overrides = await getMaintenanceOverrides();
-  const customDocs = await getCustomProductDocs();
   const skus = Object.keys(CATALOG); // catalog1.js/catalog2.js share the same sku set
 
-  const staticProducts = skus.map((sku) => {
+  const products = skus.map((sku) => {
     const p = CATALOG[sku];
     const pr = CATALOG_RESELLER[sku] || p;
     const o = overrides[sku];
@@ -273,35 +262,18 @@ router.get('/products', asyncHandler(async (req, res) => {
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: pr.price,
-      maintenance, maintenanceMessage, outOfStock: !!o?.outOfStock, isCustom: false,
+      maintenance, maintenanceMessage,
     };
   });
 
-  const customProducts = Object.entries(customDocs).map(([sku, d]) => {
-    const o = overrides[sku];
-    const maintenance = !!o?.maintenance;
-    return {
-      sku, pid: d.pid, row: d.row, name: d.name, duration: d.duration, image: d.image,
-      price: d.price, priceReseller: d.priceReseller,
-      maintenance, maintenanceMessage: maintenance ? (o?.maintenanceMessage || 'This product is temporarily under maintenance.') : null,
-      outOfStock: !!o?.outOfStock, isCustom: true,
-    };
-  });
-
-  res.json({ success: true, products: [...staticProducts, ...customProducts] });
+  res.json({ success: true, products });
 }));
-
-async function skuExists(sku) {
-  if (CATALOG[sku]) return true;
-  const snap = await db().collection('customProducts').doc(sku).get();
-  return snap.exists;
-}
 
 // POST /api/admin/products/:sku/maintenance
 // Body: { maintenance: boolean, message?: string }
 router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
   const sku = String(req.params.sku || '').trim();
-  if (!(await skuExists(sku))) return res.status(404).json({ success: false, error: 'Unknown sku' });
+  if (!CATALOG[sku]) return res.status(404).json({ success: false, error: 'Unknown sku' });
 
   const maintenance = !!req.body?.maintenance;
   const message = String(req.body?.message || '').trim();
@@ -311,106 +283,10 @@ router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
     maintenance,
     maintenanceMessage: maintenance ? (message || 'This product is temporarily under maintenance.') : null,
     updatedAt: Date.now(),
-    updatedBy: req.adminEmail,
   }, { merge: true });
 
   invalidateMaintenanceCache(); // so this takes effect immediately, not after the 30s cache TTL
   res.json({ success: true, sku, maintenance });
-}));
-
-// POST /api/admin/products/:sku/stock
-// Body: { outOfStock: boolean }
-// Distinct from maintenance: this disables ONLY this one duration —
-// sibling durations of the same product are unaffected.
-router.post('/products/:sku/stock', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  if (!(await skuExists(sku))) return res.status(404).json({ success: false, error: 'Unknown sku' });
-
-  const outOfStock = !!req.body?.outOfStock;
-
-  await db().collection('productStatus').doc(sku).set({
-    outOfStock,
-    updatedAt: Date.now(),
-    updatedBy: req.adminEmail,
-  }, { merge: true });
-
-  invalidateMaintenanceCache();
-  res.json({ success: true, sku, outOfStock });
-}));
-
-// POST /api/admin/products — create a new product with one or more
-// duration variants in one call.
-// Body: {
-//   pid: string,                 // MUST match the exact Product ID in
-//                                 // your upstream reseller's system —
-//                                 // this is what actually requests a
-//                                 // key on purchase. A made-up pid will
-//                                 // display fine but fail at checkout.
-//   fullName: string,             // product row/family, e.g. "Pato team"
-//   image: string,                // postimage.org (or similar) link
-//   durations: [{
-//     label: string,              // e.g. "3 DaYs All Colours Mix" — sent
-//                                  // to the reseller API as-is
-//     nameWithDuration: string,   // display name, e.g. "Pato 3 day all color"
-//     price: number,              // retail price
-//     priceReseller: number,      // reseller-tier price
-//   }, ...]
-// }
-router.post('/products', asyncHandler(async (req, res) => {
-  const pid = String(req.body?.pid || '').trim();
-  const fullName = String(req.body?.fullName || '').trim();
-  const image = String(req.body?.image || '').trim();
-  const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
-
-  if (!pid) return res.status(400).json({ success: false, error: 'Reseller Product ID (pid) is required' });
-  if (!fullName) return res.status(400).json({ success: false, error: 'Product full name is required' });
-  if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration' });
-  if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one product' });
-
-  const created = [];
-  const batch = db().batch();
-  const baseId = `custom_${Date.now()}`;
-
-  durations.forEach((d, i) => {
-    const label = String(d?.label || '').trim();
-    const nameWithDuration = String(d?.nameWithDuration || '').trim();
-    const price = Number(d?.price);
-    const priceReseller = Number(d?.priceReseller ?? d?.price);
-    if (!label || !nameWithDuration || !price || price <= 0) return; // skip incomplete rows silently
-
-    const sku = `${baseId}_${i}`;
-    const doc = {
-      pid, row: fullName, name: nameWithDuration, duration: label,
-      price, priceReseller: priceReseller > 0 ? priceReseller : price,
-      image, createdAt: Date.now(), createdBy: req.adminEmail,
-    };
-    batch.set(db().collection('customProducts').doc(sku), doc);
-    created.push({ sku, ...doc });
-  });
-
-  if (!created.length) return res.status(400).json({ success: false, error: 'No valid durations provided (need label, name, and a price > 0 for each)' });
-
-  await batch.commit();
-  invalidateCustomProductsCache();
-  res.json({ success: true, created });
-}));
-
-// DELETE /api/admin/products/:sku — removes a custom (admin-created)
-// product. Static catalog products (from catalog1.js/catalog2.js)
-// can't be deleted this way — edit those files directly instead.
-router.delete('/products/:sku', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  if (CATALOG[sku]) return res.status(400).json({ success: false, error: 'Static catalog products can only be edited in catalog1.js/catalog2.js' });
-
-  const ref = db().collection('customProducts').doc(sku);
-  const snap = await ref.get();
-  if (!snap.exists) return res.status(404).json({ success: false, error: 'Unknown sku' });
-
-  await ref.delete();
-  await db().collection('productStatus').doc(sku).delete().catch(() => {}); // clean up any status override too
-  invalidateCustomProductsCache();
-  invalidateMaintenanceCache();
-  res.json({ success: true, sku });
 }));
 
 // ---------------------------------------------------------------
