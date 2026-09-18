@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
-import { getLiveCatalog } from '../src/catalog.js';
+import { getLiveCatalog, invalidateRatingCache } from '../src/catalog.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -336,6 +336,59 @@ router.post('/announcement/seen', asyncHandler(async (req, res) => {
   if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
   await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
   res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------
+// Product feedback — real customer star ratings + comments, replacing
+// the old hand-typed rating number in the catalog files. Only someone
+// who's actually bought the product can review it (checked against
+// their own purchaseHistory); one review per user per product, and
+// resubmitting updates it rather than creating a duplicate.
+// ---------------------------------------------------------------
+
+// POST /api/user/feedback
+// Body: { row, stars (1-5), comment?, authorName? }
+router.post('/feedback', asyncHandler(async (req, res) => {
+  const row = String(req.body?.row || '').trim();
+  const stars = Number(req.body?.stars);
+  const comment = String(req.body?.comment || '').trim().slice(0, 500);
+  const authorName = String(req.body?.authorName || '').trim().slice(0, 60) || 'Anonymous';
+
+  if (!row) return res.status(400).json({ success: false, error: 'Missing product' });
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+    return res.status(400).json({ success: false, error: 'Rating must be 1-5 stars' });
+  }
+
+  const userSnap = await db().collection('users').doc(req.uid).get();
+  const purchaseHistory = userSnap.exists ? (userSnap.data().purchaseHistory || []) : [];
+
+  // Verified-purchase check: a direct row match (purchases made after
+  // this field was added) or a name match against the catalog's current
+  // names for this row (covers purchases made before it existed).
+  const catalog = await getLiveCatalog('user');
+  const namesForRow = new Set(Object.values(catalog).filter((p) => p.row === row).map((p) => p.name));
+  const verified = purchaseHistory.some((h) => h.row === row || namesForRow.has(h.name));
+  if (!verified) {
+    return res.status(403).json({ success: false, error: "You can only review products you've purchased" });
+  }
+
+  const id = `${req.uid}_${row}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200);
+  await db().collection('feedback').doc(id).set({
+    uid: req.uid, authorName, row, stars, comment, createdAt: Date.now(),
+  });
+
+  invalidateRatingCache(); // so the new average shows up immediately, not after the cache TTL
+  res.json({ success: true });
+}));
+
+// GET /api/user/feedback?row=... — all feedback (optionally for one
+// product), newest first. Powers /feedback.php.
+router.get('/feedback', asyncHandler(async (req, res) => {
+  const row = req.query.row ? String(req.query.row) : null;
+  const snap = await db().collection('feedback').orderBy('createdAt', 'desc').limit(300).get();
+  let items = snap.docs.map((d) => d.data());
+  if (row) items = items.filter((f) => f.row === row);
+  res.json({ success: true, feedback: items });
 }));
 
 export default router;
