@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { catalogFind, getMaintenanceForSku } from '../src/catalog.js';
+import { catalogFind, getMaintenanceForSku, findCustomProductFresh } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -194,6 +194,9 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
     product = catalogFind(sku, role);
     if (!product) {
+      product = await findCustomProductFresh(sku);
+    }
+    if (!product) {
       throw new Error('Unknown product');
     }
     realPrice = Number(product.price);
@@ -229,7 +232,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
       const historyEntry = {
-        at: new Date().toISOString(), name: product.name, duration: product.duration,
+        at: new Date().toISOString(), sku, row: product.row, name: product.name, duration: product.duration,
         price: realPrice, key, buyerName, buyerWa,
       };
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
