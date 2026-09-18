@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { findProductLive, getProductStatusForSku } from '../src/catalog.js';
+import { catalogFind, getMaintenanceForSku } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -122,20 +122,17 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   const buyerWa = String(req.body?.waNum || '').trim();
   const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null;
 
-  const product = await findProductLive(sku);
+  const product = catalogFind(sku);
   if (!product) {
     return res.status(400).json({ success: false, error: 'Unknown product' });
   }
 
-  const liveStatus = await getProductStatusForSku(sku);
+  const liveStatus = await getMaintenanceForSku(sku);
   if (product.maintenance || liveStatus.maintenance) {
     return res.status(409).json({
       success: false,
       error: liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.',
     });
-  }
-  if (liveStatus.outOfStock) {
-    return res.status(409).json({ success: false, error: 'This duration is currently out of stock. Other durations of this product may still be available.' });
   }
 
   if (product.requiresAndroidId && !androidId) {
@@ -195,18 +192,15 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
   try {
     const roleSnap = await userRef.get();
     role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
-    product = await findProductLive(sku, role);
+    product = catalogFind(sku, role);
     if (!product) {
       throw new Error('Unknown product');
     }
     realPrice = Number(product.price);
 
-    const liveStatus = await getProductStatusForSku(sku);
+    const liveStatus = await getMaintenanceForSku(sku);
     if (product.maintenance || liveStatus.maintenance) {
       throw new Error(liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.');
-    }
-    if (liveStatus.outOfStock) {
-      throw new Error('This duration is currently out of stock. Other durations of this product may still be available.');
     }
 
     if (product.requiresAndroidId && !androidId) {
@@ -235,7 +229,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
       const historyEntry = {
-        at: new Date().toISOString(), sku, name: product.name, duration: product.duration,
+        at: new Date().toISOString(), name: product.name, duration: product.duration,
         price: realPrice, key, buyerName, buyerWa,
       };
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
