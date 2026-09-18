@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
-import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache } from '../src/catalog.js';
+import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -245,24 +245,27 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 // see src/catalog.js for how it's merged into what the storefront sees.
 // ---------------------------------------------------------------
 
-// GET /api/admin/products — every sku with its current live maintenance
-// status, for the admin panel's product manager.
+// GET /api/admin/products — every sku (static + admin-added) with its
+// current live maintenance/stock status, for the admin panel's product manager.
 router.get('/products', asyncHandler(async (req, res) => {
-  const overrides = await getMaintenanceOverrides();
-  const skus = Object.keys(CATALOG); // catalog1.js/catalog2.js share the same sku set
+  const [overrides, liveCatalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
+  const skus = Object.keys(liveCatalog); // static (catalog1/2.js) + any admin-added custom products
 
   const products = skus.map((sku) => {
-    const p = CATALOG[sku];
+    const p = liveCatalog[sku];
     const pr = CATALOG_RESELLER[sku] || p;
     const o = overrides[sku];
     const maintenance = o ? !!o.maintenance : !!p.maintenance;
     const maintenanceMessage = maintenance
       ? (o?.maintenanceMessage || p.maintenanceMessage || 'This product is temporarily under maintenance.')
       : null;
+    const outOfStock = !!p.outOfStock;
+    const outOfStockMessage = outOfStock ? (p.outOfStockMessage || 'Out of stock — check back soon.') : null;
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: pr.price,
-      maintenance, maintenanceMessage,
+      maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
+      custom: !CATALOG[sku], // true for admin-added products, not in the static catalog files
     };
   });
 
@@ -287,6 +290,75 @@ router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
 
   invalidateMaintenanceCache(); // so this takes effect immediately, not after the 30s cache TTL
   res.json({ success: true, sku, maintenance });
+}));
+
+// POST /api/admin/products/:sku/out-of-stock
+// Body: { outOfStock: boolean, message?: string }
+// Deliberately a separate field from maintenance: toggling this for one
+// duration/sku (e.g. Pato's 3-day) never disables sibling skus (7-day,
+// 15-day) that just happen to share the same product "row".
+router.post('/products/:sku/out-of-stock', asyncHandler(async (req, res) => {
+  const sku = String(req.params.sku || '').trim();
+  if (!CATALOG[sku] && !(await findCustomProductFresh(sku))) {
+    return res.status(404).json({ success: false, error: 'Unknown sku' });
+  }
+
+  const outOfStock = !!req.body?.outOfStock;
+  const message = String(req.body?.message || '').trim();
+  if (message.length > 300) return res.status(400).json({ success: false, error: 'Keep the message under 300 characters' });
+
+  await db().collection('productStatus').doc(sku).set({
+    outOfStock,
+    outOfStockMessage: outOfStock ? (message || 'Out of stock — check back soon.') : null,
+    updatedAt: Date.now(),
+  }, { merge: true });
+
+  invalidateMaintenanceCache();
+  res.json({ success: true, sku, outOfStock });
+}));
+
+// POST /api/admin/products/create — add a brand new product line without
+// a code deploy. One product ("row") can have several duration variants
+// created together; each gets its own auto-generated sku.
+// Body: {
+//   image: "https://i.postimg.cc/...",
+//   row: "Pato team",                              // the product line / full name
+//   durations: [
+//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150 },
+//     { name: "Pato 7 day all color", duration: "7 Days All Colours Mix", price: 300 }
+//   ]
+// }
+router.post('/products/create', asyncHandler(async (req, res) => {
+  const image = String(req.body?.image || '').trim();
+  const row = String(req.body?.row || '').trim();
+  const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
+
+  if (!image) return res.status(400).json({ success: false, error: 'Image link is required' });
+  if (!row) return res.status(400).json({ success: false, error: 'Product full name is required' });
+  if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
+  if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
+
+  const pid = `c${Date.now().toString(36)}`;
+  const batch = db().batch();
+  const created = [];
+
+  for (let i = 0; i < durations.length; i++) {
+    const d = durations[i];
+    const name = String(d?.name || '').trim();
+    const duration = String(d?.duration || '').trim();
+    const price = Number(d?.price);
+    if (!name || !duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: name and duration label are required` });
+    if (!price || price <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: price must be a positive number` });
+
+    const sku = `custom_${pid}_${i + 1}`;
+    const product = { pid, row, name, duration, price, image, createdAt: Date.now() };
+    batch.set(db().collection('customProducts').doc(sku), product);
+    created.push({ sku, ...product });
+  }
+
+  await batch.commit();
+  invalidateCustomProductCache();
+  res.json({ success: true, row, products: created });
 }));
 
 // ---------------------------------------------------------------
