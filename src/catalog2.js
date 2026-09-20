@@ -7,7 +7,6 @@ sku_1552: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 6H', 
 sku_1553: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 12H', duration: '12 Hours', price: 120, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_1554: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 24H', duration: '24 Hours', price: 200, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 
-
 // ---- BR MOD FF PC VERSION (pid 49) ----
 sku_1: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 1 DAY', duration: '1 Day Pc Aim Silent', price: 176, rating: 4.7, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
 sku_2: { pid: '49', row: 'BR MOD FF PC VERSION', name: 'BR PC AIM SILENT 10 DAY', duration: '10 Days Pc Aim Silent', price: 245, rating: 4.7, image: 'https://i.postimg.cc/65Fdfcgp/Screenshot-20260425-150006.jpg', external: true, apkUrl: 'https://srtkeypass.blogspot.com/2026/08/html-body-margin0-important-padding0_01609529614.html' },
