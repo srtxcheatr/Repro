@@ -2,7 +2,7 @@ export const CATALOG_RESELLER = {
 
 // ---- XYZ CHEATS BALA FF NONROOT (pid 155) ----
 sku_1: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 2H', duration: '2 Hours', price: 60, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
-sku_2: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 4H', duration: '2 Hours', price: 80, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
+sku_2: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 2H', duration: '2 Hours', price: 60, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_3: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 6H', duration: '6 Hours', price: 100, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_4: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 12H', duration: '12 Hours', price: 120, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
 sku_5: { pid: '155', row: 'XYZ CHEATS BALA FF NONROOT', name: 'BALA XYZ 24H', duration: '24 Hours', price: 200, rating: 4.6, image: 'https://i.postimg.cc/Y0HwXZkt/IMG-20260430-190421-873.jpg', external: true, apkUrl: 'https://whatsapp.com/channel/0029VbE2OpJBPzjTOsnt770a' },
