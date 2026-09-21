@@ -287,7 +287,12 @@ async function applyRatings(catalogObj) {
  */
 export async function getMaintenanceForSku(sku) {
   const snap = await db().collection('productStatus').doc(sku).get();
-  if (!snap.exists) return { maintenance: false };
+  if (!snap.exists) return { maintenance: false, outOfStock: false };
   const d = snap.data();
-  return { maintenance: !!d.maintenance, maintenanceMessage: d.maintenanceMessage || null };
+  return {
+    maintenance: !!d.maintenance,
+    maintenanceMessage: d.maintenanceMessage || null,
+    outOfStock: !!d.outOfStock,
+    outOfStockMessage: d.outOfStockMessage || null,
+  };
 }
