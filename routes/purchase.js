@@ -194,7 +194,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     role = roleSnap.exists ? (roleSnap.data().role || 'user') : 'user';
     product = catalogFind(sku, role);
     if (!product) {
-      product = await findCustomProductFresh(sku);
+      product = await findCustomProductFresh(sku, role);
     }
     if (!product) {
       throw new Error('Unknown product');
