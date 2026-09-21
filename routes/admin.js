@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
-import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh } from '../src/catalog.js';
+import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -249,7 +249,7 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 // current live maintenance/stock status, for the admin panel's product manager.
 router.get('/products', asyncHandler(async (req, res) => {
   const [overrides, liveCatalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
-  const skus = Object.keys(liveCatalog); // static (catalog1/2.js) + any admin-added custom products
+  const skus = Object.keys(liveCatalog).filter((sku) => liveCatalog[sku].type !== 'whatsapp'); // whatsapp products have their own list below
 
   const products = skus.map((sku) => {
     const p = liveCatalog[sku];
@@ -263,7 +263,7 @@ router.get('/products', asyncHandler(async (req, res) => {
     const outOfStockMessage = outOfStock ? (p.outOfStockMessage || 'Out of stock — check back soon.') : null;
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
-      price: p.price, priceReseller: pr.price,
+      price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
       maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
       custom: !CATALOG[sku], // true for admin-added products, not in the static catalog files
     };
@@ -319,26 +319,28 @@ router.post('/products/:sku/out-of-stock', asyncHandler(async (req, res) => {
 
 // POST /api/admin/products/create — add a brand new product line without
 // a code deploy. One product ("row") can have several duration variants
-// created together; each gets its own auto-generated sku.
+// created together; each gets its own auto-generated sku but shares one
+// admin-chosen pid (matches how one static product's durations all share
+// a pid across catalog1.js/catalog2.js).
 // Body: {
-//   image: "https://i.postimg.cc/...",
-//   row: "Pato team",                              // the product line / full name
+//   image, pid: "122", row: "Pato team",
 //   durations: [
-//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150 },
-//     { name: "Pato 7 day all color", duration: "7 Days All Colours Mix", price: 300 }
+//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120 },
+//     ...
 //   ]
 // }
 router.post('/products/create', asyncHandler(async (req, res) => {
   const image = String(req.body?.image || '').trim();
   const row = String(req.body?.row || '').trim();
+  const pid = String(req.body?.pid || '').trim();
   const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
 
   if (!image) return res.status(400).json({ success: false, error: 'Image link is required' });
   if (!row) return res.status(400).json({ success: false, error: 'Product full name is required' });
+  if (!pid) return res.status(400).json({ success: false, error: 'Pid is required' });
   if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
   if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
 
-  const pid = `c${Date.now().toString(36)}`;
   const batch = db().batch();
   const created = [];
 
@@ -347,11 +349,13 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     const name = String(d?.name || '').trim();
     const duration = String(d?.duration || '').trim();
     const price = Number(d?.price);
+    const priceReseller = d?.priceReseller !== undefined && d?.priceReseller !== '' ? Number(d.priceReseller) : price;
     if (!name || !duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: name and duration label are required` });
-    if (!price || price <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: price must be a positive number` });
+    if (!price || price <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: user price must be a positive number` });
+    if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
 
-    const sku = `custom_${pid}_${i + 1}`;
-    const product = { pid, row, name, duration, price, image, createdAt: Date.now() };
+    const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
+    const product = { pid, row, name, duration, price, priceReseller, image, createdAt: Date.now() };
     batch.set(db().collection('customProducts').doc(sku), product);
     created.push({ sku, ...product });
   }
@@ -359,6 +363,142 @@ router.post('/products/create', asyncHandler(async (req, res) => {
   await batch.commit();
   invalidateCustomProductCache();
   res.json({ success: true, row, products: created });
+}));
+
+// POST /api/admin/products/:sku/edit
+// Body: any of { image, name, duration, price, priceReseller, pid } — only
+// the fields provided are changed. Works on custom products (updates their
+// own doc directly) AND static catalog1.js/catalog2.js products (stored as
+// an override in productStatus/{sku}, same doc maintenance/stock already use).
+router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
+  const sku = String(req.params.sku || '').trim();
+  const fields = {};
+  for (const key of ['image', 'name', 'duration', 'pid']) {
+    if (req.body?.[key] !== undefined) {
+      const v = String(req.body[key]).trim();
+      if (!v) return res.status(400).json({ success: false, error: `${key} can't be empty` });
+      fields[key] = v;
+    }
+  }
+  if (req.body?.price !== undefined) {
+    const v = Number(req.body.price);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'User price must be a positive number' });
+    fields.price = v;
+  }
+  if (req.body?.priceReseller !== undefined) {
+    const v = Number(req.body.priceReseller);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
+    fields.priceReseller = v;
+  }
+  if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+  const custom = await getCustomProductRaw(sku);
+  if (custom) {
+    await db().collection('customProducts').doc(sku).set(fields, { merge: true });
+    invalidateCustomProductCache();
+  } else if (CATALOG[sku]) {
+    await db().collection('productStatus').doc(sku).set({ ...fields, updatedAt: Date.now() }, { merge: true });
+    invalidateMaintenanceCache();
+  } else {
+    return res.status(404).json({ success: false, error: 'Unknown sku' });
+  }
+  res.json({ success: true, sku, updated: fields });
+}));
+
+// POST /api/admin/products/:sku/delete — custom products only. A static
+// (catalog1.js/catalog2.js) product can't be truly deleted without a code
+// change; use maintenance mode to take it down instead.
+router.post('/products/:sku/delete', asyncHandler(async (req, res) => {
+  const sku = String(req.params.sku || '').trim();
+  if (CATALOG[sku]) {
+    return res.status(400).json({ success: false, error: "That's a built-in product — use Maintenance to disable it instead of deleting" });
+  }
+  const custom = await getCustomProductRaw(sku);
+  if (!custom) return res.status(404).json({ success: false, error: 'Unknown sku' });
+
+  await deleteCustomProduct(sku);
+  await db().collection('productStatus').doc(sku).delete().catch(() => {}); // clean up any maintenance/stock override too, if one existed
+  invalidateMaintenanceCache();
+  res.json({ success: true, sku });
+}));
+
+// ---------------------------------------------------------------
+// WhatsApp-redirect products — no duration, no automated checkout, no
+// key delivery. The card's "buy" action is a WhatsApp deep link with a
+// pre-filled message instead. See src/catalog.js for why these are kept
+// out of catalogFind() entirely.
+// ---------------------------------------------------------------
+
+// GET /api/admin/products/whatsapp
+router.get('/products/whatsapp', asyncHandler(async (req, res) => {
+  const snap = await db().collection('whatsappProducts').get();
+  const products = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  res.json({ success: true, products });
+}));
+
+// POST /api/admin/products/create-whatsapp
+// Body: { image, name, price, priceReseller, whatsappNumber, whatsappMessage, viewDetails }
+router.post('/products/create-whatsapp', asyncHandler(async (req, res) => {
+  const image = String(req.body?.image || '').trim();
+  const name = String(req.body?.name || '').trim();
+  const price = Number(req.body?.price);
+  const priceReseller = req.body?.priceReseller !== undefined && req.body?.priceReseller !== '' ? Number(req.body.priceReseller) : price;
+  const whatsappNumber = String(req.body?.whatsappNumber || '').replace(/[^\d]/g, '');
+  const whatsappMessage = String(req.body?.whatsappMessage || '').trim().slice(0, 400);
+  const viewDetails = String(req.body?.viewDetails || '').trim().slice(0, 1000);
+
+  if (!image) return res.status(400).json({ success: false, error: 'Image link is required' });
+  if (!name) return res.status(400).json({ success: false, error: 'Product name is required' });
+  if (!price || price <= 0) return res.status(400).json({ success: false, error: 'User price must be a positive number' });
+  if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
+  if (!whatsappNumber) return res.status(400).json({ success: false, error: 'WhatsApp number is required (digits only, with country code)' });
+
+  const id = `wa_${Date.now().toString(36)}`;
+  const product = { image, name, price, priceReseller, whatsappNumber, whatsappMessage, viewDetails, createdAt: Date.now() };
+  await db().collection('whatsappProducts').doc(id).set(product);
+  invalidateWhatsappProductCache();
+  res.json({ success: true, id, ...product });
+}));
+
+// POST /api/admin/products/whatsapp/:id/edit
+router.post('/products/whatsapp/:id/edit', asyncHandler(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const existing = await getWhatsappProductRaw(id);
+  if (!existing) return res.status(404).json({ success: false, error: 'Unknown product' });
+
+  const fields = {};
+  for (const key of ['image', 'name', 'whatsappMessage', 'viewDetails']) {
+    if (req.body?.[key] !== undefined) fields[key] = String(req.body[key]).trim();
+  }
+  if (req.body?.whatsappNumber !== undefined) {
+    const v = String(req.body.whatsappNumber).replace(/[^\d]/g, '');
+    if (!v) return res.status(400).json({ success: false, error: 'WhatsApp number is required' });
+    fields.whatsappNumber = v;
+  }
+  if (req.body?.price !== undefined) {
+    const v = Number(req.body.price);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'User price must be a positive number' });
+    fields.price = v;
+  }
+  if (req.body?.priceReseller !== undefined) {
+    const v = Number(req.body.priceReseller);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
+    fields.priceReseller = v;
+  }
+  if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+  await db().collection('whatsappProducts').doc(id).set(fields, { merge: true });
+  invalidateWhatsappProductCache();
+  res.json({ success: true, id, updated: fields });
+}));
+
+// POST /api/admin/products/whatsapp/:id/delete
+router.post('/products/whatsapp/:id/delete', asyncHandler(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const existing = await getWhatsappProductRaw(id);
+  if (!existing) return res.status(404).json({ success: false, error: 'Unknown product' });
+  await deleteWhatsappProduct(id);
+  res.json({ success: true, id });
 }));
 
 // ---------------------------------------------------------------
