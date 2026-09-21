@@ -156,7 +156,7 @@ async function runGeminiChat(messages, uid) {
     if (result.card) card = result.card;
     if (result.cards) cards = result.cards;
     if (result.action) action = result.action;
-    contents.push({ role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: result.data } }] });
+    contents.push({ role: 'user', parts: [{ functionResponse: { name: functionCall.name, id: functionCall.id, response: result.data } }] });
   }
   throw new Error('AI took too many steps');
 }
@@ -230,7 +230,7 @@ async function runTool(functionCall, uid) {
       if (query && !p.row.toLowerCase().includes(query) && !p.name.toLowerCase().includes(query)) continue;
       const key = p.row;
       if (!groups[key] || p.price < groups[key].price) {
-        groups[key] = { name: p.row, rating: p.rating || null, reviewCount: p.reviewCount || 0, priceFrom: p.price };
+        groups[key] = { pid: p.pid || null, name: p.row, rating: p.rating || null, reviewCount: p.reviewCount || 0, priceFrom: p.price };
       }
     }
     const products = Object.values(groups).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit);
