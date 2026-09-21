@@ -122,7 +122,10 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   const buyerWa = String(req.body?.waNum || '').trim();
   const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null;
 
-  const product = catalogFind(sku);
+  let product = catalogFind(sku);
+  if (!product) {
+    product = await findCustomProductFresh(sku);
+  }
   if (!product) {
     return res.status(400).json({ success: false, error: 'Unknown product' });
   }
@@ -133,6 +136,15 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
       success: false,
       error: liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.',
     });
+  }
+  if (product.outOfStock || liveStatus.outOfStock) {
+    return res.status(409).json({
+      success: false,
+      error: liveStatus.outOfStockMessage || product.outOfStockMessage || 'This duration is currently out of stock.',
+    });
+  }
+  if (product.type === 'manual') {
+    return res.status(400).json({ success: false, error: 'This product is ordered via WhatsApp, not instant checkout.' });
   }
 
   if (product.requiresAndroidId && !androidId) {
@@ -204,6 +216,12 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     const liveStatus = await getMaintenanceForSku(sku);
     if (product.maintenance || liveStatus.maintenance) {
       throw new Error(liveStatus.maintenanceMessage || product.maintenanceMessage || 'This product is currently under maintenance.');
+    }
+    if (product.outOfStock || liveStatus.outOfStock) {
+      throw new Error(liveStatus.outOfStockMessage || product.outOfStockMessage || 'This duration is currently out of stock.');
+    }
+    if (product.type === 'manual') {
+      throw new Error('This product is ordered via WhatsApp, not instant checkout.');
     }
 
     if (product.requiresAndroidId && !androidId) {
