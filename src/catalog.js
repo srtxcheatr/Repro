@@ -32,7 +32,12 @@ export function catalogFind(sku, role = 'user') {
     p = CATALOG[sku] ?? null;
   }
   if (p) return p;
-  return customProductCache[sku] ?? null; // may be briefly stale — see findCustomProductFresh() for the purchase-path fallback
+  return applyCustomRole(customProductCache[sku], role); // whatsapp-redirect products are deliberately excluded — they never go through checkout
+}
+
+function applyCustomRole(p, role) {
+  if (!p) return null;
+  return { ...p, price: role === 'reseller' ? (p.priceReseller ?? p.price) : p.price };
 }
 
 /** Returns the full catalog object appropriate for a role (static, no overrides applied). */
@@ -141,9 +146,56 @@ export function invalidateCustomProductCache() {
 }
 
 /** Fresh (uncached) lookup for one custom-product sku — used by the purchase path when catalogFind() misses, so a just-created product is buyable immediately. */
-export async function findCustomProductFresh(sku) {
+export async function findCustomProductFresh(sku, role = 'user') {
+  const snap = await db().collection('customProducts').doc(sku).get();
+  return snap.exists ? applyCustomRole(snap.data(), role) : null;
+}
+
+/** Direct read of one custom product's raw stored doc (both prices, no role applied) — for the admin edit form, which needs to show/edit both at once. */
+export async function getCustomProductRaw(sku) {
   const snap = await db().collection('customProducts').doc(sku).get();
   return snap.exists ? snap.data() : null;
+}
+
+export async function deleteCustomProduct(sku) {
+  await db().collection('customProducts').doc(sku).delete();
+  invalidateCustomProductCache();
+}
+
+// ---------------------------------------------------------------
+// WhatsApp-redirect products — a third product type alongside the
+// automated (static + custom) catalog. No duration, no checkout, no
+// key delivery: the "buy" action is just a deep link into WhatsApp
+// with a pre-filled message. Never merged into catalogFind(), so
+// these can never accidentally enter the automated purchase flow.
+// ---------------------------------------------------------------
+
+let whatsappProductCache = {};
+let whatsappProductCacheAt = 0;
+
+async function refreshWhatsappProducts() {
+  const now = Date.now();
+  if (whatsappProductCacheAt > 0 && now - whatsappProductCacheAt < OVERRIDE_CACHE_TTL_MS) return whatsappProductCache;
+  const snap = await db().collection('whatsappProducts').get();
+  const map = {};
+  snap.forEach((d) => { map[d.id] = d.data(); });
+  whatsappProductCache = map;
+  whatsappProductCacheAt = now;
+  return whatsappProductCache;
+}
+
+export function invalidateWhatsappProductCache() {
+  whatsappProductCacheAt = 0;
+}
+
+export async function getWhatsappProductRaw(id) {
+  const snap = await db().collection('whatsappProducts').doc(id).get();
+  return snap.exists ? snap.data() : null;
+}
+
+export async function deleteWhatsappProduct(id) {
+  await db().collection('whatsappProducts').doc(id).delete();
+  invalidateWhatsappProductCache();
 }
 
 /**
@@ -162,9 +214,18 @@ export async function getLiveCatalog(role = 'user') {
 
   try {
     const custom = await refreshCustomProducts();
-    for (const [sku, p] of Object.entries(custom)) base[sku] = { ...p };
+    for (const [sku, p] of Object.entries(custom)) base[sku] = applyCustomRole(p, role);
   } catch (e) {
     console.error('[catalog] custom products unavailable, showing static catalog only:', e);
+  }
+
+  try {
+    const whatsapp = await refreshWhatsappProducts();
+    for (const [id, p] of Object.entries(whatsapp)) {
+      base[id] = { ...applyCustomRole(p, role), type: 'whatsapp', row: p.name, name: p.name };
+    }
+  } catch (e) {
+    console.error('[catalog] whatsapp products unavailable:', e);
   }
 
   let overrides;
@@ -189,6 +250,14 @@ export async function getLiveCatalog(role = 'user') {
       // or any other sku, even though they share the same product "row".
       outOfStock: !!o.outOfStock,
       outOfStockMessage: o.outOfStock ? (o.outOfStockMessage || 'Out of stock — check back soon.') : undefined,
+      // Editable display fields — only present once an admin has edited a
+      // STATIC (catalog1/2.js) product; custom/whatsapp products are edited
+      // in their own collection directly instead, so this rarely applies to them.
+      ...(o.image !== undefined ? { image: o.image } : {}),
+      ...(o.name !== undefined ? { name: o.name } : {}),
+      ...(o.duration !== undefined ? { duration: o.duration } : {}),
+      ...(o.pid !== undefined ? { pid: o.pid } : {}),
+      ...(o.price !== undefined ? { price: role === 'reseller' ? (o.priceReseller ?? o.price) : o.price } : {}),
     };
   }
   return applyRatings(merged);
