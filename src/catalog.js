@@ -147,6 +147,7 @@ export function invalidateCustomProductCache() {
 
 /** Fresh (uncached) lookup for one custom-product sku — used by the purchase path when catalogFind() misses, so a just-created product is buyable immediately. */
 export async function findCustomProductFresh(sku, role = 'user') {
+  if (!sku) return null; // a Firestore .doc() path can't be empty — fail soft, not with an unhandled 500
   const snap = await db().collection('customProducts').doc(sku).get();
   return snap.exists ? applyCustomRole(snap.data(), role) : null;
 }
