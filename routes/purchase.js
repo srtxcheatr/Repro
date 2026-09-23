@@ -35,6 +35,11 @@ async function fetchRealKey(sku, product, androidId = null) {
 
   console.log(`[Reseller] Request: pid=${product.pid}, duration=${duration}${androidId ? `, android_id=${androidId}` : ''}`);
 
+  // Referer/Origin must match whatever host RESELLER_ENDPOINT actually
+  // points at — a stale hardcoded domain here can itself get the request
+  // rejected (or flagged) by the reseller panel, independent of whether
+  // the credentials are correct.
+  const apiOrigin = new URL(API_URL).origin;
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'x-master-key': MASTER_KEY,
@@ -42,8 +47,8 @@ async function fetchRealKey(sku, product, androidId = null) {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
-    'Referer': 'https://adminpanels.shop/',
-    'Origin': 'https://adminpanels.shop',
+    'Referer': `${apiOrigin}/`,
+    'Origin': apiOrigin,
     'Connection': 'keep-alive',
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
@@ -121,6 +126,10 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   const buyerName = String(req.body?.name || '').trim();
   const buyerWa = String(req.body?.waNum || '').trim();
   const androidId = req.body?.android_id ? String(req.body.android_id).trim() : null;
+
+  if (!sku) {
+    return res.status(400).json({ success: false, error: 'Missing product selection. Please pick a duration and try again.' });
+  }
 
   let product = catalogFind(sku);
   if (!product) {
