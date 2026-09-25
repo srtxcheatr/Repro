@@ -3,8 +3,7 @@ import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { findProductFresh, getMaintenanceForSku } from '../src/catalog.js';
-import { issueFpsKey } from '../src/purchase2.js';
+import { catalogFind, getMaintenanceForSku, findCustomProductFresh } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -118,49 +117,6 @@ function setJob(jobId, patch) {
   const existing = jobs.get(jobId) || {};
   jobs.set(jobId, { ...existing, ...patch });
 }
-
-// Direct FPS purchase bridge. Server validates the product, role, balance,
-// maintenance state and charges only after the FPS server returns a key.
-router.post('/purchase2/key', asyncHandler(async (req,res) => {
-  const sku=String(req.body?.sku||'').trim();
-  const buyerName=String(req.body?.name||'').trim();
-  const buyerWa=String(req.body?.waNum||'').trim();
-  const androidId=req.body?.android_id ? String(req.body.android_id).trim() : null;
-  if(!sku) return res.status(400).json({success:false,error:'Missing sku'});
-
-  const userRef=db().collection('users').doc(req.uid);
-  const userSnap=await userRef.get();
-  const role=userSnap.exists ? (userSnap.data().role||'user') : 'user';
-  const product=await findProductFresh(sku,role);
-  if(!product) return res.status(404).json({success:false,error:'Unknown product'});
-  if(product.source!=='fps') return res.status(400).json({success:false,error:'This product is not an FPS product'});
-  const status=await getMaintenanceForSku(sku);
-  if(product.maintenance || status.maintenance) return res.status(409).json({success:false,error:status.maintenanceMessage||'Product under maintenance'});
-  if(product.outOfStock || status.outOfStock) return res.status(409).json({success:false,error:status.outOfStockMessage||'Product out of stock'});
-  const price=Number(product.price||0);
-  let reserved=false;
-  try {
-    let newBalance=0;
-    await db().runTransaction(async tx=>{
-      const snap=await tx.get(userRef);
-      const bal=Number(snap.data()?.balance||0);
-      if(bal<price) throw new Error('Insufficient balance');
-      newBalance=bal-price;
-      tx.update(userRef,{balance:newBalance});
-    });
-    reserved=true;
-    const key=await issueFpsKey({sku,product,uid:req.uid,email:req.email,androidId});
-    const history=userSnap.exists?(userSnap.data().purchaseHistory||[]):[];
-    history.push({at:new Date().toISOString(),sku,row:product.row,name:product.name,duration:product.duration,price,key,buyerName,buyerWa,source:'fps'});
-    await userRef.set({purchaseHistory:history,totalKeysBought:admin.firestore.FieldValue.increment(1),totalSpent:admin.firestore.FieldValue.increment(price)},{merge:true});
-    const fresh=await userRef.get();
-    return res.json({success:true,key,newBalance:Number(fresh.data()?.balance||0)});
-  } catch(e) {
-    if(res.headersSent) return;
-    if(reserved) await userRef.update({balance:admin.firestore.FieldValue.increment(price)}).catch(()=>{});
-    return res.status(400).json({success:false,error:e.message});
-  }
-}));
 
 // ============================================================
 //  POST /checkout/start
@@ -289,47 +245,33 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
 
     setJob(jobId, { percent: 30, label: 'Checking balance...' });
 
-    // Reserve the money before contacting the key server. This prevents
-    // two simultaneous checkouts from spending the same balance.
-    let reserved = false;
-    let reservedBalance = 0;
-    const reserveSnap = await db().runTransaction(async (tx) => {
+    const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
-      if (currentBalance < realPrice) throw new Error('Please top up first then trying 🙏');
-      reservedBalance = currentBalance - realPrice;
-      tx.update(userRef, { balance: reservedBalance });
-      return { currentBalance };
-    });
-    reserved = true;
 
-    let key;
-    try {
-      setJob(jobId, { percent: 60, label: product.source === 'fps' ? 'Contacting FPS key server...' : 'Contacting reseller...' });
-      key = product.source === 'fps'
-        ? await issueFpsKey({ sku, product, uid, email, androidId })
-        : await fetchRealKey(sku, product, androidId);
-    } catch (e) {
-      if (reserved) {
-        await db().collection('users').doc(uid).update({ balance: admin.firestore.FieldValue.increment(realPrice) }).catch(() => {});
+      if (currentBalance < realPrice) {
+        throw new Error('Please top up first then trying 🙏');
       }
-      throw e;
-    }
 
-    setJob(jobId, { percent: 90, label: 'Finalizing order...' });
-    const historyEntry = {
-      at: new Date().toISOString(), sku, row: product.row, name: product.name, duration: product.duration,
-      price: realPrice, key, buyerName, buyerWa, source: product.source || 'reseller',
-    };
-    const finalSnap = await db().collection('users').doc(uid).get();
-    const purchaseHistory = finalSnap.exists ? (finalSnap.data().purchaseHistory || []) : [];
-    purchaseHistory.push(historyEntry);
-    await db().collection('users').doc(uid).set({
-      purchaseHistory,
-      totalKeysBought: admin.firestore.FieldValue.increment(1),
-      totalSpent: admin.firestore.FieldValue.increment(realPrice),
-    }, { merge: true });
-    const result = { key, newBalance: reservedBalance };
+      setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
+      const key = await fetchRealKey(sku, product, androidId);
+
+      setJob(jobId, { percent: 90, label: 'Finalizing order...' });
+      const newBalance = currentBalance - realPrice;
+      const historyEntry = {
+        at: new Date().toISOString(), sku, row: product.row, name: product.name, duration: product.duration,
+        price: realPrice, key, buyerName, buyerWa,
+      };
+      const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
+      purchaseHistory.push(historyEntry);
+
+      tx.set(userRef, {
+        balance: newBalance, purchaseHistory,
+        totalKeysBought: admin.firestore.FieldValue.increment(1),
+        totalSpent: admin.firestore.FieldValue.increment(realPrice),
+      }, { merge: true });
+      return { key, newBalance };
+    });
 
     setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, ...result });
 
