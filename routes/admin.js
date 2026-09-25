@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
-import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
+import { getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateProductCache, findProductFresh, getProductRaw, deleteCustomProduct, upsertProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 
 const router = express.Router();
@@ -237,189 +237,139 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------
-// Products / maintenance — catalog1.js and catalog2.js describe the
-// same physical products at two price tiers (retail vs reseller), so
-// maintenance is tracked once per sku, not once per catalog, and
-// applies to both automatically. The override lives in Firestore
-// (productStatus/{sku}) so toggling it never needs a code deploy —
-// see src/catalog.js for how it's merged into what the storefront sees.
+// ---------------------------------------------------------------
+// Firestore-only products / maintenance.
+// Every product is stored in products/{sku}; catalog1.js/catalog2.js
+// are intentionally empty. One Firestore document represents one
+// purchasable duration/SKU and can carry multiple tags.
 // ---------------------------------------------------------------
 
-// GET /api/admin/products — every sku (static + admin-added) with its
-// current live maintenance/stock status, for the admin panel's product manager.
+const cleanTags = (tags) => {
+  const allowed = new Set(['IOS','NONROOT','ROOT','PC','FREE']);
+  const raw = Array.isArray(tags) ? tags : String(tags || '').split(',');
+  return [...new Set(raw.map(x => String(x).trim().toUpperCase())
+    .filter(x => allowed.has(x))
+    .map(x => x === 'IOS' ? 'iOS' : x))];
+};
+
 router.get('/products', asyncHandler(async (req, res) => {
-  const [overrides, liveCatalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
-  const skus = Object.keys(liveCatalog).filter((sku) => liveCatalog[sku].type !== 'whatsapp'); // whatsapp products have their own list below
-
-  const products = skus.map((sku) => {
-    const p = liveCatalog[sku];
-    const pr = CATALOG_RESELLER[sku] || p;
-    const o = overrides[sku];
-    const maintenance = o ? !!o.maintenance : !!p.maintenance;
-    const maintenanceMessage = maintenance
-      ? (o?.maintenanceMessage || p.maintenanceMessage || 'This product is temporarily under maintenance.')
-      : null;
-    const outOfStock = !!p.outOfStock;
-    const outOfStockMessage = outOfStock ? (p.outOfStockMessage || 'Out of stock — check back soon.') : null;
-    return {
-      sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
-      price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
-      maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
-      custom: !CATALOG[sku], // true for admin-added products, not in the static catalog files
-    };
-  });
-
-  res.json({ success: true, products });
+  const liveCatalog = await getLiveCatalog('user');
+  const products = Object.entries(liveCatalog)
+    .filter(([,p]) => p.type !== 'whatsapp')
+    .map(([sku,p]) => ({
+      sku, pid:p.pid || '', row:p.row || p.name || '', name:p.name || '',
+      duration:p.duration || '', image:p.image || '',
+      price:Number(p.price || 0), priceReseller:Number(p.priceReseller ?? p.price ?? 0),
+      tags:cleanTags(p.tags), source:p.source || 'reseller',
+      free:!!p.free, maintenance:!!p.maintenance,
+      maintenanceMessage:p.maintenanceMessage || null,
+      outOfStock:!!p.outOfStock, outOfStockMessage:p.outOfStockMessage || null,
+      rating:p.rating ?? null, reviewCount:p.reviewCount || 0,
+    }));
+  res.json({ success:true, products });
 }));
 
-// POST /api/admin/products/:sku/maintenance
-// Body: { maintenance: boolean, message?: string }
-router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  if (!CATALOG[sku]) return res.status(404).json({ success: false, error: 'Unknown sku' });
-
-  const maintenance = !!req.body?.maintenance;
-  const message = String(req.body?.message || '').trim();
-  if (message.length > 300) return res.status(400).json({ success: false, error: 'Keep the message under 300 characters' });
-
+router.post('/products/:sku/maintenance', asyncHandler(async (req,res) => {
+  const sku=String(req.params.sku||'').trim();
+  const existing=await getProductRaw(sku);
+  if(!existing) return res.status(404).json({success:false,error:'Unknown sku'});
+  const maintenance=!!req.body?.maintenance;
+  const message=String(req.body?.message||'').trim().slice(0,300);
   await db().collection('productStatus').doc(sku).set({
     maintenance,
-    maintenanceMessage: maintenance ? (message || 'This product is temporarily under maintenance.') : null,
-    updatedAt: Date.now(),
-  }, { merge: true });
-
-  invalidateMaintenanceCache(); // so this takes effect immediately, not after the 30s cache TTL
-  res.json({ success: true, sku, maintenance });
+    maintenanceMessage:maintenance ? (message || 'This product is temporarily under maintenance.') : null,
+    updatedAt:Date.now(),
+  },{merge:true});
+  invalidateMaintenanceCache();
+  res.json({success:true,sku,maintenance});
 }));
 
-// POST /api/admin/products/:sku/out-of-stock
-// Body: { outOfStock: boolean, message?: string }
-// Deliberately a separate field from maintenance: toggling this for one
-// duration/sku (e.g. Pato's 3-day) never disables sibling skus (7-day,
-// 15-day) that just happen to share the same product "row".
-router.post('/products/:sku/out-of-stock', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  if (!CATALOG[sku] && !(await findCustomProductFresh(sku))) {
-    return res.status(404).json({ success: false, error: 'Unknown sku' });
-  }
-
-  const outOfStock = !!req.body?.outOfStock;
-  const message = String(req.body?.message || '').trim();
-  if (message.length > 300) return res.status(400).json({ success: false, error: 'Keep the message under 300 characters' });
-
+router.post('/products/:sku/out-of-stock', asyncHandler(async (req,res) => {
+  const sku=String(req.params.sku||'').trim();
+  if(!(await getProductRaw(sku))) return res.status(404).json({success:false,error:'Unknown sku'});
+  const outOfStock=!!req.body?.outOfStock;
+  const message=String(req.body?.message||'').trim().slice(0,300);
   await db().collection('productStatus').doc(sku).set({
     outOfStock,
-    outOfStockMessage: outOfStock ? (message || 'Out of stock — check back soon.') : null,
-    updatedAt: Date.now(),
-  }, { merge: true });
-
+    outOfStockMessage:outOfStock ? (message || 'Out of stock — check back soon.') : null,
+    updatedAt:Date.now(),
+  },{merge:true});
   invalidateMaintenanceCache();
-  res.json({ success: true, sku, outOfStock });
+  res.json({success:true,sku,outOfStock});
 }));
 
-// POST /api/admin/products/create — add a brand new product line without
-// a code deploy. One product ("row") can have several duration variants
-// created together; each gets its own auto-generated sku but shares one
-// admin-chosen pid (matches how one static product's durations all share
-// a pid across catalog1.js/catalog2.js).
-// Body: {
-//   image, pid: "122", row: "Pato team",
-//   durations: [
-//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120 },
-//     ...
-//   ]
-// }
-router.post('/products/create', asyncHandler(async (req, res) => {
-  const image = String(req.body?.image || '').trim();
-  const row = String(req.body?.row || '').trim();
-  const pid = String(req.body?.pid || '').trim();
-  const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
-
-  if (!image) return res.status(400).json({ success: false, error: 'Image link is required' });
-  if (!row) return res.status(400).json({ success: false, error: 'Product full name is required' });
-  if (!pid) return res.status(400).json({ success: false, error: 'Pid is required' });
-  if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
-  if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
-
-  const batch = db().batch();
-  const created = [];
-
-  for (let i = 0; i < durations.length; i++) {
-    const d = durations[i];
-    const name = String(d?.name || '').trim();
-    const duration = String(d?.duration || '').trim();
-    const price = Number(d?.price);
-    const priceReseller = d?.priceReseller !== undefined && d?.priceReseller !== '' ? Number(d.priceReseller) : price;
-    if (!name || !duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: name and duration label are required` });
-    if (!price || price <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: user price must be a positive number` });
-    if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
-
-    const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
-    const product = { pid, row, name, duration, price, priceReseller, image, createdAt: Date.now() };
-    batch.set(db().collection('customProducts').doc(sku), product);
-    created.push({ sku, ...product });
+// POST /api/admin/products/create
+// Body: {image,row,pid,tags:[],durations:[{name,duration,price,priceReseller,source,free}]}
+router.post('/products/create', asyncHandler(async (req,res) => {
+  const image=String(req.body?.image||'').trim();
+  const row=String(req.body?.row||'').trim();
+  const pid=String(req.body?.pid||'').trim();
+  const tags=cleanTags(req.body?.tags);
+  const durations=Array.isArray(req.body?.durations)?req.body.durations:[];
+  const defaultSource=String(req.body?.source||'reseller').trim()==='fps'?'fps':'reseller';
+  if(!image) return res.status(400).json({success:false,error:'Image link is required'});
+  if(!row) return res.status(400).json({success:false,error:'Product name is required'});
+  if(!pid) return res.status(400).json({success:false,error:'PID is required'});
+  if(!durations.length || durations.length>20) return res.status(400).json({success:false,error:'Add 1-20 durations'});
+  const batch=db().batch(), created=[];
+  for(let i=0;i<durations.length;i++){
+    const d=durations[i];
+    const name=String(d?.name||row).trim();
+    const duration=String(d?.duration||'').trim();
+    const price=Number(d?.price);
+    const priceReseller=Number(d?.priceReseller ?? price);
+    if(!name || !duration || !(price>0) || !(priceReseller>0))
+      return res.status(400).json({success:false,error:`Duration #${i+1}: name, duration and valid prices are required`});
+    const sku=String(d?.sku||`p_${pid}_${Date.now().toString(36)}_${i+1}`).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
+    const ref=db().collection('products').doc(sku);
+    const product={
+      row,name,duration,pid,image,price,priceReseller,tags,
+      source:String(d?.source||defaultSource),
+      free:!!d?.free || tags.includes('FREE'),
+      createdAt:Date.now(),updatedAt:Date.now()
+    };
+    batch.set(ref,product,{merge:true}); created.push({sku,...product});
   }
-
-  await batch.commit();
-  invalidateCustomProductCache();
-  res.json({ success: true, row, products: created });
+  await batch.commit(); invalidateProductCache();
+  res.json({success:true,row,products:created});
 }));
 
-// POST /api/admin/products/:sku/edit
-// Body: any of { image, name, duration, price, priceReseller, pid } — only
-// the fields provided are changed. Works on custom products (updates their
-// own doc directly) AND static catalog1.js/catalog2.js products (stored as
-// an override in productStatus/{sku}, same doc maintenance/stock already use).
-router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  const fields = {};
-  for (const key of ['image', 'name', 'duration', 'pid']) {
-    if (req.body?.[key] !== undefined) {
-      const v = String(req.body[key]).trim();
-      if (!v) return res.status(400).json({ success: false, error: `${key} can't be empty` });
-      fields[key] = v;
+router.post('/products/:sku/edit', asyncHandler(async(req,res)=>{
+  const sku=String(req.params.sku||'').trim();
+  const existing=await getProductRaw(sku);
+  if(!existing) return res.status(404).json({success:false,error:'Unknown sku'});
+  const fields={};
+  for(const key of ['image','name','duration','pid','row','source']){
+    if(req.body?.[key]!==undefined){
+      const v=String(req.body[key]).trim();
+      if(!v) return res.status(400).json({success:false,error:`${key} can't be empty`});
+      fields[key]=v;
     }
   }
-  if (req.body?.price !== undefined) {
-    const v = Number(req.body.price);
-    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'User price must be a positive number' });
-    fields.price = v;
+  if(req.body?.tags!==undefined) fields.tags=cleanTags(req.body.tags);
+  if(req.body?.price!==undefined){
+    const v=Number(req.body.price); if(!(v>0)) return res.status(400).json({success:false,error:'User price must be positive'});
+    fields.price=v;
   }
-  if (req.body?.priceReseller !== undefined) {
-    const v = Number(req.body.priceReseller);
-    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
-    fields.priceReseller = v;
+  if(req.body?.priceReseller!==undefined){
+    const v=Number(req.body.priceReseller); if(!(v>0)) return res.status(400).json({success:false,error:'Reseller price must be positive'});
+    fields.priceReseller=v;
   }
-  if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
-
-  const custom = await getCustomProductRaw(sku);
-  if (custom) {
-    await db().collection('customProducts').doc(sku).set(fields, { merge: true });
-    invalidateCustomProductCache();
-  } else if (CATALOG[sku]) {
-    await db().collection('productStatus').doc(sku).set({ ...fields, updatedAt: Date.now() }, { merge: true });
-    invalidateMaintenanceCache();
-  } else {
-    return res.status(404).json({ success: false, error: 'Unknown sku' });
-  }
-  res.json({ success: true, sku, updated: fields });
+  if(req.body?.free!==undefined) fields.free=!!req.body.free;
+  if(!Object.keys(fields).length) return res.status(400).json({success:false,error:'Nothing to update'});
+  fields.updatedAt=Date.now();
+  await db().collection('products').doc(sku).set(fields,{merge:true});
+  invalidateProductCache();
+  res.json({success:true,sku,updated:fields});
 }));
 
-// POST /api/admin/products/:sku/delete — custom products only. A static
-// (catalog1.js/catalog2.js) product can't be truly deleted without a code
-// change; use maintenance mode to take it down instead.
-router.post('/products/:sku/delete', asyncHandler(async (req, res) => {
-  const sku = String(req.params.sku || '').trim();
-  if (CATALOG[sku]) {
-    return res.status(400).json({ success: false, error: "That's a built-in product — use Maintenance to disable it instead of deleting" });
-  }
-  const custom = await getCustomProductRaw(sku);
-  if (!custom) return res.status(404).json({ success: false, error: 'Unknown sku' });
-
-  await deleteCustomProduct(sku);
-  await db().collection('productStatus').doc(sku).delete().catch(() => {}); // clean up any maintenance/stock override too, if one existed
-  invalidateMaintenanceCache();
-  res.json({ success: true, sku });
+router.post('/products/:sku/delete', asyncHandler(async(req,res)=>{
+  const sku=String(req.params.sku||'').trim();
+  if(!(await getProductRaw(sku))) return res.status(404).json({success:false,error:'Unknown sku'});
+  await db().collection('products').doc(sku).delete();
+  await db().collection('productStatus').doc(sku).delete().catch(()=>{});
+  invalidateProductCache(); invalidateMaintenanceCache();
+  res.json({success:true,sku});
 }));
 
 // ---------------------------------------------------------------
