@@ -5,8 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "migrate-products": "node scripts/migrate-products.js"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18"
