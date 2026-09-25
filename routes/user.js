@@ -16,7 +16,7 @@ const DEFAULTS = (email) => ({
   profilePhone: '',
   tiktok: '',
   requestStatus: 'Active',
-  adminMessage: 'Welcome!  need 1500+ balance and buy 8+ key for reseller mode unlock 🔑',
+  adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
   balance: 0,
   purchaseHistory: [],
   totalKeysBought: 0,
@@ -336,51 +336,6 @@ router.post('/announcement/seen', asyncHandler(async (req, res) => {
   if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
   await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
   res.json({ success: true });
-}));
-
-// ---------------------------------------------------------------
-// Automatic reseller upgrade. Eligibility is based on server-side
-// purchase history and current balance; client-side values are ignored.
-// Target: at least 8 purchased/sold keys (purchaseHistory entries) and
-// balance >= NRP 1500. The application document gives the UI a short
-// "verifying" state, then the backend promotes the account.
-// ---------------------------------------------------------------
-router.get('/reseller/status', asyncHandler(async (req,res) => {
-  const ref=db().collection('users').doc(req.uid);
-  const snap=await ref.get();
-  const d=snap.exists?snap.data():{};
-  const transactions=Array.isArray(d.purchaseHistory)?d.purchaseHistory.length:Number(d.totalKeysBought||0);
-  const balance=Number(d.balance||0);
-  const eligible=transactions>=8 && balance>=1500;
-  const role=d.role||'user';
-  const appSnap=await db().collection('resellerApplications').doc(req.uid).get();
-  const appData=appSnap.exists?appSnap.data():null;
-  res.json({success:true,role,eligible,transactions,balance,targetTransactions:8,targetBalance:1500,
-    status:appData?.status||'not_started',verifiedAt:appData?.verifiedAt||null});
-}));
-
-router.post('/reseller/apply', asyncHandler(async(req,res) => {
-  const ref=db().collection('users').doc(req.uid);
-  const snap=await ref.get();
-  const d=snap.exists?snap.data():{};
-  if((d.role||'user')==='reseller') return res.json({success:true,role:'reseller',status:'already_reseller'});
-  const transactions=Array.isArray(d.purchaseHistory)?d.purchaseHistory.length:Number(d.totalKeysBought||0);
-  const balance=Number(d.balance||0);
-  if(transactions<8 || balance<1500) {
-    return res.status(403).json({success:false,error:`Reseller target not complete. Need 8+ keys and NRP 1500+ balance. Current: ${transactions} keys, NRP ${balance}.`});
-  }
-  const appRef=db().collection('resellerApplications').doc(req.uid);
-  await appRef.set({uid:req.uid,status:'verifying',startedAt:Date.now(),transactions,balance},{merge:true});
-  // Re-read before promotion so the server is the sole authority.
-  const verifySnap=await ref.get();
-  const vd=verifySnap.data()||{};
-  const verifiedTransactions=Array.isArray(vd.purchaseHistory)?vd.purchaseHistory.length:Number(vd.totalKeysBought||0);
-  const verifiedBalance=Number(vd.balance||0);
-  if(verifiedTransactions<8 || verifiedBalance<1500)
-    return res.status(403).json({success:false,error:'Eligibility changed during verification'});
-  await ref.set({role:'reseller',resellerVerifiedAt:Date.now()},{merge:true});
-  await appRef.set({status:'approved',verifiedAt:Date.now(),transactions:verifiedTransactions,balance:verifiedBalance},{merge:true});
-  res.json({success:true,role:'reseller',status:'approved',transactions:verifiedTransactions,balance:verifiedBalance});
 }));
 
 // ---------------------------------------------------------------
