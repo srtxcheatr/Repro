@@ -391,4 +391,84 @@ router.get('/feedback', asyncHandler(async (req, res) => {
   res.json({ success: true, feedback: items });
 }));
 
+// ---------------------------------------------------------------
+// Reseller self-upgrade — once a regular user has bought/sold 8+ keys
+// AND holds a balance of at least NRP 1500, they can promote themselves
+// to 'reseller' from the dashboard. Both numbers are re-checked here
+// against Firestore (never trusted from the client), so this can't be
+// gamed by a frontend that lies about having met the requirement.
+// ---------------------------------------------------------------
+const RESELLER_MIN_KEYS = 8;
+const RESELLER_MIN_BALANCE = 1500;
+
+// POST /api/user/apply-reseller — no body needed; uid comes from the
+// verified Firebase token. Promotes immediately on success (no separate
+// admin approval step) since the two numeric gates ARE the approval —
+// but still notifies Telegram so you have a record of every promotion.
+router.post('/apply-reseller', asyncHandler(async (req, res) => {
+  const userRef = db().collection('users').doc(req.uid);
+
+  const result = await db().runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const data = snap.exists ? snap.data() : {};
+
+    if ((data.role || 'user') === 'reseller') {
+      return { ok: false, error: 'You are already a reseller' };
+    }
+
+    const totalKeysBought = Number(data.totalKeysBought || 0);
+    const balance = Number(data.balance || 0);
+
+    if (totalKeysBought < RESELLER_MIN_KEYS || balance < RESELLER_MIN_BALANCE) {
+      return {
+        ok: false,
+        error: `Not eligible yet — need ${RESELLER_MIN_KEYS}+ keys bought (you have ${totalKeysBought}) and NRP ${RESELLER_MIN_BALANCE}+ balance (you have NRP ${balance}).`,
+      };
+    }
+
+    const log = data.adminLog || [];
+    log.push({
+      delta: 0,
+      note: `Self-upgraded to reseller (${totalKeysBought} keys, NRP ${balance} balance)`,
+      resultingBalance: balance,
+      at: new Date().toISOString(),
+    });
+
+    tx.set(userRef, { role: 'reseller', adminLog: log }, { merge: true });
+    return { ok: true, totalKeysBought, balance };
+  });
+
+  if (!result.ok) return res.status(400).json({ success: false, error: result.error });
+
+  telegramNotify(
+    `👑 <b>RESELLER SELF-UPGRADE</b>\n` +
+    `UID: <code>${esc(req.uid)}</code>\n` +
+    `Email: ${esc(req.email)}\n` +
+    `Keys bought: ${result.totalKeysBought}\n` +
+    `Balance: NRP ${result.balance}`
+  );
+
+  res.json({ success: true, role: 'reseller' });
+}));
+
+// GET /api/user/reseller-progress — the two numbers the dashboard needs
+// to draw the "X of 8 keys, NRP Y of 1500" progress bar, without the
+// client ever computing eligibility itself (that stays server-side, see
+// POST /apply-reseller above — this route is display-only).
+router.get('/reseller-progress', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').doc(req.uid).get();
+  const data = snap.exists ? snap.data() : {};
+  const totalKeysBought = Number(data.totalKeysBought || 0);
+  const balance = Number(data.balance || 0);
+  res.json({
+    success: true,
+    role: data.role || 'user',
+    totalKeysBought,
+    balance,
+    minKeys: RESELLER_MIN_KEYS,
+    minBalance: RESELLER_MIN_BALANCE,
+    eligible: (data.role || 'user') !== 'reseller' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
+  });
+}));
+
 export default router;
