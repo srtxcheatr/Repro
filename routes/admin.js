@@ -264,6 +264,7 @@ router.get('/products', asyncHandler(async (req, res) => {
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
+      tags: Array.isArray(p.tags) ? p.tags : [],
       maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
       custom: !CATALOG[sku], // true for admin-added products, not in the static catalog files
     };
@@ -274,9 +275,19 @@ router.get('/products', asyncHandler(async (req, res) => {
 
 // POST /api/admin/products/:sku/maintenance
 // Body: { maintenance: boolean, message?: string }
+//
+// FIX: this used to gate on `CATALOG[sku]` (a static catalog1.js entry),
+// which 404'd on every product now that catalog1.js/catalog2.js are
+// empty and everything lives in Firestore's customProducts collection
+// instead. Checking against the live catalog (static + custom +
+// whatsapp merged) means maintenance mode works regardless of which
+// collection a product's data actually lives in.
 router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
   const sku = String(req.params.sku || '').trim();
-  if (!CATALOG[sku]) return res.status(404).json({ success: false, error: 'Unknown sku' });
+  const liveCatalog = await getLiveCatalog('user');
+  if (!CATALOG[sku] && !liveCatalog[sku]) {
+    return res.status(404).json({ success: false, error: 'Unknown sku' });
+  }
 
   const maintenance = !!req.body?.maintenance;
   const message = String(req.body?.message || '').trim();
@@ -317,13 +328,25 @@ router.post('/products/:sku/out-of-stock', asyncHandler(async (req, res) => {
   res.json({ success: true, sku, outOfStock });
 }));
 
+// Valid product tags. A product can carry more than one at once — e.g.
+// a build that works on both rooted and non-rooted devices gets
+// tags: ["ROOT","NONROOT"], and the storefront renders one badge per
+// tag instead of squeezing it into a single derived category.
+const VALID_TAGS = ['NONROOT', 'ROOT', 'IOS', 'PC'];
+
+function normalizeTags(input) {
+  const arr = Array.isArray(input) ? input : [];
+  return [...new Set(arr.map((t) => String(t || '').trim().toUpperCase()))].filter((t) => VALID_TAGS.includes(t));
+}
+
 // POST /api/admin/products/create — add a brand new product line without
 // a code deploy. One product ("row") can have several duration variants
 // created together; each gets its own auto-generated sku but shares one
-// admin-chosen pid (matches how one static product's durations all share
-// a pid across catalog1.js/catalog2.js).
+// admin-chosen pid AND one admin-chosen tag set (matches how one static
+// product's durations all share a pid across catalog1.js/catalog2.js —
+// tags now travel the same way).
 // Body: {
-//   image, pid: "122", row: "Pato team",
+//   image, pid: "122", row: "Pato team", tags: ["NONROOT","IOS"],
 //   durations: [
 //     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120 },
 //     ...
@@ -333,11 +356,13 @@ router.post('/products/create', asyncHandler(async (req, res) => {
   const image = String(req.body?.image || '').trim();
   const row = String(req.body?.row || '').trim();
   const pid = String(req.body?.pid || '').trim();
+  const tags = normalizeTags(req.body?.tags);
   const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
 
   if (!image) return res.status(400).json({ success: false, error: 'Image link is required' });
   if (!row) return res.status(400).json({ success: false, error: 'Product full name is required' });
   if (!pid) return res.status(400).json({ success: false, error: 'Pid is required' });
+  if (!tags.length) return res.status(400).json({ success: false, error: `Select at least one tag (${VALID_TAGS.join(', ')})` });
   if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
   if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
 
@@ -355,7 +380,7 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
 
     const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
-    const product = { pid, row, name, duration, price, priceReseller, image, createdAt: Date.now() };
+    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now() };
     batch.set(db().collection('customProducts').doc(sku), product);
     created.push({ sku, ...product });
   }
@@ -389,6 +414,11 @@ router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
     const v = Number(req.body.priceReseller);
     if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
     fields.priceReseller = v;
+  }
+  if (req.body?.tags !== undefined) {
+    const v = normalizeTags(req.body.tags);
+    if (!v.length) return res.status(400).json({ success: false, error: `Select at least one tag (${VALID_TAGS.join(', ')})` });
+    fields.tags = v;
   }
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
 
