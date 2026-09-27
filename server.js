@@ -3,7 +3,6 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
-import aiRoutes from './routes/ai.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -78,6 +77,21 @@ app.get('/', (req, res) => {
   res.status(200).json({ success: true, status: 'online' });
 });
 
+// GET /health — a deliberately trivial endpoint (no Firebase call, no
+// auth, no rate limit) for an external uptime pinger to hit every few
+// minutes. Render's FREE tier spins the whole service down after ~15
+// minutes with no traffic; the next real request then has to cold-boot
+// Node + firebase-admin from scratch, which routinely takes long enough
+// for Render's own proxy to give up and return 502 to the browser before
+// the app finishes booting. That 502 is a platform-level timeout, not a
+// bug in this code — nothing server-side can make a sleeping free
+// instance wake up faster. The fix is to stop it from sleeping: point a
+// free uptime monitor (UptimeRobot, cron-job.org, etc.) at this URL every
+// 5-10 minutes so the service never goes cold in the first place.
+app.get('/health', (req, res) => {
+  res.status(200).json({ success: true, status: 'awake', uptime: process.uptime() });
+});
+
 // POST /api/security/verify — verifies the Turnstile gate used by the
 // frontend boot/loading screen. This is UX + an extra abuse layer; it is
 // NOT the trust boundary because attackers can bypass browser JavaScript.
@@ -126,7 +140,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/purchase', purchaseRoutes);
-app.use('/api/ai', aiRoutes);
 
 // Last-resort error handler — same job as firebase.php's shutdown
 // handler: never let a raw stack trace leak to the client, always
