@@ -81,6 +81,24 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
+/**
+ * Same idea as requireAdmin, but checks X-Employee-Secret against
+ * EMPLOYEE_SECRET. Only used by routes/employee.js. It is a completely
+ * separate secret from ADMIN_SECRET and deliberately does NOT accept
+ * the admin secret as a fallback: an employee key must never unlock
+ * more than the employee router, and the owner's key isn't needed here.
+ * Unset EMPLOYEE_SECRET => the employee router rejects everything.
+ */
+export function requireEmployee(req, res, next) {
+  const expected = process.env.EMPLOYEE_SECRET;
+  const given = String(req.headers['x-employee-secret'] || '');
+
+  if (!expected || !timingSafeStringEqual(given, expected)) {
+    return res.status(401).json({ success: false, error: 'Not authorized' });
+  }
+  next();
+}
+
 function timingSafeStringEqual(a, b) {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
