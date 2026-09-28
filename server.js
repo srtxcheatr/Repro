@@ -3,6 +3,7 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
+import employeeRoutes from './routes/employee.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -139,6 +140,7 @@ app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
 
 // Last-resort error handler — same job as firebase.php's shutdown
