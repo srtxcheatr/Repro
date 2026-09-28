@@ -5,6 +5,7 @@ import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
+import { notifyBalanceChange } from '../src/balanceAlerts.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -104,7 +105,8 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
 
   const userRef = db().collection('users').doc(uid);
   try {
-    let approvedAmount = 0;
+    let beforeBalance = 0;
+    let userEmail = '';
     const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const current = snap.exists ? Number(snap.data().balance || 0) : 0;
@@ -116,9 +118,19 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
       log.push({ delta, note, resultingBalance: updated, at: new Date().toISOString() });
 
       tx.set(userRef, { balance: updated, adminLog: log }, { merge: true });
+      beforeBalance = current;
+      userEmail = snap.exists ? (snap.data().email || '') : '';
       return updated;
     });
     res.json({ success: true, newBalance });
+
+    // Telegram alert on the dedicated balance-load channel (after the
+    // response, so a slow/failed Telegram call can never delay or fail
+    // the actual balance change).
+    notifyBalanceChange({
+      actor: 'ADMIN', kind: direction === 'add' ? 'load' : 'deduct',
+      uid, email: userEmail, amount, before: beforeBalance, after: newBalance, note,
+    });
   } catch (e) {
     res.status(400).json({ success: false, error: e.message });
   }
@@ -201,7 +213,18 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
       return balance;
     });
     res.json({ success: true, newBalance });
-    telegramNotify(telegramFormat(`Balance Load ${action === 'approve' ? 'Approved' : 'Rejected'}`, { username: uid, product: 'SRT X CHEATS (OWNER)', price: action === 'approve' ? approvedAmount : 0, uid, status: action === 'approve' ? 'success' : 'failed', others: `TX code: ${txCode}` }), 'balance');
+    if (action === 'approve') {
+      // Admin credited a customer's top-up: same dedicated channel as
+      // every other staff balance load.
+      notifyBalanceChange({
+        actor: 'ADMIN', kind: 'load', title: 'TOP-UP APPROVED',
+        uid, amount: approvedAmount, before: newBalance - approvedAmount, after: newBalance,
+        note: `TX code: ${txCode}`,
+      });
+    } else {
+      // Rejections aren't a balance load — left exactly as before.
+      telegramNotify(telegramFormat('Balance Load Rejected', { username: uid, product: 'SRT X CHEATS (OWNER)', price: 0, uid, status: 'failed', others: `TX code: ${txCode}` }), 'balance');
+    }
   } catch (e) {
     res.status(400).json({ success: false, error: e.message });
   }
