@@ -741,4 +741,72 @@ router.post('/announcements/:id/deactivate', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ---------------------------------------------------------------
+// GET /api/admin/users — full user directory for the admin panel.
+//
+// Query params (all optional):
+//   topupDays=7 | 30    only users whose most recent APPROVED topup
+//                       falls within the last N days
+//   q=<text>           case-insensitive match on name/email/phone/uid
+//   limit=<n>           default 200, max 500
+//
+// Returns exactly the fields the panel's user-list table needs — name,
+// whatsapp, email, balance, keys bought, total spent, last topup date,
+// role — computed from real fields already on each user doc (no new
+// fields invented, nothing stored twice).
+// ---------------------------------------------------------------
+router.get('/users', asyncHandler(async (req, res) => {
+  const topupDays = req.query.topupDays ? parseInt(req.query.topupDays, 10) : null;
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 200));
+
+  const cutoff = topupDays ? Date.now() - topupDays * 24 * 60 * 60 * 1000 : null;
+
+  const snap = await db().collection('users').get();
+  const rows = [];
+
+  snap.forEach((doc) => {
+    const d = doc.data();
+    const topups = Array.isArray(d.topupRequests) ? d.topupRequests : [];
+
+    // "Last topup" means the most recent APPROVED one — a pending or
+    // rejected request never added real balance, so it shouldn't count
+    // as the user's last successful top-up.
+    const approved = topups.filter((t) => t.status === 'APPROVED');
+    const lastTopup = approved.length
+      ? approved.reduce((latest, t) => (new Date(t.date) > new Date(latest.date) ? t : latest))
+      : null;
+    const lastTopupAt = lastTopup ? new Date(lastTopup.date).getTime() : null;
+
+    if (cutoff !== null && (!lastTopupAt || lastTopupAt < cutoff)) return; // outside the window -> skip
+
+    const row = {
+      uid: doc.id,
+      name: d.profileName || (d.email ? d.email.split('@')[0] : 'Unknown'),
+      whatsapp: d.profilePhone || '',
+      email: d.email || '',
+      balance: Number(d.balance || 0),
+      totalKeysBought: Number(d.totalKeysBought || 0),
+      totalSpent: Number(d.totalSpent || 0),
+      lastTopupAt,
+      lastTopupAmount: lastTopup ? Number(lastTopup.amount || 0) : null,
+      role: d.role || 'user',
+    };
+
+    if (q) {
+      const hay = `${row.name} ${row.email} ${row.whatsapp} ${row.uid}`.toLowerCase();
+      if (!hay.includes(q)) return;
+    }
+
+    rows.push(row);
+  });
+
+  // Most recent top-up first when filtering by topup window (that's the
+  // point of the view); otherwise highest lifetime spend first, so the
+  // full directory opens with your best customers on top.
+  rows.sort((a, b) => (topupDays ? (b.lastTopupAt || 0) - (a.lastTopupAt || 0) : b.totalSpent - a.totalSpent));
+
+  res.json({ success: true, total: rows.length, users: rows.slice(0, limit) });
+}));
+
 export default router;
