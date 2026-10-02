@@ -204,7 +204,11 @@ router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
 async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androidId) {
   const userRef = db().collection('users').doc(uid);
 
-  setJob(jobId, { percent: 10, label: 'Verifying product...' });
+  // Labels below match the exact step sequence shown in the frontend's
+  // delivery checklist (store.php) — keep these two in sync if either
+  // changes. Percent checkpoints are unchanged from before; only the
+  // label text was renamed.
+  setJob(jobId, { percent: 5, label: 'Checking request...' });
 
   let role = 'user';
   let product = null;
@@ -237,13 +241,15 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       throw new Error('Android ID is required for this product');
     }
 
+    setJob(jobId, { percent: 20, label: 'Checking product...' });
+
     telegramNotify(telegramFormat('Purchase attempt', {
-      username: buyerName || email, email, product: product.name,
+      username: buyerName || email, email, phone: buyerWa, product: product.name,
       duration: product.duration, price: realPrice, uid, status: 'attempt',
       others: `role: ${role}`,
     }));
 
-    setJob(jobId, { percent: 30, label: 'Checking balance...' });
+    setJob(jobId, { percent: 35, label: 'Checking balance...' });
 
     const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
@@ -253,8 +259,12 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
         throw new Error('Please top up first then trying 🙏');
       }
 
-      setJob(jobId, { percent: 60, label: 'Contacting reseller...' });
+      setJob(jobId, { percent: 55, label: 'Connecting to server...' });
       const key = await fetchRealKey(sku, product, androidId);
+      // "Server connected..." only fires once fetchRealKey has actually
+      // returned a key — this step reflects a real completed network
+      // call, not a fixed-time fake animation step.
+      setJob(jobId, { percent: 80, label: 'Server connected...' });
 
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       const newBalance = currentBalance - realPrice;
@@ -270,20 +280,24 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
         totalKeysBought: admin.firestore.FieldValue.increment(1),
         totalSpent: admin.firestore.FieldValue.increment(realPrice),
       }, { merge: true });
-      return { key, newBalance };
+      // currentBalance/newBalance travel out of the transaction here so
+      // the Telegram message below can show the before/after NRP amounts
+      // — they weren't being returned at all before this change.
+      return { key, newBalance, currentBalance };
     });
 
-    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, ...result });
+    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance });
 
     telegramNotify(telegramFormat('Purchase success', {
-      username: buyerName || email, email, product: product.name,
+      username: buyerName || email, email, phone: buyerWa, product: product.name,
       duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
+      balanceBefore: result.currentBalance, balanceAfter: result.newBalance,
     }));
   } catch (e) {
     setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
 
     telegramNotify(telegramFormat('Purchase rejected', {
-      username: buyerName || email, email, product: product ? product.name : sku,
+      username: buyerName || email, email, phone: buyerWa, product: product ? product.name : sku,
       duration: product ? product.duration : '', price: realPrice, uid, status: 'failed',
       others: `${e.message} (role: ${role})`,
     }));
