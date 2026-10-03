@@ -160,6 +160,88 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Android ID is required for this product' });
   }
 
+  // ------------------------------------------------------------------
+  // Balance + temporary-ban pre-check, BEFORE a job/Telegram-attempt is
+  // ever created. Previously this product ran the full 5-step pipeline
+  // (ping reseller, open a Firestore transaction, etc.) only to fail at
+  // "Checking balance..." — wasting a job slot and firing a "Purchase
+  // attempt" Telegram message for something that was never going to
+  // succeed. Checking here means a zero-balance user never sees the key-
+  // fetch animation at all; the frontend shows a topup prompt instead.
+  // ------------------------------------------------------------------
+  {
+    const userSnap = await db().collection('users').doc(req.uid).get();
+    const userData = userSnap.exists ? userSnap.data() : {};
+    const role = userData.role || 'user';
+    const balance = Number(userData.balance || 0);
+
+    // An existing ban (from a prior low-balance strike) always wins,
+    // regardless of whether the CURRENT attempt would have enough
+    // balance — the point of the ban is "stop trying for a while", not
+    // "stop trying until you happen to have money again".
+    const bannedUntil = Number(userData.checkoutBanUntil || 0);
+    if (bannedUntil > Date.now()) {
+      return res.status(403).json({
+        success: false,
+        code: 'CHECKOUT_BANNED',
+        error: 'Too many purchase attempts with insufficient balance. Please wait before trying again.',
+        bannedUntil,
+      });
+    }
+
+    // Re-resolve price the same way runCheckoutJob does (role-aware),
+    // so this pre-check can't disagree with what the job would actually
+    // charge. Re-run product lookup with role in case the role-specific
+    // catalog has a different price for the same sku.
+    let roleProduct = catalogFind(sku, role) || await findCustomProductFresh(sku, role) || product;
+    const realPrice = Number(roleProduct.price);
+
+    if (balance < realPrice) {
+      const strikes = Number(userData.lowBalanceStrikes || 0) + 1;
+      const updates = { lowBalanceStrikes: strikes };
+
+      // 2nd strike -> 1-hour checkout ban. Resets to 0 once the ban
+      // expires naturally (handled by simply overwriting on the next
+      // strike after expiry, see below) rather than needing a cron job.
+      let justBanned = false;
+      if (strikes >= 2) {
+        updates.checkoutBanUntil = Date.now() + 60 * 60 * 1000; // 1 hour
+        updates.lowBalanceStrikes = 0; // reset the counter once the ban itself takes over
+        justBanned = true;
+      }
+      await db().collection('users').doc(req.uid).set(updates, { merge: true });
+
+      if (justBanned) {
+        telegramNotify(telegramFormat('Checkout Banned (1h)', {
+          username: userData.profileName || req.email, email: userData.email || req.email,
+          phone: userData.profilePhone || '', product: roleProduct.name || sku,
+          price: realPrice, uid: req.uid, status: 'failed',
+          others: `2nd insufficient-balance attempt — banned until ${new Date(updates.checkoutBanUntil).toISOString()} (role: ${role})`,
+        }));
+        return res.status(403).json({
+          success: false,
+          code: 'CHECKOUT_BANNED',
+          error: 'Too many purchase attempts with insufficient balance. Please wait before trying again.',
+          bannedUntil: updates.checkoutBanUntil,
+        });
+      }
+
+      return res.status(402).json({
+        success: false,
+        code: 'INSUFFICIENT_BALANCE',
+        error: "You have 0 balance and can't purchase any product. Please top up first then try again.",
+        balance, required: realPrice,
+      });
+    }
+
+    // Balance was sufficient this time — clear any stale strike count so
+    // a user doesn't get banned later from an old strike that happened
+    // before they topped up.
+    if (Number(userData.lowBalanceStrikes || 0) > 0) {
+      await db().collection('users').doc(req.uid).set({ lowBalanceStrikes: 0 }, { merge: true });
+    }
+  }
+
   const jobId = crypto.randomUUID();
   setJob(jobId, {
     uid: req.uid,
