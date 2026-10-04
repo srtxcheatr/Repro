@@ -5,7 +5,7 @@ import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
 import { getLiveCatalog } from './src/catalog.js';
-import { userCors } from './src/firebase.js';
+import { userCors, db } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
 import { rateLimit, securityHeaders } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
@@ -135,6 +135,24 @@ app.post('/api/security/verify', turnstileCors,
 app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
   const catalog = await getLiveCatalog('user');
   res.json({ success: true, catalog });
+}));
+
+// GET /api/policy — public, unauthenticated, read-only. Powers the (!)
+// button on login.php (which must work for signed-out visitors) and the
+// forced first-login popup on dashboard.php. The text itself lives in
+// one Firestore doc (config/policy) edited ONLY through the admin panel's
+// POST /api/admin/policy — there's no way to change it from the browser:
+// a devtools edit to this response is local to that one tab/session and
+// is simply overwritten the next time any page calls this endpoint fresh.
+app.get('/api/policy', userCors, asyncHandler(async (req, res) => {
+  const snap = await db().collection('config').doc('policy').get();
+  const data = snap.exists ? snap.data() : {};
+  res.json({
+    success: true,
+    title: data.title || 'Terms & Policy',
+    body: data.body || 'No policy has been published yet. Please check back later.',
+    updatedAt: data.updatedAt || null,
+  });
 }));
 
 app.use('/api/auth', authRoutes);
