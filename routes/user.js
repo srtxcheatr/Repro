@@ -36,8 +36,9 @@ router.post('/init', asyncHandler(async (req, res) => {
 
   const userRef = db().collection('users').doc(req.uid);
   const snap = await userRef.get();
+  const isNewUser = !snap.exists;
 
-  if (!snap.exists) {
+  if (isNewUser) {
     const data = DEFAULTS(req.email);
     if (name) data.profileName = name;
     if (phone) data.profilePhone = phone;
@@ -53,7 +54,10 @@ router.post('/init', asyncHandler(async (req, res) => {
     if (tiktok && !snap.data().tiktok) patch.tiktok = tiktok;
     if (Object.keys(patch).length) await userRef.set(patch, { merge: true });
   }
-  res.json({ success: true });
+  // isNewUser is derived purely from "did a Firestore doc already exist
+  // for this uid" — not a client-sent flag — so the frontend can safely
+  // trust it to decide whether to force-show the policy popup.
+  res.json({ success: true, isNewUser });
 }));
 
 // GET /api/user/me — a lean account summary. uid/email/role come
@@ -180,11 +184,12 @@ router.post('/topup', asyncHandler(async (req,res)=>{
     const notifyText = telegramFormat('Balance Load Request',{
       username: profile.profileName || req.email,
       email: profile.email || req.email,
+      phone: profile.profilePhone || '',
       product: paymentAccount,
       price: amount,
       uid: req.uid,
       status:'pending',
-      others:`TX code: ${txCode}\nNumber: ${profile.profilePhone || '—'}`
+      others:`TX code: ${txCode}`
     });
     await telegramNotify(notifyText,'balance');
     return res.json({success:true,request:entry});
@@ -469,6 +474,31 @@ router.get('/reseller-progress', asyncHandler(async (req, res) => {
     minBalance: RESELLER_MIN_BALANCE,
     eligible: (data.role || 'user') !== 'reseller' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
   });
+}));
+
+// ---------------------------------------------------------------
+// Policy acknowledgement — "Don't show again" has to be remembered
+// server-side, tied to req.uid (verified by requireFirebaseUid), not
+// localStorage: a localStorage flag only proves "this browser saw it
+// once", which is fine for convenience but trivial to clear/fake and
+// doesn't follow the account across devices. Storing it on the user's
+// own Firestore doc means only that authenticated user can set their
+// own flag (there's no uid parameter here to spoof — it's always
+// req.uid), and dashboard.php re-checks this on every load rather than
+// trusting any client-side cache of the answer.
+// ---------------------------------------------------------------
+router.get('/policy-ack', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').doc(req.uid).get();
+  const data = snap.exists ? snap.data() : {};
+  res.json({ success: true, acknowledged: !!data.policyAcknowledged });
+}));
+
+router.post('/policy-ack', asyncHandler(async (req, res) => {
+  await db().collection('users').doc(req.uid).set({
+    policyAcknowledged: true,
+    policyAcknowledgedAt: Date.now(),
+  }, { merge: true });
+  res.json({ success: true });
 }));
 
 export default router;
