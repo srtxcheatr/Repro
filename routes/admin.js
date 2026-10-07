@@ -6,6 +6,9 @@ import { rateLimit } from '../src/security.js';
 import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 import { notifyBalanceChange } from '../src/balanceAlerts.js';
+import { normDuration, apiLabel, API_DURATION_RE, findLabelConflict } from '../src/apiMatch.js';
+import { loadPidProducts } from '../src/resellerApiCatalog.js';
+import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -274,6 +277,14 @@ router.get('/products', asyncHandler(async (req, res) => {
   const [overrides, liveCatalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
   const skus = Object.keys(liveCatalog).filter((sku) => liveCatalog[sku].type !== 'whatsapp'); // whatsapp products have their own list below
 
+  // Two products sharing the same pid AND the same API-facing duration can't be
+  // told apart by a reseller's API call — flag them so the admin can fix it.
+  const labelCount = {};
+  for (const sku of skus) {
+    const k = `${String(liveCatalog[sku].pid ?? '').trim()}|${normDuration(apiLabel(liveCatalog[sku]))}`;
+    labelCount[k] = (labelCount[k] || 0) + 1;
+  }
+
   const products = skus.map((sku) => {
     const p = liveCatalog[sku];
     const pr = CATALOG_RESELLER[sku] || p;
@@ -288,6 +299,8 @@ router.get('/products', asyncHandler(async (req, res) => {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
       tags: Array.isArray(p.tags) ? p.tags : [],
+      apiDuration: p.apiDuration || '', apiLabel: apiLabel(p),
+      apiConflict: labelCount[`${String(p.pid ?? '').trim()}|${normDuration(apiLabel(p))}`] > 1,
       maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
       custom: !CATALOG[sku], // true for admin-added products, not in the static catalog files
     };
@@ -371,7 +384,7 @@ function normalizeTags(input) {
 // Body: {
 //   image, pid: "122", row: "Pato team", tags: ["NONROOT","IOS"],
 //   durations: [
-//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120 },
+//     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120, apiDuration: "3 Days" /* optional */ },
 //     ...
 //   ]
 // }
@@ -389,6 +402,28 @@ router.post('/products/create', asyncHandler(async (req, res) => {
   if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
   if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
 
+  // Reseller API: pid + duration must identify exactly ONE product. Check the
+  // labels of this batch against each other and against what already exists.
+  const existingForPid = await loadPidProducts(pid);
+  const seenLabels = new Set();
+  for (let i = 0; i < durations.length; i++) {
+    const d = durations[i];
+    const apiDur = String(d?.apiDuration || '').trim();
+    if (apiDur && !API_DURATION_RE.test(apiDur)) {
+      return res.status(400).json({ success: false, error: `Duration #${i + 1}: API duration may only use letters, numbers, spaces and _ . + - (max 40 characters)` });
+    }
+    const label = apiDur || String(d?.duration || '').trim();
+    const norm = normDuration(label);
+    if (norm && seenLabels.has(norm)) {
+      return res.status(400).json({ success: false, error: `Duration #${i + 1}: "${label}" is the same API duration as another row in this product — each duration needs a different one` });
+    }
+    seenLabels.add(norm);
+    const clash = findLabelConflict(existingForPid, pid, label);
+    if (clash) {
+      return res.status(400).json({ success: false, error: `Duration #${i + 1}: pid ${pid} already has "${apiLabel(clash)}" (${clash.name}). The reseller API couldn't tell them apart — set a different API duration.` });
+    }
+  }
+
   const batch = db().batch();
   const created = [];
 
@@ -396,6 +431,7 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     const d = durations[i];
     const name = String(d?.name || '').trim();
     const duration = String(d?.duration || '').trim();
+    const apiDuration = String(d?.apiDuration || '').trim();
     const price = Number(d?.price);
     const priceReseller = d?.priceReseller !== undefined && d?.priceReseller !== '' ? Number(d.priceReseller) : price;
     if (!name || !duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: name and duration label are required` });
@@ -403,7 +439,7 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
 
     const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
-    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now() };
+    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now(), ...(apiDuration ? { apiDuration } : {}) };
     batch.set(db().collection('customProducts').doc(sku), product);
     created.push({ sku, ...product });
   }
@@ -443,9 +479,28 @@ router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
     if (!v.length) return res.status(400).json({ success: false, error: `Select at least one tag (${VALID_TAGS.join(', ')})` });
     fields.tags = v;
   }
+  // apiDuration is the one field that MAY be blank: blank = "use the normal
+  // duration label for the API".
+  if (req.body?.apiDuration !== undefined) {
+    const v = String(req.body.apiDuration).trim();
+    if (v && !API_DURATION_RE.test(v)) return res.status(400).json({ success: false, error: 'API duration may only use letters, numbers, spaces and _ . + - (max 40 characters)' });
+    fields.apiDuration = v;
+  }
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
 
   const custom = await getCustomProductRaw(sku);
+
+  // Only when pid / duration / apiDuration actually change: make sure the result
+  // still identifies exactly one product for the reseller API. (A price-only
+  // edit never trips this, even on a product that already had a clash.)
+  if (custom && ['pid', 'duration', 'apiDuration'].some((k) => fields[k] !== undefined && fields[k] !== (custom[k] ?? ''))) {
+    const merged = { ...custom, ...fields };
+    const clash = findLabelConflict(await loadPidProducts(merged.pid), merged.pid, apiLabel(merged), sku);
+    if (clash) {
+      return res.status(400).json({ success: false, error: `pid ${merged.pid} already has "${apiLabel(clash)}" (${clash.name}). The reseller API couldn't tell them apart — use a different API duration.` });
+    }
+  }
+
   if (custom) {
     await db().collection('customProducts').doc(sku).set(fields, { merge: true });
     invalidateCustomProductCache();
@@ -833,6 +888,94 @@ router.post('/policy', asyncHandler(async (req, res) => {
 
   await db().collection('config').doc('policy').set({ title, body, updatedAt: Date.now() }, { merge: true });
   res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------
+// RESELLER API management — see routes/reseller-api.js for the API itself.
+//   * One global ON/OFF switch (emergency brake for the whole API)
+//   * Per-reseller: list, disable/enable, revoke
+//   * Per-reseller order log (every key the API handed out)
+// Admins never see anyone's keys — only hashes are stored.
+// ---------------------------------------------------------------
+
+router.get('/api-settings', asyncHandler(async (req, res) => {
+  const s = await getApiSettings();
+  res.json({ success: true, enabled: s.enabled, updatedAt: s.updatedAt });
+}));
+
+router.post('/api-settings', asyncHandler(async (req, res) => {
+  if (typeof req.body?.enabled !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'enabled must be true or false' });
+  }
+  await setApiEnabled(req.body.enabled);
+  telegramNotify(`${req.body.enabled ? '🟢' : '🔴'} <b>RESELLER API turned ${req.body.enabled ? 'ON' : 'OFF'}</b> (admin panel)`, 'reseller');
+  res.json({ success: true, enabled: req.body.enabled });
+}));
+
+// GET /api/admin/api-clients — every reseller that has generated API keys.
+router.get('/api-clients', asyncHandler(async (req, res) => {
+  const snap = await db().collection('apiClients').limit(300).get();
+  if (snap.empty) return res.json({ success: true, clients: [] });
+
+  const userSnaps = await db().getAll(...snap.docs.map((d) => db().collection('users').doc(d.id)));
+  const userById = {};
+  userSnaps.forEach((u) => { if (u.exists) userById[u.id] = u.data(); });
+
+  const clients = snap.docs.map((d) => {
+    const c = d.data();
+    const u = userById[d.id] || {};
+    return {
+      uid: d.id, email: u.email || c.email || '', name: u.profileName || '',
+      role: u.role || 'user', balance: Number(u.balance || 0),
+      totalKeysBought: Number(u.totalKeysBought || 0),
+      prefix: c.prefix || '', createdAt: c.createdAt || null,
+      regeneratedAt: c.regeneratedAt || null, lastUsedAt: c.lastUsedAt || null,
+      disabled: !!c.disabled,
+    };
+  }).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  res.json({ success: true, clients });
+}));
+
+// POST /api/admin/api-clients/:uid/disable  { disabled: boolean }
+router.post('/api-clients/:uid/disable', asyncHandler(async (req, res) => {
+  const uid = String(req.params.uid || '').trim();
+  if (typeof req.body?.disabled !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'disabled must be true or false' });
+  }
+  const ref = db().collection('apiClients').doc(uid);
+  if (!(await ref.get()).exists) return res.status(404).json({ success: false, error: 'That user has no API keys' });
+  await ref.update({ disabled: req.body.disabled, disabledAt: req.body.disabled ? Date.now() : null });
+  res.json({ success: true, uid, disabled: req.body.disabled });
+}));
+
+// POST /api/admin/api-clients/:uid/revoke — deletes their keys outright. The
+// reseller can generate a fresh pair (unlike "disable", which blocks that too).
+router.post('/api-clients/:uid/revoke', asyncHandler(async (req, res) => {
+  const uid = String(req.params.uid || '').trim();
+  const ref = db().collection('apiClients').doc(uid);
+  if (!(await ref.get()).exists) return res.status(404).json({ success: false, error: 'That user has no API keys' });
+  await ref.delete();
+  res.json({ success: true, uid });
+}));
+
+// GET /api/admin/api-orders?uid=...&limit=30 — a reseller's recent API orders.
+router.get('/api-orders', asyncHandler(async (req, res) => {
+  const uid = String(req.query.uid || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 30));
+  const snap = await db().collection('users').doc(uid).collection('apiOrders').orderBy('createdAt', 'desc').limit(limit).get();
+  res.json({
+    success: true,
+    orders: snap.docs.map((d) => {
+      const o = d.data();
+      return {
+        orderId: o.orderId, status: o.status, product: o.productRow, pid: o.pid, duration: o.durationLabel,
+        quantity: o.quantity, delivered: o.delivered || 0, charged: o.charged || 0, refunded: o.refunded || 0,
+        keys: o.keys || [], createdAt: o.createdAt, finishedAt: o.finishedAt || null, error: o.error || null,
+      };
+    }),
+  });
 }));
 
 export default router;
