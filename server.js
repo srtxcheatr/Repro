@@ -4,6 +4,8 @@ import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
+import resellerApiRoutes from './routes/reseller-api.js';
+import resellerPortalRoutes from './routes/reseller-portal.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors, db } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -160,6 +162,12 @@ app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
+
+// Reseller API: resellers' own servers call /api/reseller/v1 with an api_key +
+// master key (see routes/reseller-api.js). The portal routes are what the
+// logged-in apicontact.php page uses to show docs and generate those keys.
+app.use('/api/reseller/v1', resellerApiRoutes);
+app.use('/api/reseller-portal', resellerPortalRoutes);
 
 // Last-resort error handler — same job as firebase.php's shutdown
 // handler: never let a raw stack trace leak to the client, always
