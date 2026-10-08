@@ -9,6 +9,7 @@ import { notifyBalanceChange } from '../src/balanceAlerts.js';
 import { normDuration, apiLabel, API_DURATION_RE, findLabelConflict } from '../src/apiMatch.js';
 import { loadPidProducts } from '../src/resellerApiCatalog.js';
 import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
+import { invalidateUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -90,6 +91,7 @@ router.post('/set-role', asyncHandler(async (req, res) => {
   log.push({ delta: 0, note: `Role changed to "${role}"`, resultingBalance: Number(snap.data().balance || 0), at: new Date().toISOString() });
 
   await userRef.set({ role, adminLog: log }, { merge: true });
+  invalidateUserDoc(uid);
   res.json({ success: true, uid, role });
 }));
 
@@ -125,6 +127,7 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
       userEmail = snap.exists ? (snap.data().email || '') : '';
       return updated;
     });
+    invalidateUserDoc(uid);
     res.json({ success: true, newBalance });
 
     // Telegram alert on the dedicated balance-load channel (after the
@@ -161,6 +164,7 @@ router.post('/set-status', asyncHandler(async (req, res) => {
   }
 
   await db().collection('users').doc(uid).set(update, { merge: true });
+  invalidateUserDoc(uid);
   res.json({ success: true });
 }));
 
@@ -215,6 +219,7 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
       tx.set(userRef, update, { merge: true });
       return balance;
     });
+    invalidateUserDoc(uid);
     res.json({ success: true, newBalance });
     if (action === 'approve') {
       // Admin credited a customer's top-up: same dedicated channel as
