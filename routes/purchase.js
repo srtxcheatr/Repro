@@ -6,6 +6,7 @@ import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { catalogFind, getMaintenanceForSku, findCustomProductFresh } from '../src/catalog.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 import { fetchRealKey } from '../src/upstream.js';
+import { invalidateUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -271,6 +272,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       // — they weren't being returned at all before this change.
       return { key, newBalance, currentBalance };
     });
+    invalidateUserDoc(uid);
 
     setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance });
 
