@@ -4,6 +4,7 @@ import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
 import { getLiveCatalog, invalidateRatingCache } from '../src/catalog.js';
+import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -54,6 +55,7 @@ router.post('/init', asyncHandler(async (req, res) => {
     if (tiktok && !snap.data().tiktok) patch.tiktok = tiktok;
     if (Object.keys(patch).length) await userRef.set(patch, { merge: true });
   }
+  invalidateUserDoc(req.uid);
   // isNewUser is derived purely from "did a Firestore doc already exist
   // for this uid" — not a client-sent flag — so the frontend can safely
   // trust it to decide whether to force-show the policy popup.
@@ -63,9 +65,8 @@ router.post('/init', asyncHandler(async (req, res) => {
 // GET /api/user/me — a lean account summary. uid/email/role come
 // straight off the verified token or Firestore — never client-supplied.
 router.get('/me', asyncHandler(async (req, res) => {
-  const userRef = db().collection('users').doc(req.uid);
-  const snap = await userRef.get();
-  const data = snap.exists ? snap.data() : DEFAULTS(req.email);
+  const snap = await getUserDoc(req.uid);
+  const data = snap.exists ? snap.data : DEFAULTS(req.email);
 
   res.json({
     success: true,
@@ -81,15 +82,15 @@ router.get('/me', asyncHandler(async (req, res) => {
 
 // GET /api/user/balance — the single state call the frontend polls.
 router.get('/balance', asyncHandler(async (req, res) => {
-  const userRef = db().collection('users').doc(req.uid);
-  const snap = await userRef.get();
+  const snap = await getUserDoc(req.uid);
 
   let data;
   if (!snap.exists) {
     data = DEFAULTS(req.email);
-    await userRef.set(data, { merge: true });
+    await db().collection('users').doc(req.uid).set(data, { merge: true });
+    invalidateUserDoc(req.uid); // next read (cached or not) must see the doc we just created
   } else {
-    data = snap.data();
+    data = snap.data;
   }
 
   res.json({
@@ -116,8 +117,8 @@ router.get('/balance', asyncHandler(async (req, res) => {
 // call (not from a token claim), so an admin's role change takes
 // effect on the user's very next page load/poll.
 router.get('/catalog', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const role = snap.exists ? (snap.data().role || 'user') : 'user';
+  const snap = await getUserDoc(req.uid);
+  const role = snap.exists ? (snap.data.role || 'user') : 'user';
   res.json({ success: true, role, catalog: await getLiveCatalog(role) });
 }));
 
@@ -145,19 +146,21 @@ router.post('/profile', asyncHandler(async (req, res) => {
     update.tiktok = tiktok;
   }
   await db().collection('users').doc(req.uid).set(update, { merge: true });
+  invalidateUserDoc(req.uid);
   res.json({ success: true });
 }));
 
 // GET /api/user/history
 router.get('/history', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const purchases = snap.exists ? (snap.data().purchaseHistory || []) : [];
+  const snap = await getUserDoc(req.uid);
+  const purchases = snap.exists ? (snap.data.purchaseHistory || []) : [];
   res.json({ success: true, history: [...purchases].reverse() });
 }));
 
 // POST /api/user/history-clear
 router.post('/history-clear', asyncHandler(async (req, res) => {
   await db().collection('users').doc(req.uid).set({ purchaseHistory: [] }, { merge: true });
+  invalidateUserDoc(req.uid);
   res.json({ success: true });
 }));
 
@@ -179,6 +182,7 @@ router.post('/topup', asyncHandler(async (req,res)=>{
       const e={date:new Date().toISOString(),amount,paymentAccount,txCode,status:'PENDING',uid:req.uid,email:req.email};
       tx.set(userRef,{topupRequests:[...existing,e]},{merge:true}); return e;
     });
+    invalidateUserDoc(req.uid);
     const profileSnap = await userRef.get();
     const profile = profileSnap.exists ? profileSnap.data() : {};
     const notifyText = telegramFormat('Balance Load Request',{
@@ -200,8 +204,8 @@ router.post('/topup', asyncHandler(async (req,res)=>{
 // log (top-up approvals, admin corrections). Different from
 // /history, which is what they bought, not what was added to balance.
 router.get('/balance-history', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const log = snap.exists ? (snap.data().adminLog || []) : [];
+  const snap = await getUserDoc(req.uid);
+  const log = snap.exists ? (snap.data.adminLog || []) : [];
   res.json({ success: true, log: [...log].reverse() });
 }));
 
@@ -211,7 +215,7 @@ router.post('/report', asyncHandler(async(req,res)=>{
   if(!['Balance','Unknown product','Others'].includes(category)) return res.status(400).json({success:false,error:'Choose a valid bug category'});
   if(!problem) return res.status(400).json({success:false,error:'Please describe the problem'});
   if(problem.length>1000) return res.status(400).json({success:false,error:'Please keep it under 1000 characters'});
-  const snap=await db().collection('users').doc(req.uid).get(); const data=snap.exists?snap.data():{};
+  const snap=await getUserDoc(req.uid); const data=snap.exists?snap.data:{};
   telegramNotify(`🐛 <b>BUG REPORT</b>\n📌 Category: <b>${esc(category)}</b>\n👤 ${esc(data.profileName||'—')}\n✉️ ${esc(data.email||req.email)}\n📱 ${esc(data.profilePhone||'—')}\n💰 Rs ${esc(data.balance??0)}\n🆔 <code>${esc(req.uid)}</code>\n🌐 IP: <code>${esc(req.ip)}</code>\n📅 ${esc(new Date().toISOString())}\n📝 ${esc(problem)}`,'bug');
   res.json({success:true});
 }));
@@ -219,25 +223,38 @@ router.post('/report', asyncHandler(async(req,res)=>{
 // GET /api/user/leaderboard — top 10 users by lifetime keys bought.
 // Only ever exposes name + counts, never email/phone/balance, since
 // every logged-in user can see this list.
+//
+// The result is IDENTICAL for every caller (it's not scoped to req.uid),
+// so it's cached for a short, fixed window rather than per-user — one
+// 10-doc query serves every dashboard load in that window instead of
+// one 10-doc query PER load. 20s is imperceptible for a leaderboard.
+let leaderboardCache = null;
+let leaderboardCacheAt = 0;
+const SHARED_CACHE_TTL_MS = 20 * 1000;
+
 router.get('/leaderboard', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users')
-    .orderBy('totalKeysBought', 'desc')
-    .limit(10)
-    .get();
+  const now = Date.now();
+  if (!leaderboardCache || now - leaderboardCacheAt >= SHARED_CACHE_TTL_MS) {
+    const snap = await db().collection('users')
+      .orderBy('totalKeysBought', 'desc')
+      .limit(10)
+      .get();
 
-  const board = snap.docs
-    .map((doc) => {
-      const d = doc.data();
-      return {
-        uid: doc.id,
-        name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
-        totalKeysBought: Number(d.totalKeysBought || 0),
-        totalSpent: Number(d.totalSpent || 0),
-      };
-    })
-    .filter((row) => row.totalKeysBought > 0);
+    leaderboardCache = snap.docs
+      .map((doc) => {
+        const d = doc.data();
+        return {
+          uid: doc.id,
+          name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
+          totalKeysBought: Number(d.totalKeysBought || 0),
+          totalSpent: Number(d.totalSpent || 0),
+        };
+      })
+      .filter((row) => row.totalKeysBought > 0);
+    leaderboardCacheAt = now;
+  }
 
-  res.json({ success: true, leaderboard: board });
+  res.json({ success: true, leaderboard: leaderboardCache });
 }));
 
 // GET /api/user/public-profile?uid=... — the "view profile" card any
@@ -302,6 +319,7 @@ router.post('/redeem', asyncHandler(async (req, res) => {
   });
 
   if (!result.ok) return res.status(400).json({ success: false, error: result.error });
+  invalidateUserDoc(req.uid);
   res.json({ success: true, amountCredited: result.amount, newBalance: result.newBalance });
 }));
 
@@ -315,19 +333,30 @@ router.post('/redeem', asyncHandler(async (req, res) => {
 // that combination, which was never created, so every call 500'd.
 // Filtering on just `active` needs no composite index (single-field
 // equality is auto-indexed); the newest one is picked in memory instead.
-router.get('/announcement', asyncHandler(async (req, res) => {
-  const annSnap = await db().collection('announcements')
-    .where('active', '==', true)
-    .limit(20)
-    .get();
-  if (annSnap.empty) return res.json({ success: true, announcement: null });
+// The active-announcement list is the same for every caller, so it's
+// cached for the same short shared window as the leaderboard above —
+// only the per-user "have they already seen it" check below needs to
+// be user-specific, and that already goes through getUserDoc().
+let announcementCache = null;
+let announcementCacheAt = 0;
 
-  const ann = annSnap.docs
-    .map((d) => d.data())
+router.get('/announcement', asyncHandler(async (req, res) => {
+  const now = Date.now();
+  if (!announcementCache || now - announcementCacheAt >= SHARED_CACHE_TTL_MS) {
+    const annSnap = await db().collection('announcements')
+      .where('active', '==', true)
+      .limit(20)
+      .get();
+    announcementCache = annSnap.empty ? [] : annSnap.docs.map((d) => d.data());
+    announcementCacheAt = now;
+  }
+  if (announcementCache.length === 0) return res.json({ success: true, announcement: null });
+
+  const ann = announcementCache
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
-  const userSnap = await db().collection('users').doc(req.uid).get();
-  const lastSeen = userSnap.exists ? userSnap.data().lastSeenAnnouncementId : null;
+  const userSnap = await getUserDoc(req.uid);
+  const lastSeen = userSnap.exists ? userSnap.data.lastSeenAnnouncementId : null;
   if (lastSeen === ann.id) return res.json({ success: true, announcement: null });
 
   res.json({ success: true, announcement: { id: ann.id, message: ann.message, giftCode: ann.giftCode || null, giftAmount: ann.giftAmount || null } });
@@ -340,6 +369,7 @@ router.post('/announcement/seen', asyncHandler(async (req, res) => {
   const id = String(req.body?.id || '').trim();
   if (!id) return res.status(400).json({ success: false, error: 'Provide an announcement id' });
   await db().collection('users').doc(req.uid).set({ lastSeenAnnouncementId: id }, { merge: true });
+  invalidateUserDoc(req.uid);
   res.json({ success: true });
 }));
 
@@ -364,8 +394,8 @@ router.post('/feedback', asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Rating must be 1-5 stars' });
   }
 
-  const userSnap = await db().collection('users').doc(req.uid).get();
-  const purchaseHistory = userSnap.exists ? (userSnap.data().purchaseHistory || []) : [];
+  const userSnap = await getUserDoc(req.uid);
+  const purchaseHistory = userSnap.exists ? (userSnap.data.purchaseHistory || []) : [];
 
   // Verified-purchase check: a direct row match (purchases made after
   // this field was added) or a name match against the catalog's current
@@ -444,6 +474,7 @@ router.post('/apply-reseller', asyncHandler(async (req, res) => {
   });
 
   if (!result.ok) return res.status(400).json({ success: false, error: result.error });
+  invalidateUserDoc(req.uid);
 
   telegramNotify(
     `👑 <b>RESELLER SELF-UPGRADE</b>\n` +
@@ -461,8 +492,8 @@ router.post('/apply-reseller', asyncHandler(async (req, res) => {
 // client ever computing eligibility itself (that stays server-side, see
 // POST /apply-reseller above — this route is display-only).
 router.get('/reseller-progress', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const data = snap.exists ? snap.data() : {};
+  const snap = await getUserDoc(req.uid);
+  const data = snap.exists ? snap.data : {};
   const totalKeysBought = Number(data.totalKeysBought || 0);
   const balance = Number(data.balance || 0);
   res.json({
@@ -488,8 +519,8 @@ router.get('/reseller-progress', asyncHandler(async (req, res) => {
 // trusting any client-side cache of the answer.
 // ---------------------------------------------------------------
 router.get('/policy-ack', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').doc(req.uid).get();
-  const data = snap.exists ? snap.data() : {};
+  const snap = await getUserDoc(req.uid);
+  const data = snap.exists ? snap.data : {};
   res.json({ success: true, acknowledged: !!data.policyAcknowledged });
 }));
 
@@ -498,6 +529,7 @@ router.post('/policy-ack', asyncHandler(async (req, res) => {
     policyAcknowledged: true,
     policyAcknowledgedAt: Date.now(),
   }, { merge: true });
+  invalidateUserDoc(req.uid);
   res.json({ success: true });
 }));
 
