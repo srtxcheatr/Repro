@@ -20,6 +20,8 @@
 //     (e.g. one new rating) instead of dropping the cache and re-reading
 //     the whole collection.
 
+import { bump } from './versions.js';
+
 const num = (name, fallback) => {
   const v = Number(process.env[name]);
   return Number.isFinite(v) && v > 0 ? v : fallback;
@@ -50,7 +52,7 @@ export const TTL = {
  * @param {() => Promise<any>} load  reads from Firestore and returns the value to cache
  * @param {{ttlMs:number, name?:string}} opts
  */
-export function cachedLoader(load, { ttlMs, name = 'cache' }) {
+export function cachedLoader(load, { ttlMs, name = 'cache', versionKey = null }) {
   let value;
   let at = 0;          // 0 = nothing usable cached
   let inflight = null;
@@ -82,11 +84,11 @@ export function cachedLoader(load, { ttlMs, name = 'cache' }) {
   return {
     get,
     /** Drop the cached copy; the next get() re-reads Firestore. Use when you don't know exactly what changed. */
-    invalidate() { generation++; at = 0; inflight = null; },
+    invalidate() { generation++; at = 0; inflight = null; if (versionKey) bump(versionKey); },
     /** Change the cached value in place (only if one is cached). Use when you know exactly what changed. */
-    patch(fn) { if (at) value = fn(value); },
+    patch(fn) { if (at) value = fn(value); if (versionKey) bump(versionKey); },
     /** Replace the cached value outright. */
-    set(v) { value = v; at = Date.now(); },
+    set(v) { value = v; at = Date.now(); if (versionKey) bump(versionKey); },
     peek() { return at ? value : undefined; },
   };
 }
