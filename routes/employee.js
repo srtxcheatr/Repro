@@ -18,6 +18,7 @@
 // EMPLOYEE_SECRET on Render cuts the employee off instantly without
 // touching your own ADMIN_SECRET.
 import express from 'express';
+import { invalidateUserDoc } from '../src/userCache.js';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireEmployee, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
@@ -146,6 +147,7 @@ router.post('/load-balance', asyncHandler(async (req, res) => {
   }).catch((e) => ({ error: e.message }));
 
   if (result.error) return res.status(400).json({ success: false, error: result.error });
+  invalidateUserDoc(uid); // balance changed — cached readers must not serve the old one
 
   // Audit trail to the owner's dedicated balance-load Telegram channel —
   // every employee load is visible to you in real time, and also stamped
