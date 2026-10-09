@@ -9,7 +9,8 @@ import { notifyBalanceChange } from '../src/balanceAlerts.js';
 import { normDuration, apiLabel, API_DURATION_RE, findLabelConflict } from '../src/apiMatch.js';
 import { loadPidProducts } from '../src/resellerApiCatalog.js';
 import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
-import { invalidateUserDoc } from '../src/userCache.js';
+import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
+import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -263,6 +264,8 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
     }
   }
   if (inBatch > 0) await batch.commit();
+  invalidateAllUserDocs();
+  leaderboardCache.invalidate();
 
   res.json({ success: true, usersUpdated: updated });
 }));
@@ -782,6 +785,7 @@ router.post('/announcements', asyncHandler(async (req, res) => {
   }
 
   await db().collection('announcements').doc(id).set(docData);
+  announcementCache.invalidate();
   res.json({ success: true, announcement: docData });
 }));
 
@@ -798,6 +802,7 @@ router.post('/announcements/:id/deactivate', asyncHandler(async (req, res) => {
   const snap = await ref.get();
   if (!snap.exists) return res.status(404).json({ success: false, error: 'Announcement not found' });
   await ref.set({ active: false }, { merge: true });
+  announcementCache.invalidate();
   res.json({ success: true });
 }));
 
@@ -892,6 +897,7 @@ router.post('/policy', asyncHandler(async (req, res) => {
   if (body.length > 20000) return res.status(400).json({ success: false, error: 'Policy text is too long (max 20,000 characters)' });
 
   await db().collection('config').doc('policy').set({ title, body, updatedAt: Date.now() }, { merge: true });
+  policyCache.invalidate();
   res.json({ success: true });
 }));
 
