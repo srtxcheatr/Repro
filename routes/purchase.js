@@ -115,6 +115,7 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
         justBanned = true;
       }
       await db().collection('users').doc(req.uid).set(updates, { merge: true });
+      invalidateUserDoc(req.uid);
 
       if (justBanned) {
         telegramNotify(telegramFormat('Checkout Banned (1h)', {
@@ -144,6 +145,7 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
     // before they topped up.
     if (Number(userData.lowBalanceStrikes || 0) > 0) {
       await db().collection('users').doc(req.uid).set({ lowBalanceStrikes: 0 }, { merge: true });
+      invalidateUserDoc(req.uid);
     }
   }
 
@@ -181,6 +183,7 @@ router.get('/checkout/status/:jobId', asyncHandler(async (req, res) => {
     success: job.success ?? null,
     key: job.key,
     newBalance: job.newBalance,
+    entry: job.entry,
     error: job.error,
   });
 }));
@@ -270,11 +273,11 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       // currentBalance/newBalance travel out of the transaction here so
       // the Telegram message below can show the before/after NRP amounts
       // — they weren't being returned at all before this change.
-      return { key, newBalance, currentBalance };
+      return { key, newBalance, currentBalance, entry: historyEntry };
     });
     invalidateUserDoc(uid);
 
-    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance });
+    setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance, entry: result.entry });
 
     telegramNotify(telegramFormat('Purchase success', {
       username: buyerName || email, email, phone: buyerWa, product: product.name,
