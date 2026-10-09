@@ -15,6 +15,7 @@
 // transaction (or an explicit fresh .get()), so they never see this cache.
 import { db } from './firebase.js';
 import { cachedKeyedLoader, TTL } from './cache.js';
+import { bumpUser, bumpAllUsers } from './versions.js';
 
 const users = cachedKeyedLoader(async (uid) => {
   const snap = await db().collection('users').doc(uid).get();
@@ -28,9 +29,11 @@ export function getUserDoc(uid) {
 /** Call right after writing to a user's doc anywhere in the app. */
 export function invalidateUserDoc(uid) {
   users.invalidate(uid);
+  bumpUser(uid); // tells the user's open browsers to refetch balance/profile/history
 }
 
 /** For bulk writers (e.g. backfill-stats) that touch many users at once. */
 export function invalidateAllUserDocs() {
   users.invalidateAll();
+  bumpAllUsers();
 }
