@@ -23,7 +23,7 @@ export const leaderboardCache = cachedLoader(async () => {
       };
     })
     .filter((row) => row.totalKeysBought > 0);
-}, { ttlMs: TTL.leaderboard, name: 'leaderboard' });
+}, { ttlMs: TTL.leaderboard, name: 'leaderboard', versionKey: 'leaderboard' });
 
 // Active announcements. Deliberately NOT .where('active').orderBy('createdAt')
 // together — that needs a composite index that was never created; the
@@ -31,7 +31,7 @@ export const leaderboardCache = cachedLoader(async () => {
 export const announcementCache = cachedLoader(async () => {
   const snap = await db().collection('announcements').where('active', '==', true).limit(20).get();
   return snap.empty ? [] : snap.docs.map((d) => d.data());
-}, { ttlMs: TTL.announcement, name: 'announcements' });
+}, { ttlMs: TTL.announcement, name: 'announcements', versionKey: 'announcement' });
 
 // config/policy — edited only through the admin panel.
 export const policyCache = cachedLoader(async () => {
@@ -42,4 +42,4 @@ export const policyCache = cachedLoader(async () => {
     body: data.body || 'No policy has been published yet. Please check back later.',
     updatedAt: data.updatedAt || null,
   };
-}, { ttlMs: TTL.policy, name: 'policy' });
+}, { ttlMs: TTL.policy, name: 'policy', versionKey: 'policy' });
