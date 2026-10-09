@@ -3,7 +3,9 @@ import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
-import { getLiveCatalog, invalidateRatingCache } from '../src/catalog.js';
+import { getLiveCatalog, getFeedbackList, recordFeedback } from '../src/catalog.js';
+import { leaderboardCache, announcementCache } from '../src/sharedCaches.js';
+import { uploadAvatar } from '../src/imgbb.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
@@ -16,6 +18,7 @@ const DEFAULTS = (email) => ({
   profileName: '',
   profilePhone: '',
   tiktok: '',
+  avatarUrl: '',
   requestStatus: 'Active',
   adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
   balance: 0,
@@ -106,6 +109,14 @@ router.get('/balance', asyncHandler(async (req, res) => {
     totalKeysBought: Number(data.totalKeysBought || 0),
     totalSpent: Number(data.totalSpent || 0),
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
+    // Extra fields so the browser cache can answer these WITHOUT more
+    // requests: avatar for the drawer/profile, the policy flag for the
+    // dashboard modal, and the reseller thresholds so the dashboard's
+    // progress card is computed locally from the cached profile.
+    avatarUrl: data.avatarUrl || '',
+    policyAcknowledged: !!data.policyAcknowledged,
+    minKeys: RESELLER_MIN_KEYS,
+    minBalance: RESELLER_MIN_BALANCE,
   });
 }));
 
@@ -228,33 +239,8 @@ router.post('/report', asyncHandler(async(req,res)=>{
 // so it's cached for a short, fixed window rather than per-user — one
 // 10-doc query serves every dashboard load in that window instead of
 // one 10-doc query PER load. 20s is imperceptible for a leaderboard.
-let leaderboardCache = null;
-let leaderboardCacheAt = 0;
-const SHARED_CACHE_TTL_MS = 20 * 1000;
-
 router.get('/leaderboard', asyncHandler(async (req, res) => {
-  const now = Date.now();
-  if (!leaderboardCache || now - leaderboardCacheAt >= SHARED_CACHE_TTL_MS) {
-    const snap = await db().collection('users')
-      .orderBy('totalKeysBought', 'desc')
-      .limit(10)
-      .get();
-
-    leaderboardCache = snap.docs
-      .map((doc) => {
-        const d = doc.data();
-        return {
-          uid: doc.id,
-          name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
-          totalKeysBought: Number(d.totalKeysBought || 0),
-          totalSpent: Number(d.totalSpent || 0),
-        };
-      })
-      .filter((row) => row.totalKeysBought > 0);
-    leaderboardCacheAt = now;
-  }
-
-  res.json({ success: true, leaderboard: leaderboardCache });
+  res.json({ success: true, leaderboard: await leaderboardCache.get() });
 }));
 
 // GET /api/user/public-profile?uid=... — the "view profile" card any
@@ -265,13 +251,14 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
   const uid = String(req.query.uid || '').trim();
   if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
 
-  const snap = await db().collection('users').doc(uid).get();
+  const snap = await getUserDoc(uid);
   if (!snap.exists) return res.status(404).json({ success: false, error: 'User not found' });
 
-  const d = snap.data();
+  const d = snap.data;
   res.json({
     success: true,
     uid,
+    avatarUrl: d.avatarUrl || '',
     name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
     email: d.email || '',
     phone: d.profilePhone || '',
@@ -337,23 +324,11 @@ router.post('/redeem', asyncHandler(async (req, res) => {
 // cached for the same short shared window as the leaderboard above —
 // only the per-user "have they already seen it" check below needs to
 // be user-specific, and that already goes through getUserDoc().
-let announcementCache = null;
-let announcementCacheAt = 0;
-
 router.get('/announcement', asyncHandler(async (req, res) => {
-  const now = Date.now();
-  if (!announcementCache || now - announcementCacheAt >= SHARED_CACHE_TTL_MS) {
-    const annSnap = await db().collection('announcements')
-      .where('active', '==', true)
-      .limit(20)
-      .get();
-    announcementCache = annSnap.empty ? [] : annSnap.docs.map((d) => d.data());
-    announcementCacheAt = now;
-  }
-  if (announcementCache.length === 0) return res.json({ success: true, announcement: null });
+  const active = await announcementCache.get();
+  if (active.length === 0) return res.json({ success: true, announcement: null });
 
-  const ann = announcementCache
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  const ann = [...active].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
   const userSnap = await getUserDoc(req.uid);
   const lastSeen = userSnap.exists ? userSnap.data.lastSeenAnnouncementId : null;
@@ -408,11 +383,10 @@ router.post('/feedback', asyncHandler(async (req, res) => {
   }
 
   const id = `${req.uid}_${row}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200);
-  await db().collection('feedback').doc(id).set({
-    uid: req.uid, authorName, row, stars, comment, createdAt: Date.now(),
-  });
+  const feedbackDoc = { uid: req.uid, authorName, row, stars, comment, createdAt: Date.now() };
+  await db().collection('feedback').doc(id).set(feedbackDoc);
 
-  invalidateRatingCache(); // so the new average shows up immediately, not after the cache TTL
+  recordFeedback(id, feedbackDoc); // patch just this review into the cache — no collection re-read
   res.json({ success: true });
 }));
 
@@ -420,10 +394,8 @@ router.post('/feedback', asyncHandler(async (req, res) => {
 // product), newest first. Powers /feedback.php.
 router.get('/feedback', asyncHandler(async (req, res) => {
   const row = req.query.row ? String(req.query.row) : null;
-  const snap = await db().collection('feedback').orderBy('createdAt', 'desc').limit(300).get();
-  let items = snap.docs.map((d) => d.data());
-  if (row) items = items.filter((f) => f.row === row);
-  res.json({ success: true, feedback: items });
+  // Served from the in-memory feedback set (see src/catalog.js) — zero Firestore reads per call.
+  res.json({ success: true, feedback: await getFeedbackList({ row, limit: 300 }) });
 }));
 
 // ---------------------------------------------------------------
@@ -505,6 +477,39 @@ router.get('/reseller-progress', asyncHandler(async (req, res) => {
     minBalance: RESELLER_MIN_BALANCE,
     eligible: (data.role || 'user') !== 'reseller' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
   });
+}));
+
+// ---------------------------------------------------------------
+// Profile picture. The browser crops/resizes the image into a square
+// (the UI shows it as a circle), sends it here as base64, and THIS server
+// uploads it to imgbb — so IMGBB_API_KEY never reaches the browser. Only the
+// resulting URL is stored on the user doc (users/{uid}.avatarUrl).
+// ---------------------------------------------------------------
+const lastAvatarUpload = new Map(); // uid -> ms, basic per-user throttle
+router.post('/avatar', asyncHandler(async (req, res) => {
+  const now = Date.now();
+  if (now - (lastAvatarUpload.get(req.uid) || 0) < 10_000) {
+    return res.status(429).json({ success: false, error: 'Please wait a few seconds before uploading again.' });
+  }
+  lastAvatarUpload.set(req.uid, now);
+
+  const image = String(req.body?.image || '');
+  let url;
+  try {
+    url = await uploadAvatar(image, req.uid);
+  } catch (e) {
+    lastAvatarUpload.delete(req.uid);
+    return res.status(e.status || 502).json({ success: false, error: e.message });
+  }
+  await db().collection('users').doc(req.uid).set({ avatarUrl: url }, { merge: true });
+  invalidateUserDoc(req.uid);
+  res.json({ success: true, avatarUrl: url });
+}));
+
+router.delete('/avatar', asyncHandler(async (req, res) => {
+  await db().collection('users').doc(req.uid).set({ avatarUrl: '' }, { merge: true });
+  invalidateUserDoc(req.uid);
+  res.json({ success: true, avatarUrl: '' });
 }));
 
 // ---------------------------------------------------------------
