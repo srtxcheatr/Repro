@@ -13,6 +13,7 @@
 import { CATALOG } from './catalog1.js';
 import { CATALOG_RESELLER } from './catalog2.js';
 import { db } from './firebase.js';
+import { cachedLoader, TTL } from './cache.js';
 
 export { CATALOG, CATALOG_RESELLER };
 
@@ -53,32 +54,27 @@ export function catalogForRole(role = 'user') {
 // SAME physical product at two price tiers, so one toggle covers both.
 // ---------------------------------------------------------------
 
-let overrideCache = null;
-let overrideCacheAt = 0;
-const OVERRIDE_CACHE_TTL_MS = 30 * 1000;
-
-/**
- * All current overrides as { [sku]: { maintenance, maintenanceMessage } }.
- * Cached for 30s — fine for catalog *display*, which doesn't need to be
- * perfectly real-time. The purchase path does NOT use this cache; see
- * getMaintenanceForSku() below.
- */
-export async function getMaintenanceOverrides() {
-  const now = Date.now();
-  if (overrideCache && now - overrideCacheAt < OVERRIDE_CACHE_TTL_MS) return overrideCache;
-
+const overrides = cachedLoader(async () => {
   const snap = await db().collection('productStatus').get();
   const map = {};
   snap.forEach((d) => { map[d.id] = d.data(); });
-  overrideCache = map;
-  overrideCacheAt = now;
   return map;
+}, { ttlMs: TTL.catalog, name: 'productStatus' });
+
+/**
+ * All current overrides as { [sku]: { maintenance, maintenanceMessage } }.
+ * Cached (TTL.catalog, default 10 min) and shared by every request; every
+ * admin/employee write calls invalidateMaintenanceCache(), so changes show
+ * up immediately. The purchase path does NOT use this cache; see
+ * getMaintenanceForSku() below.
+ */
+export function getMaintenanceOverrides() {
+  return overrides.get();
 }
 
 /** Call after any write to productStatus so the change is visible immediately, not after the TTL. */
 export function invalidateMaintenanceCache() {
-  overrideCache = null;
-  overrideCacheAt = 0;
+  overrides.invalidate();
 }
 
 // ---------------------------------------------------------------
@@ -88,33 +84,59 @@ export function invalidateMaintenanceCache() {
 // share a rating). Same cache-for-display pattern as everything else here.
 // ---------------------------------------------------------------
 
-let ratingCache = null;
-let ratingCacheAt = 0;
+// The WHOLE feedback collection is read once and kept in memory as a Map
+// (docId -> doc). Averages are computed from that Map with zero reads, the
+// feedback page is served from it too, and a newly submitted review is
+// patched in with recordFeedback() — one changed doc never costs a re-read
+// of the other few hundred. It is only fully re-read after TTL.feedback.
+let ratingsMemo = null;
+
+const feedbackStore = cachedLoader(async () => {
+  const snap = await db().collection('feedback').get();
+  const docs = new Map();
+  snap.forEach((d) => docs.set(d.id, d.data()));
+  ratingsMemo = null;
+  return docs;
+}, { ttlMs: TTL.feedback, name: 'feedback' });
 
 async function getProductRatings() {
-  const now = Date.now();
-  if (ratingCache && now - ratingCacheAt < OVERRIDE_CACHE_TTL_MS) return ratingCache;
+  const docs = await feedbackStore.get();
+  if (ratingsMemo) return ratingsMemo;
 
-  const snap = await db().collection('feedback').get();
   const sums = {}; // row -> { total, count }
-  snap.forEach((d) => {
-    const f = d.data();
-    if (!f.row || !f.stars) return;
+  for (const f of docs.values()) {
+    if (!f.row || !f.stars) continue;
     if (!sums[f.row]) sums[f.row] = { total: 0, count: 0 };
     sums[f.row].total += Number(f.stars);
     sums[f.row].count += 1;
-  });
+  }
   const map = {};
   for (const [row, s] of Object.entries(sums)) {
     map[row] = { rating: Math.round((s.total / s.count) * 10) / 10, reviewCount: s.count };
   }
-  ratingCache = map;
-  ratingCacheAt = now;
+  ratingsMemo = map;
   return map;
 }
 
+/** Newest-first feedback list (optionally for one product row), capped like the old query was. Zero extra reads. */
+export async function getFeedbackList({ row = null, limit = 300 } = {}) {
+  const docs = await feedbackStore.get();
+  let items = [...docs.values()].filter((f) => f.createdAt);
+  items.sort((a, b) => b.createdAt - a.createdAt);
+  items = items.slice(0, limit);
+  return row ? items.filter((f) => f.row === row) : items;
+}
+
+/** Patch ONE submitted/edited review into the cached set instead of re-reading the collection. */
+export function recordFeedback(id, doc) {
+  feedbackStore.patch((docs) => { docs.set(id, doc); return docs; });
+  ratingsMemo = null;
+}
+
+/** Kept for compatibility — prefer recordFeedback(). */
 export function invalidateRatingCache() {
-  ratingCacheAt = 0;
+  feedbackStore.invalidate();
+  ratingsMemo = null;
 }
 
 // ---------------------------------------------------------------
@@ -127,22 +149,22 @@ export function invalidateRatingCache() {
 // to miss a brand new product because the cache hadn't refreshed yet.
 // ---------------------------------------------------------------
 
-let customProductCache = {};
-let customProductCacheAt = 0;
+let customProductCache = {}; // also read synchronously by catalogFind()
 
-async function refreshCustomProducts() {
-  const now = Date.now();
-  if (customProductCacheAt > 0 && now - customProductCacheAt < OVERRIDE_CACHE_TTL_MS) return customProductCache;
+const customProducts = cachedLoader(async () => {
   const snap = await db().collection('customProducts').get();
   const map = {};
   snap.forEach((d) => { map[d.id] = d.data(); });
   customProductCache = map;
-  customProductCacheAt = now;
-  return customProductCache;
+  return map;
+}, { ttlMs: TTL.catalog, name: 'customProducts' });
+
+function refreshCustomProducts() {
+  return customProducts.get();
 }
 
 export function invalidateCustomProductCache() {
-  customProductCacheAt = 0;
+  customProducts.invalidate();
 }
 
 /** Fresh (uncached) lookup for one custom-product sku — used by the purchase path when catalogFind() misses, so a just-created product is buyable immediately. */
@@ -171,22 +193,19 @@ export async function deleteCustomProduct(sku) {
 // these can never accidentally enter the automated purchase flow.
 // ---------------------------------------------------------------
 
-let whatsappProductCache = {};
-let whatsappProductCacheAt = 0;
-
-async function refreshWhatsappProducts() {
-  const now = Date.now();
-  if (whatsappProductCacheAt > 0 && now - whatsappProductCacheAt < OVERRIDE_CACHE_TTL_MS) return whatsappProductCache;
+const whatsappProducts = cachedLoader(async () => {
   const snap = await db().collection('whatsappProducts').get();
   const map = {};
   snap.forEach((d) => { map[d.id] = d.data(); });
-  whatsappProductCache = map;
-  whatsappProductCacheAt = now;
-  return whatsappProductCache;
+  return map;
+}, { ttlMs: TTL.catalog, name: 'whatsappProducts' });
+
+function refreshWhatsappProducts() {
+  return whatsappProducts.get();
 }
 
 export function invalidateWhatsappProductCache() {
-  whatsappProductCacheAt = 0;
+  whatsappProducts.invalidate();
 }
 
 export async function getWhatsappProductRaw(id) {
