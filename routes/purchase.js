@@ -7,6 +7,7 @@ import { catalogFind, getMaintenanceForSku, findCustomProductFresh } from '../sr
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 import { fetchRealKey } from '../src/upstream.js';
 import { invalidateUserDoc } from '../src/userCache.js';
+import { leaderboardCache } from '../src/sharedCaches.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -276,6 +277,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       return { key, newBalance, currentBalance, entry: historyEntry };
     });
     invalidateUserDoc(uid);
+    leaderboardCache.invalidate(); // this sale may change the top-10 (next read = one 10-doc query)
 
     setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance, entry: result.entry });
 
