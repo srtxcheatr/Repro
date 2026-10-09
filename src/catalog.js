@@ -59,7 +59,7 @@ const overrides = cachedLoader(async () => {
   const map = {};
   snap.forEach((d) => { map[d.id] = d.data(); });
   return map;
-}, { ttlMs: TTL.catalog, name: 'productStatus' });
+}, { ttlMs: TTL.catalog, name: 'productStatus', versionKey: 'catalog' });
 
 /**
  * All current overrides as { [sku]: { maintenance, maintenanceMessage } }.
@@ -97,7 +97,7 @@ const feedbackStore = cachedLoader(async () => {
   snap.forEach((d) => docs.set(d.id, d.data()));
   ratingsMemo = null;
   return docs;
-}, { ttlMs: TTL.feedback, name: 'feedback' });
+}, { ttlMs: TTL.feedback, name: 'feedback', versionKey: 'feedback' });
 
 async function getProductRatings() {
   const docs = await feedbackStore.get();
@@ -157,7 +157,7 @@ const customProducts = cachedLoader(async () => {
   snap.forEach((d) => { map[d.id] = d.data(); });
   customProductCache = map;
   return map;
-}, { ttlMs: TTL.catalog, name: 'customProducts' });
+}, { ttlMs: TTL.catalog, name: 'customProducts', versionKey: 'catalog' });
 
 function refreshCustomProducts() {
   return customProducts.get();
@@ -198,7 +198,7 @@ const whatsappProducts = cachedLoader(async () => {
   const map = {};
   snap.forEach((d) => { map[d.id] = d.data(); });
   return map;
-}, { ttlMs: TTL.catalog, name: 'whatsappProducts' });
+}, { ttlMs: TTL.catalog, name: 'whatsappProducts', versionKey: 'catalog' });
 
 function refreshWhatsappProducts() {
   return whatsappProducts.get();
