@@ -11,6 +11,7 @@ import { userCors, db } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
 import { rateLimit, securityHeaders } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
+import { policyCache } from './src/sharedCaches.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -19,7 +20,11 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(securityHeaders);
-// Keep request bodies tiny. This API only accepts small JSON payloads.
+// The profile-picture upload carries a small base64 image (the browser sends a
+// cropped square), so that ONE route gets a bigger body limit. It must be
+// registered BEFORE the global 16kb parser, which would otherwise reject it.
+app.use('/api/user/avatar', express.json({ limit: '800kb' }));
+// Keep every other request body tiny. This API only accepts small JSON payloads.
 app.use(express.json({ limit: '16kb' }));
 
 // Baseline abuse protection for every API endpoint. Route-specific limits
@@ -147,14 +152,9 @@ app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
 // a devtools edit to this response is local to that one tab/session and
 // is simply overwritten the next time any page calls this endpoint fresh.
 app.get('/api/policy', userCors, asyncHandler(async (req, res) => {
-  const snap = await db().collection('config').doc('policy').get();
-  const data = snap.exists ? snap.data() : {};
-  res.json({
-    success: true,
-    title: data.title || 'Terms & Policy',
-    body: data.body || 'No policy has been published yet. Please check back later.',
-    updatedAt: data.updatedAt || null,
-  });
+  // Cached (admin edits invalidate it) — this is a public, unauthenticated
+  // endpoint, so without a cache every visitor was one Firestore read.
+  res.json({ success: true, ...(await policyCache.get()) });
 }));
 
 app.use('/api/auth', authRoutes);
