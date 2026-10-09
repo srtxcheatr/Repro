@@ -29,6 +29,7 @@ import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
+import { invalidateUserDoc } from '../src/userCache.js';
 import { getMaintenanceForSku } from '../src/catalog.js';
 import { fetchRealKey } from '../src/upstream.js';
 import { keyToString } from '../src/apiMatch.js';
@@ -243,6 +244,7 @@ async function processBuy(auth, body) {
     notifyOrder({ auth, order, finished, total, balanceBefore });
     return orderResponse({ ...order, ...finished });
   } finally {
+    invalidateUserDoc(uid); // balance/totals were written on this path
     const n = (inflight.get(uid) || 1) - 1;
     if (n <= 0) inflight.delete(uid); else inflight.set(uid, n);
   }
