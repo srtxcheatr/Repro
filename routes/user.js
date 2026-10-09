@@ -6,6 +6,11 @@ import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
 import { getLiveCatalog, getFeedbackList, recordFeedback } from '../src/catalog.js';
 import { leaderboardCache, announcementCache } from '../src/sharedCaches.js';
 import { uploadAvatar } from '../src/imgbb.js';
+import { getVersions } from '../src/versions.js';
+import {
+  LIMITS_MS, computeLocks, assertUnlocked, RuleError,
+  normalizePanelLink, normalizeTikTokUser, normalizeTikTokName,
+} from '../src/profileRules.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
@@ -17,7 +22,9 @@ const DEFAULTS = (email) => ({
   role: 'user', // 'user' (retail catalog) or 'reseller' (reseller catalog) - admin-only to change
   profileName: '',
   profilePhone: '',
-  tiktok: '',
+  tiktokName: '',
+  tiktokUser: '',
+  panelLink: '',
   avatarUrl: '',
   requestStatus: 'Active',
   adminMessage: 'Welcome! Pay via eSewa or Balance to get your key 🔑',
@@ -36,7 +43,11 @@ const DEFAULTS = (email) => ({
 router.post('/init', asyncHandler(async (req, res) => {
   const name = String(req.body?.name || '').trim();
   const phone = String(req.body?.phone || '').trim();
-  const tiktok = String(req.body?.tiktok || '').trim();
+  let tiktokName = '', tiktokUser = '';
+  try {
+    tiktokName = normalizeTikTokName(req.body?.tiktokName);
+    tiktokUser = normalizeTikTokUser(req.body?.tiktokUser);
+  } catch (_) { /* signup extras are best-effort; the profile page validates strictly */ }
 
   const userRef = db().collection('users').doc(req.uid);
   const snap = await userRef.get();
@@ -46,22 +57,24 @@ router.post('/init', asyncHandler(async (req, res) => {
     const data = DEFAULTS(req.email);
     if (name) data.profileName = name;
     if (phone) data.profilePhone = phone;
-    if (tiktok) data.tiktok = tiktok;
+    if (tiktokName) data.tiktokName = tiktokName;
+    if (tiktokUser) data.tiktokUser = tiktokUser;
     await userRef.set(data, { merge: true });
   } else {
     const patch = {};
-    if (req.email && snap.data().email !== req.email) patch.email = req.email;
+    const cur = snap.data();
+    if (req.email && cur.email !== req.email) patch.email = req.email;
     // Only fill in fields that are still blank — never clobber values
     // the user already saved from their profile page.
-    if (name && !snap.data().profileName) patch.profileName = name;
-    if (phone && !snap.data().profilePhone) patch.profilePhone = phone;
-    if (tiktok && !snap.data().tiktok) patch.tiktok = tiktok;
+    if (name && !cur.profileName) patch.profileName = name;
+    if (phone && !cur.profilePhone) patch.profilePhone = phone;
+    if (tiktokName && !cur.tiktokName) patch.tiktokName = tiktokName;
+    if (tiktokUser && !cur.tiktokUser) patch.tiktokUser = tiktokUser;
     if (Object.keys(patch).length) await userRef.set(patch, { merge: true });
   }
   invalidateUserDoc(req.uid);
   // isNewUser is derived purely from "did a Firestore doc already exist
-  // for this uid" — not a client-sent flag — so the frontend can safely
-  // trust it to decide whether to force-show the policy popup.
+  // for this uid" — not a client-sent flag.
   res.json({ success: true, isNewUser });
 }));
 
@@ -103,7 +116,11 @@ router.get('/balance', asyncHandler(async (req, res) => {
     requestStatus: data.requestStatus || 'Active',
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
-    tiktok: data.tiktok || '',
+    tiktokName: data.tiktokName || '',
+    tiktokUser: data.tiktokUser || '',
+    panelLink: data.panelLink || '',
+    profileLocks: computeLocks(data),
+    profileLimits: LIMITS_MS,
     email: data.email || req.email,
     role: data.role || 'user',
     totalKeysBought: Number(data.totalKeysBought || 0),
@@ -134,31 +151,74 @@ router.get('/catalog', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/user/profile
+// Body: { name, phone, tiktokName?, tiktokUser?, panelLink? }
+// Name / phone / panel link are rate-limited per field (see src/profileRules.js);
+// a field that is unchanged never counts as a change.
 router.post('/profile', asyncHandler(async (req, res) => {
-  const name = String(req.body?.name || '').trim();
-  const phone = String(req.body?.phone || '').trim();
-  const tiktok = String(req.body?.tiktok ?? '').trim();
+  const body = req.body || {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(body, k);
+  const name = String(body.name || '').trim();
+  const phone = String(body.phone || '').trim();
   if (!name || !phone) {
     return res.status(400).json({ success: false, error: 'Please fill both fields' });
   }
   if (name.length > 60 || phone.length > 30) {
     return res.status(400).json({ success: false, error: 'Name or phone is too long' });
   }
-  if (tiktok.length > 200) {
-    return res.status(400).json({ success: false, error: 'TikTok link is too long' });
+
+  const userRef = db().collection('users').doc(req.uid);
+  const snap = await userRef.get(); // fresh read: limits must be checked against the real stored values
+  const cur = snap.exists ? snap.data() : {};
+  const now = Date.now();
+  const stamps = { ...(cur.profileChangeAt || {}) };
+  const update = {};
+
+  try {
+    // ---- name (1 / 7 days) ----
+    const oldName = String(cur.profileName || '');
+    if (name !== oldName) {
+      if (oldName) { assertUnlocked(cur, 'name', now); stamps.name = now; } // first fill is free
+      update.profileName = name; update.name = name;
+    }
+    // ---- WhatsApp number (1 / 2 days) ----
+    const oldPhone = String(cur.profilePhone || '');
+    if (phone !== oldPhone) {
+      if (oldPhone) { assertUnlocked(cur, 'phone', now); stamps.phone = now; }
+      update.profilePhone = phone; update.whatsapp = phone;
+    }
+    // ---- TikTok name + username (no limit) ----
+    if (has('tiktokName')) update.tiktokName = normalizeTikTokName(body.tiktokName);
+    if (has('tiktokUser')) update.tiktokUser = normalizeTikTokUser(body.tiktokUser);
+    // ---- own panel link (resellers only, 1 / day) ----
+    if (has('panelLink')) {
+      const link = normalizePanelLink(body.panelLink);
+      if (link !== String(cur.panelLink || '')) {
+        if ((cur.role || 'user') !== 'reseller') throw new RuleError('Only reseller accounts can add a panel link.', 403);
+        assertUnlocked(cur, 'panelLink', now);
+        stamps.panelLink = now;
+        update.panelLink = link;
+      }
+    }
+  } catch (e) {
+    if (e instanceof RuleError) return res.status(e.status).json({ success: false, error: e.message, ...e.extra });
+    throw e;
   }
-  const update = {
-    profileName: name, profilePhone: phone, name, whatsapp: phone, email: req.email,
-  };
-  // tiktok is optional — only touch it when the caller actually sent
-  // the field, so a bare {name, phone} save (e.g. from the "complete
-  // your profile" popup) doesn't wipe out a tiktok link saved earlier.
-  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'tiktok')) {
-    update.tiktok = tiktok;
-  }
-  await db().collection('users').doc(req.uid).set(update, { merge: true });
+
+  update.email = req.email;
+  update.profileChangeAt = stamps;
+  await userRef.set(update, { merge: true });
   invalidateUserDoc(req.uid);
-  res.json({ success: true });
+  if (update.profileName) leaderboardCache.invalidate(); // new name must show on the leaderboard too
+
+  const merged = { ...cur, ...update };
+  res.json({
+    success: true,
+    fields: {
+      profileName: merged.profileName || '', profilePhone: merged.profilePhone || '',
+      tiktokName: merged.tiktokName || '', tiktokUser: merged.tiktokUser || '', panelLink: merged.panelLink || '',
+    },
+    locks: computeLocks(merged, now),
+  });
 }));
 
 // GET /api/user/history
@@ -262,7 +322,9 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
     name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
     email: d.email || '',
     phone: d.profilePhone || '',
-    tiktok: d.tiktok || '',
+    tiktokName: d.tiktokName || '',
+    tiktokUser: d.tiktokUser || '',
+    panelLink: (d.role === 'reseller' && d.panelLink) ? d.panelLink : '',
     role: d.role || 'user',
     totalKeysBought: Number(d.totalKeysBought || 0),
     totalSpent: Number(d.totalSpent || 0),
@@ -491,26 +553,47 @@ router.post('/avatar', asyncHandler(async (req, res) => {
   if (now - (lastAvatarUpload.get(req.uid) || 0) < 10_000) {
     return res.status(429).json({ success: false, error: 'Please wait a few seconds before uploading again.' });
   }
-  lastAvatarUpload.set(req.uid, now);
 
-  const image = String(req.body?.image || '');
+  // 1 photo change / 7 days — read fresh so a just-made change can't be bypassed via a cached copy.
+  const userRef = db().collection('users').doc(req.uid);
+  const cur = (await userRef.get()).data() || {};
+  try { assertUnlocked(cur, 'avatar', now); }
+  catch (e) { return res.status(e.status || 429).json({ success: false, error: e.message, ...(e.extra || {}) }); }
+
+  lastAvatarUpload.set(req.uid, now);
   let url;
   try {
-    url = await uploadAvatar(image, req.uid);
+    url = await uploadAvatar(String(req.body?.image || ''), req.uid);
   } catch (e) {
     lastAvatarUpload.delete(req.uid);
     return res.status(e.status || 502).json({ success: false, error: e.message });
   }
-  await db().collection('users').doc(req.uid).set({ avatarUrl: url }, { merge: true });
+  const stamps = { ...(cur.profileChangeAt || {}), avatar: Date.now() };
+  await userRef.set({ avatarUrl: url, profileChangeAt: stamps }, { merge: true });
   invalidateUserDoc(req.uid);
-  res.json({ success: true, avatarUrl: url });
+  leaderboardCache.invalidate(); // the leaderboard row must show the new photo, not the old one
+  res.json({ success: true, avatarUrl: url, locks: computeLocks({ profileChangeAt: stamps }) });
 }));
 
 router.delete('/avatar', asyncHandler(async (req, res) => {
-  await db().collection('users').doc(req.uid).set({ avatarUrl: '' }, { merge: true });
+  const now = Date.now();
+  const userRef = db().collection('users').doc(req.uid);
+  const cur = (await userRef.get()).data() || {};
+  try { assertUnlocked(cur, 'avatar', now); }
+  catch (e) { return res.status(e.status || 429).json({ success: false, error: e.message, ...(e.extra || {}) }); }
+  const stamps = { ...(cur.profileChangeAt || {}), avatar: now };
+  await userRef.set({ avatarUrl: '', profileChangeAt: stamps }, { merge: true });
   invalidateUserDoc(req.uid);
-  res.json({ success: true, avatarUrl: '' });
+  leaderboardCache.invalidate();
+  res.json({ success: true, avatarUrl: '', locks: computeLocks({ profileChangeAt: stamps }, now) });
 }));
+
+// GET /api/user/sync — "has anything changed?" Pure memory, ZERO Firestore reads.
+// Browsers poll this every few seconds and refetch only the datasets whose stamp moved.
+router.get('/sync', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ success: true, versions: getVersions(req.uid) });
+});
 
 // ---------------------------------------------------------------
 // Policy acknowledgement — "Don't show again" has to be remembered
