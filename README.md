@@ -28,6 +28,25 @@ Same names as before — Environment tab:
 | `RESELLER_WORKER_URL` | Only once you fill in `fetchRealKey()` |
 | `WORKER_INTERNAL_SECRET` | Same |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Optional — purchase/top-up notifications |
+| `IMGBB_API_KEY` | Profile pictures — your key from https://api.imgbb.com/ (stays on the server, never sent to the browser) |
+| `IMGBB_ENDPOINT` | Optional — defaults to `https://api.imgbb.com/1/upload` |
+
+### Cache tuning (all optional, milliseconds)
+
+Firestore reads are the scarce resource on the free plan, so shared data is cached in memory and
+only re-read when it expires or when something writes to it. Defaults:
+
+| Key | Default | What it caches |
+|---|---|---|
+| `CATALOG_CACHE_TTL_MS` | 600000 (10 min) | products, maintenance flags, WhatsApp products |
+| `FEEDBACK_CACHE_TTL_MS` | 1800000 (30 min) | all reviews (star averages + feedback page); new reviews are patched in, not re-read |
+| `LEADERBOARD_CACHE_TTL_MS` | 300000 (5 min) | top-10 leaderboard |
+| `ANNOUNCEMENT_CACHE_TTL_MS` | 600000 (10 min) | active announcement |
+| `POLICY_CACHE_TTL_MS` | 1800000 (30 min) | terms & policy text |
+| `USER_DOC_CACHE_TTL_MS` | 60000 (1 min) | one user's document (every writer invalidates it) |
+
+Admin/employee edits invalidate the matching cache immediately, so changes made through this backend
+show up at once. If Firestore errors (including quota exhausted) the last good copy is served instead of a 500.
 
 ## What's NOT included, same as always
 
