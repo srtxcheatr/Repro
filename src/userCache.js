@@ -1,48 +1,36 @@
-// src/userCache.js — collapses a burst of near-simultaneous reads of the
-// SAME tiny users/{uid} document into one real Firestore read.
+// src/userCache.js — read-through cache for the tiny users/{uid} document.
 //
-// THE PROBLEM THIS FIXES: a single dashboard.php load fires off
-// /api/user/balance, /api/user/history, /api/user/reseller-progress,
-// /api/user/policy-ack and /api/user/announcement almost at the same
-// time (Promise.all). Every one of those routes used to call
-// db().collection('users').doc(uid).get() independently — 5+ full
-// reads of one document, every page load, for every user, which is
-// exactly what was burning through the Spark plan's 50K reads/day.
+// Display routes (balance, history, reseller-progress, policy-ack,
+// announcement…) call getUserDoc(uid) instead of hitting Firestore
+// directly. Within the TTL they share one real read, and concurrent
+// callers share a single in-flight read.
 //
-// THE FIX: routes that only READ the user doc for display purposes call
-// getUserDoc(uid) instead of hitting Firestore directly. The first call
-// in any ~6s window does a real read and caches it; every other call
-// for the same uid in that window reuses it. Anything that WRITES the
-// doc must call invalidateUserDoc(uid) right after, so the very next
-// read — even inside the TTL — sees the fresh value instead of a stale
-// one.
+// EVERY code path that WRITES users/{uid} must call invalidateUserDoc(uid)
+// right after (profile save, admin balance/role edits, employee top-ups,
+// completed purchases, reseller-API orders, policy-ack, …) so the very
+// next read sees the new value instead of a stale one.
 //
-// NOT used for anything transactional or money-related (checkout's
-// balance check, admin's balance/topup edits, apply-reseller, redeem).
-// Those all read via tx.get(ref) inside db().runTransaction(), which is
-// a completely different code path from db().collection('users').doc()
-// .get() — so they're structurally untouched by this cache and always
-// see a fully fresh, consistent read. This file is purely an
-// optimization for cheap, frequent, read-only display calls.
+// NOT used for anything money-critical: checkout, admin/employee balance
+// edits, redeem and apply-reseller read through tx.get(ref) inside a
+// transaction (or an explicit fresh .get()), so they never see this cache.
 import { db } from './firebase.js';
+import { cachedKeyedLoader, TTL } from './cache.js';
 
-const TTL_MS = 6000;
-const cache = new Map(); // uid -> { exists, data, at }
-
-export async function getUserDoc(uid) {
-  const hit = cache.get(uid);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit;
-
+const users = cachedKeyedLoader(async (uid) => {
   const snap = await db().collection('users').doc(uid).get();
-  const entry = { exists: snap.exists, data: snap.exists ? snap.data() : null, at: Date.now() };
-  cache.set(uid, entry);
-  return entry;
+  return { exists: snap.exists, data: snap.exists ? snap.data() : null, at: Date.now() };
+}, { ttlMs: TTL.userDoc, name: 'userDoc' });
+
+export function getUserDoc(uid) {
+  return users.get(uid);
 }
 
-// Call right after writing to a user's doc anywhere in the app (profile
-// save, admin balance/role edits, topup approval, a completed purchase,
-// policy-ack, announcement-seen, etc.) so cached readers don't serve a
-// stale copy for the rest of the TTL window.
+/** Call right after writing to a user's doc anywhere in the app. */
 export function invalidateUserDoc(uid) {
-  cache.delete(uid);
+  users.invalidate(uid);
+}
+
+/** For bulk writers (e.g. backfill-stats) that touch many users at once. */
+export function invalidateAllUserDocs() {
+  users.invalidateAll();
 }
