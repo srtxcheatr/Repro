@@ -11,6 +11,7 @@ import { loadPidProducts } from '../src/resellerApiCatalog.js';
 import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
 import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
 import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
+import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -306,6 +307,7 @@ router.get('/products', asyncHandler(async (req, res) => {
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
+      downloadLink: p.downloadLink || '',
       tags: Array.isArray(p.tags) ? p.tags : [],
       apiDuration: p.apiDuration || '', apiLabel: apiLabel(p),
       apiConflict: labelCount[`${String(p.pid ?? '').trim()}|${normDuration(apiLabel(p))}`] > 1,
@@ -391,6 +393,7 @@ function normalizeTags(input) {
 // tags now travel the same way).
 // Body: {
 //   image, pid: "122", row: "Pato team", tags: ["NONROOT","IOS"],
+//   downloadLink: "https://example.com/pato.apk", // optional — falls back to /allupdate.php
 //   durations: [
 //     { name: "Pato 3 day all color", duration: "3 Days All Colours Mix", price: 150, priceReseller: 120, apiDuration: "3 Days" /* optional */ },
 //     ...
@@ -409,6 +412,17 @@ router.post('/products/create', asyncHandler(async (req, res) => {
   if (!tags.length) return res.status(400).json({ success: false, error: `Select at least one tag (${VALID_TAGS.join(', ')})` });
   if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
   if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
+
+  // Optional — the storefront falls back to the generic /allupdate.php page
+  // when a product has none set. One link per product row (like image/tags
+  // above), duplicated onto every duration's doc below.
+  let downloadLink;
+  try {
+    downloadLink = normalizeUrlField(req.body?.downloadLink, 'Download link', { maxLen: 500 });
+  } catch (e) {
+    if (e instanceof RuleError) return res.status(e.status).json({ success: false, error: e.message });
+    throw e;
+  }
 
   // Reseller API: pid + duration must identify exactly ONE product. Check the
   // labels of this batch against each other and against what already exists.
@@ -447,7 +461,7 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
 
     const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
-    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now(), ...(apiDuration ? { apiDuration } : {}) };
+    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now(), ...(apiDuration ? { apiDuration } : {}), ...(downloadLink ? { downloadLink } : {}) };
     batch.set(db().collection('customProducts').doc(sku), product);
     created.push({ sku, ...product });
   }
@@ -458,10 +472,11 @@ router.post('/products/create', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/admin/products/:sku/edit
-// Body: any of { image, name, duration, price, priceReseller, pid } — only
-// the fields provided are changed. Works on custom products (updates their
-// own doc directly) AND static catalog1.js/catalog2.js products (stored as
-// an override in productStatus/{sku}, same doc maintenance/stock already use).
+// Body: any of { image, name, duration, price, priceReseller, pid, tags,
+// apiDuration, downloadLink } — only the fields provided are changed. Works
+// on custom products (updates their own doc directly) AND static
+// catalog1.js/catalog2.js products (stored as an override in
+// productStatus/{sku}, same doc maintenance/stock already use).
 router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
   const sku = String(req.params.sku || '').trim();
   const fields = {};
@@ -493,6 +508,16 @@ router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
     const v = String(req.body.apiDuration).trim();
     if (v && !API_DURATION_RE.test(v)) return res.status(400).json({ success: false, error: 'API duration may only use letters, numbers, spaces and _ . + - (max 40 characters)' });
     fields.apiDuration = v;
+  }
+  // downloadLink may also be blank — clearing it just falls back to the
+  // generic /allupdate.php page on the storefront, same as never setting it.
+  if (req.body?.downloadLink !== undefined) {
+    try {
+      fields.downloadLink = normalizeUrlField(req.body.downloadLink, 'Download link', { maxLen: 500 });
+    } catch (e) {
+      if (e instanceof RuleError) return res.status(e.status).json({ success: false, error: e.message });
+      throw e;
+    }
   }
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
 
