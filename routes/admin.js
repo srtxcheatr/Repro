@@ -343,7 +343,7 @@ router.post('/products/:sku/maintenance', asyncHandler(async (req, res) => {
     updatedAt: Date.now(),
   }, { merge: true });
 
-  invalidateMaintenanceCache(); // so this takes effect immediately, not after the 30s cache TTL
+  invalidateMaintenanceCache(); // so this takes effect immediately, not after TTL.catalog (10 min)
   res.json({ success: true, sku, maintenance });
 }));
 
