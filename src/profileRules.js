@@ -47,17 +47,28 @@ export function assertUnlocked(data, field, now = Date.now()) {
   }
 }
 
-/** "xxxxxxx.com" / "https://x.com/path" -> "https://x.com/path". '' clears it. */
-export function normalizePanelLink(input) {
+/**
+ * "xxxxxxx.com" / "https://x.com/path" -> "https://x.com/path". '' clears it.
+ * Generic so any "paste a link, we'll clean it up" field (profile panel
+ * link, an admin-set product download link, ...) can share one real
+ * implementation instead of each growing its own copy. `label` only
+ * affects the wording of thrown errors.
+ */
+export function normalizeUrlField(input, label, { maxLen = 200 } = {}) {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
-  if (raw.length > 200) throw new RuleError('Panel link is too long (max 200 characters).');
-  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\//i.test(raw)) throw new RuleError('Panel link must start with https:// (or just be a domain like mypanel.com).');
+  if (raw.length > maxLen) throw new RuleError(`${label} is too long (max ${maxLen} characters).`);
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\//i.test(raw)) throw new RuleError(`${label} must start with https:// (or just be a domain like example.com).`);
   const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   let u;
-  try { u = new URL(withScheme); } catch { throw new RuleError('That panel link is not a valid website address.'); }
-  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(u.hostname)) throw new RuleError('Panel link must be a real domain, e.g. mypanel.com');
+  try { u = new URL(withScheme); } catch { throw new RuleError(`That ${label.toLowerCase()} is not a valid website address.`); }
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(u.hostname)) throw new RuleError(`${label} must be a real domain, e.g. example.com`);
   return u.toString().replace(/\/$/, '');
+}
+
+/** "xxxxxxx.com" / "https://x.com/path" -> "https://x.com/path". '' clears it. */
+export function normalizePanelLink(input) {
+  return normalizeUrlField(input, 'Panel link');
 }
 
 /** "srtxcheats" / "@srtxcheats" -> "@srtxcheats". */
