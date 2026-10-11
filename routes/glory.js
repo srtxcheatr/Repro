@@ -79,14 +79,45 @@ function flat(o, prefix = '', out = {}, depth = 0) {
 }
 
 const detailsCache = new Map(); // groupId -> { at, data }
-const DETAILS_TTL = 30_000;
+const DETAILS_TTL = 40_000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function loadDetails(groupId) {
+// Every call to the upstream group-action endpoint goes through ONE queue
+// (the reseller account is shared; parallel calls give 409 "operation in
+// progress"). A 409 is retried twice after a short pause.
+function groupAction(action, groupId, timeoutMs = 30000) {
+  return serialized(async () => {
+    for (let i = 0; ; i++) {
+      try {
+        const out = await gloryCall('POST', '/api/client/group-action', { body: { action, group_id: groupId }, timeoutMs });
+        if (out && typeof out === 'object' && (out.success === false || (out.error && out.success !== true))) {
+          throw new GloryError(String(out.error || 'Service returned an error.'), { status: 502 });
+        }
+        return out;
+      } catch (e) {
+        if (e instanceof GloryError && e.status === 409 && i < 2) { await sleep(1500); continue; }
+        throw e;
+      }
+    }
+  });
+}
+const errText = (e) => (e instanceof GloryError ? `${e.message}${e.status ? ` (HTTP ${e.status})` : ''}` : 'Unexpected error');
+
+async function loadDetails(groupId, fresh = false) {
   const hit = detailsCache.get(groupId);
-  if (hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
-  const call = (action) => gloryCall('POST', '/api/client/group-action', { body: { action, group_id: groupId }, timeoutMs: 15000 }).catch(() => null);
-  const [g, c] = await Promise.all([call('get-glory'), call('get-clan-info')]);
-  if (g === null && c === null) return hit ? hit.data : null;
+  if (!fresh && hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
+
+  const errors = {};
+  let g = null; let c = null;
+  try { g = await groupAction('get-glory', groupId); } catch (e) { errors.glory = errText(e); }
+  try { c = await groupAction('get-clan-info', groupId); } catch (e) { errors.clan = errText(e); }
+
+  if (g === null && c === null) {
+    if (hit) return { ...hit.data, stale: true, errors };
+    const err = new GloryError(`Live info unavailable — ${Object.entries(errors).map(([k, v]) => `${k}: ${v}`).join('; ')}`, { status: 502 });
+    throw err;
+  }
+
   const gloryVal = typeof g === 'number' ? g : dig(g, ['glory', 'total_glory', 'points', 'score', 'clan_glory']);
   const data = {
     clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name']) ?? dig(g, ['clan_name', 'clanName']),
@@ -101,11 +132,23 @@ async function loadDetails(groupId) {
       ?? dig(c, ['since', 'last_match_at']),
     clan: flat(c),
     gloryInfo: flat(typeof g === 'object' ? g : { glory: g }),
+    errors,
     updatedAt: new Date().toISOString(),
     raw: JSON.stringify({ glory: g, clan: c }).slice(0, 800),
   };
   detailsCache.set(groupId, { at: Date.now(), data });
   return data;
+}
+
+async function ownGroup(req, res) {
+  const gid = String(req.query.group_id || '').trim();
+  if (!gid) { res.status(400).json({ success: false, error: 'Missing group_id.' }); return null; }
+  const doc = await db().collection(COL).doc(gid).get();
+  if (!doc.exists || doc.data().uid !== req.uid || doc.data().status === 'deleted') {
+    res.status(404).json({ success: false, error: 'Group not found.' });
+    return null;
+  }
+  return doc.data();
 }
 
 // GET /api/glory/regions — enabled regions with the NRP price for each.
@@ -146,12 +189,6 @@ router.get('/groups', asyncHandler(async (req, res) => {
       running: l ? l.running_count : 0,
     };
   }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-
-  // Attach live details for running groups (cached 30s, fetched in parallel).
-  await Promise.all(groups.map(async (g) => {
-    if (g.status !== 'running') return;
-    try { g.details = await loadDetails(g.groupId); } catch (_) { g.details = null; }
-  }));
 
   res.json({ success: true, groups });
 }));
@@ -293,6 +330,31 @@ router.post('/action', rateLimit({ windowMs: 60_000, max: 40, name: 'glory-actio
     if (action === 'delete') await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true });
 
     res.json({ success: true, result: out });
+  } catch (e) { return fail(res, e); }
+}));
+
+// GET /api/glory/details?group_id=X[&fresh=1] — live glory + clan info for ONE of your groups.
+router.get('/details', rateLimit({ windowMs: 60_000, max: 60, name: 'glory-details' }), asyncHandler(async (req, res) => {
+  if (!(await ownGroup(req, res))) return;
+  try {
+    const details = await loadDetails(String(req.query.group_id), req.query.fresh === '1');
+    res.json({ success: true, details });
+  } catch (e) { return fail(res, e); }
+}));
+
+// GET /api/glory/progress?group_id=X — glory timeline (documented endpoint).
+router.get('/progress', rateLimit({ windowMs: 60_000, max: 30, name: 'glory-progress' }), asyncHandler(async (req, res) => {
+  if (!(await ownGroup(req, res))) return;
+  try {
+    const out = await serialized(() => gloryCall('GET', '/api/client/glory-progression', {
+      query: { group_id: String(req.query.group_id) }, timeoutMs: 20000,
+    }));
+    const snaps = Array.isArray(out?.snapshots) ? out.snapshots : [];
+    res.json({
+      success: true,
+      clanId: out?.clan_id, gloryFarmed: out?.glory_farmed,
+      snapshots: snaps.slice(-12).map((x) => ({ at: x.captured_at, glory: x.total_glory, hours: x.uptime_hours })),
+    });
   } catch (e) { return fail(res, e); }
 }));
 
