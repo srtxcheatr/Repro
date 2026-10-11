@@ -18,6 +18,28 @@ const maxGroups = () => Math.max(1, Number(process.env.GLORY_MAX_GROUPS_PER_USER
 // charging NRP twice.
 const launching = new Set();
 
+// Be tolerant about how the upstream names the new group's id.
+function pickId(o) {
+  if (!o || typeof o !== 'object') return '';
+  const v = o.group_id || o.groupId || o.id
+    || (o.group && (o.group.group_id || o.group.id))
+    || (o.data && (o.data.group_id || o.data.id));
+  return v ? String(v) : '';
+}
+
+// Fallback: newest upstream group for this clan that we haven't recorded yet.
+async function findNewGroup(clanId) {
+  const list = await gloryCall('GET', '/api/client/my-groups');
+  const cands = (Array.isArray(list) ? list : [])
+    .filter((g) => String(g.clan_id) === clanId)
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  for (const g of cands) {
+    const known = await db().collection(COL).doc(String(g.group_id)).get();
+    if (!known.exists) return String(g.group_id);
+  }
+  return '';
+}
+
 function fail(res, e) {
   if (e instanceof GloryError) return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: e.message });
   throw e;
@@ -129,10 +151,23 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     // 2) Launch upstream (one at a time across all users).
     let out;
     try {
-      out = await serialized(() => gloryCall('POST', '/api/client/auto-clan-group', {
-        body: { region: region.id, clan_id: clanId },
-      }));
-      if (!out || !out.group_id) throw new GloryError('FF Glory service returned an unexpected reply.', { status: 502 });
+      out = await serialized(async () => {
+        const r = await gloryCall('POST', '/api/client/auto-clan-group', {
+          body: { region: region.id, clan_id: clanId },
+        });
+        let id = pickId(r);
+        if (!id && !(r && r.success === false)) {
+          // Upstream said OK but we couldn't read the id — find the new group by clan.
+          console.error('[glory] launch reply had no group id:', JSON.stringify(r).slice(0, 500));
+          id = await findNewGroup(clanId);
+        }
+        if (!id) {
+          const err = new GloryError('FF Glory service returned an unexpected reply.', { status: 502 });
+          err.detail = JSON.stringify(r).slice(0, 300);
+          throw err;
+        }
+        return { ...(r || {}), group_id: id };
+      });
     } catch (e) {
       if (e instanceof GloryError && e.timeout) {
         // The group may have been created — do NOT auto-refund; flag for manual review.
@@ -140,7 +175,7 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
         return res.status(504).json({ success: false, error: 'The service took too long. Your NRP was held — contact support if no group appears shortly.' });
       }
       await refund();
-      telegramNotify(`❌ <b>Glory launch failed</b> (refunded)\nUser: <code>${esc(req.uid)}</code>\nClan: ${esc(clanId)} · ${esc(region.id)}\n${esc(e.message)}`);
+      telegramNotify(`❌ <b>Glory launch failed</b> (refunded)\nUser: <code>${esc(req.uid)}</code>\nClan: ${esc(clanId)} · ${esc(region.id)}\n${esc(e.message)}${e.detail ? '\nReply: <code>' + esc(e.detail) + '</code>' : ''}`);
       return fail(res, e);
     }
 
