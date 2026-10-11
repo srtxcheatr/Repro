@@ -13,7 +13,7 @@ export async function fetchRealKey(sku, product, androidId = null) {
   if (!API_KEY) throw new Error('RESELLER_API_KEY missing');
   if (!MASTER_KEY) throw new Error('RESELLER_MASTER_KEY missing');
 
-  // ✅ CRITICAL FIX: Uses the exact text from your catalog (e.g. "1 DaYs", "1 Hours")
+  // The panel matches the duration text exactly as written in the catalog ("1 DaYs", "1 Hours").
   const duration = product.duration;
 
   const formData = new URLSearchParams();
