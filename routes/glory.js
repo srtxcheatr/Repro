@@ -45,6 +45,69 @@ function fail(res, e) {
   throw e;
 }
 
+
+// ---- Live details (clan name, level, members, captain, glory) ----
+// The upstream docs don't show the exact reply shape of get-glory /
+// get-clan-info, so the fields are looked up under several common names.
+function dig(o, keys, depth = 0) {
+  if (!o || typeof o !== 'object' || depth > 3) return undefined;
+  for (const k of keys) {
+    const v = o[k];
+    if (v !== undefined && v !== null && typeof v !== 'object') return v;
+  }
+  for (const v of Object.values(o)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const r = dig(v, keys, depth + 1);
+      if (r !== undefined) return r;
+    }
+  }
+  return undefined;
+}
+// Turn any reply into a flat { key: primitive } map for the Details / Squad Info popups.
+function flat(o, prefix = '', out = {}, depth = 0) {
+  if (o === null || o === undefined) return out;
+  if (typeof o !== 'object') { out[prefix || 'value'] = o; return out; }
+  if (depth > 2) return out;
+  for (const [k, v] of Object.entries(o)) {
+    if (Object.keys(out).length >= 40) break;
+    if (v === null || v === undefined) continue;
+    if (Array.isArray(v)) out[prefix + k] = v.every((x) => typeof x !== 'object') ? v.join(', ') : `${v.length} items`;
+    else if (typeof v === 'object') flat(v, prefix + k + '.', out, depth + 1);
+    else out[prefix + k] = v;
+  }
+  return out;
+}
+
+const detailsCache = new Map(); // groupId -> { at, data }
+const DETAILS_TTL = 30_000;
+
+async function loadDetails(groupId) {
+  const hit = detailsCache.get(groupId);
+  if (hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
+  const call = (action) => gloryCall('POST', '/api/client/group-action', { body: { action, group_id: groupId }, timeoutMs: 15000 }).catch(() => null);
+  const [g, c] = await Promise.all([call('get-glory'), call('get-clan-info')]);
+  if (g === null && c === null) return hit ? hit.data : null;
+  const gloryVal = typeof g === 'number' ? g : dig(g, ['glory', 'total_glory', 'points', 'score', 'clan_glory']);
+  const data = {
+    clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name']) ?? dig(g, ['clan_name', 'clanName']),
+    level: dig(c, ['clan_level', 'clanLevel', 'level']),
+    members: dig(c, ['member_num', 'member_count', 'memberCount', 'members', 'current_members']),
+    capacity: dig(c, ['capacity', 'member_capacity', 'max_members', 'maxMembers', 'max_member']),
+    captain: dig(c, ['captain_id', 'captainId', 'captain', 'leader_id', 'leader']),
+    glory: gloryVal ?? dig(c, ['glory', 'total_glory', 'clan_glory']),
+    games: dig(g, ['games', 'games_played', 'matches', 'match_count', 'matches_played', 'total_games', 'total_matches'])
+      ?? dig(c, ['games', 'matches']),
+    since: dig(g, ['since', 'last_match_at', 'last_match_time', 'last_match', 'last_match_since'])
+      ?? dig(c, ['since', 'last_match_at']),
+    clan: flat(c),
+    gloryInfo: flat(typeof g === 'object' ? g : { glory: g }),
+    updatedAt: new Date().toISOString(),
+    raw: JSON.stringify({ glory: g, clan: c }).slice(0, 800),
+  };
+  detailsCache.set(groupId, { at: Date.now(), data });
+  return data;
+}
+
 // GET /api/glory/regions — enabled regions with the NRP price for each.
 router.get('/regions', asyncHandler(async (req, res) => {
   try {
@@ -83,6 +146,12 @@ router.get('/groups', asyncHandler(async (req, res) => {
       running: l ? l.running_count : 0,
     };
   }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  // Attach live details for running groups (cached 30s, fetched in parallel).
+  await Promise.all(groups.map(async (g) => {
+    if (g.status !== 'running') return;
+    try { g.details = await loadDetails(g.groupId); } catch (_) { g.details = null; }
+  }));
 
   res.json({ success: true, groups });
 }));
