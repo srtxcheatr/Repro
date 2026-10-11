@@ -1,7 +1,9 @@
+import './src/loadEnv.js';
 import express from 'express';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import purchaseRoutes from './routes/purchase.js';
+import gloryRoutes from './routes/glory.js';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
 import resellerApiRoutes from './routes/reseller-api.js';
@@ -162,6 +164,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
+app.use('/api/glory', gloryRoutes);
 
 // Reseller API: resellers' own servers call /api/reseller/v1 with an api_key +
 // master key (see routes/reseller-api.js). The portal routes are what the
