@@ -46,9 +46,9 @@ function fail(res, e) {
 }
 
 
-// Live clan details. We don't have a written spec for the reply of
-// get-glory / get-clan-info, so each field is looked up under the names
-// the panel is known to use, plus a few close variants.
+// ---- Live details (clan name, level, members, captain, glory) ----
+// The upstream docs don't show the exact reply shape of get-glory /
+// get-clan-info, so the fields are looked up under several common names.
 function dig(o, keys, depth = 0) {
   if (!o || typeof o !== 'object' || depth > 3) return undefined;
   for (const k of keys) {
@@ -63,7 +63,7 @@ function dig(o, keys, depth = 0) {
   }
   return undefined;
 }
-// Flatten any reply into { key: primitive } for the Details popup.
+// Turn any reply into a flat { key: primitive } map for the Details / Squad Info popups.
 function flat(o, prefix = '', out = {}, depth = 0) {
   if (o === null || o === undefined) return out;
   if (typeof o !== 'object') { out[prefix || 'value'] = o; return out; }
@@ -78,49 +78,8 @@ function flat(o, prefix = '', out = {}, depth = 0) {
   return out;
 }
 
-
-// Clan emblem. Prefer a ready-made image URL from the reply; otherwise a
-// numeric badge id plus GLORY_BADGE_URL_TEMPLATE (e.g. https://cdn.example/{id}.png).
-function pickLogo(...sources) {
-  const urls = []; const ids = [];
-  const walk = (o, depth = 0) => {
-    if (!o || typeof o !== 'object' || depth > 3) return;
-    for (const [k, v] of Object.entries(o)) {
-      if (typeof v === 'string' && /^https?:\/\//i.test(v) && /logo|badge|emblem|icon|avatar|image|img|pic/i.test(k)) urls.push(v.replace(/^http:/i, 'https:'));
-      else if ((typeof v === 'number' || /^\d{1,12}$/.test(String(v))) && /badge|logo|emblem/i.test(k)) ids.push(String(v));
-      else if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, depth + 1);
-    }
-  };
-  sources.forEach((s) => walk(s));
-  const badgeId = ids[0] || '';
-  if (urls[0]) return { logoUrl: urls[0], badgeId };
-  const tpl = process.env.GLORY_BADGE_URL_TEMPLATE;
-  if (tpl && badgeId) return { logoUrl: tpl.replace('{id}', encodeURIComponent(badgeId)), badgeId };
-  return { logoUrl: '', badgeId };
-}
-
-// Latest glory snapshot from the documented glory-progression endpoint.
-// Cached longer than the live info: snapshots only change about once an hour.
-const snapCache = new Map();
-async function lastSnapshot(groupId) {
-  const hit = snapCache.get(groupId);
-  if (hit && Date.now() - hit.at < 300_000) return hit.data;
-  const out = await serialized(() => gloryCall('GET', '/api/client/glory-progression', { query: { group_id: groupId }, timeoutMs: 20000 }));
-  const list = Array.isArray(out?.snapshots) ? out.snapshots : [];
-  const a = list[list.length - 1];
-  const b = list[list.length - 2];
-  const data = a ? {
-    at: a.captured_at, glory: a.total_glory,
-    gained: b ? Number(a.total_glory) - Number(b.total_glory) : null,
-    farmed: out.glory_farmed,
-  } : null;
-  snapCache.set(groupId, { at: Date.now(), data });
-  return data;
-}
-
 const detailsCache = new Map(); // groupId -> { at, data }
 const DETAILS_TTL = 40_000;
-let loggedShape = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Every call to the upstream group-action endpoint goes through ONE queue
@@ -144,7 +103,66 @@ function groupAction(action, groupId, timeoutMs = 30000) {
 }
 const errText = (e) => (e instanceof GloryError ? `${e.message}${e.status ? ` (HTTP ${e.status})` : ''}` : 'Unexpected error');
 
-async function loadDetails(groupId, fresh = false) {
+
+// ---- "Last match" ----------------------------------------------------
+// The upstream never documents a last-match field, so we work it out from
+// the best source available (in this order):
+//   1. an explicit timestamp in the get-glory / get-clan-info / my-groups reply
+//   2. we saw the glory number go UP between two polls (a match just ended)
+//   3. the newest glory-progression snapshot where glory grew
+const LAST_MATCH_KEYS = [
+  'last_match_at', 'last_match_time', 'last_match', 'lastMatchAt', 'lastMatchTime', 'lastMatch',
+  'last_match_ts', 'last_game_at', 'last_game_time', 'last_game', 'last_played', 'last_played_at',
+  'last_active', 'last_activity',
+];
+const GAMES_KEYS = ['games', 'games_played', 'matches', 'match_count', 'matches_played', 'total_games', 'total_matches', 'game_count'];
+
+// Accept ISO strings, "2026-03-28 10:00:00", epoch seconds or epoch millis.
+function toIso(v) {
+  if (v === undefined || v === null || v === '') return null;
+  let d;
+  if (typeof v === 'number' || /^\d{9,13}$/.test(String(v))) {
+    const n = Number(v);
+    d = new Date(n < 1e12 ? n * 1000 : n);
+  } else {
+    let str = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(str)) str = str.replace(' ', 'T');
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) str += 'Z'; // no zone = UTC
+    d = new Date(str);
+  }
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+const gloryMemory = new Map(); // groupId -> { glory, changedAt }
+function noteGlory(groupId, glory) {
+  const n = Number(glory);
+  if (!Number.isFinite(n)) return null;
+  const prev = gloryMemory.get(groupId);
+  if (!prev) { gloryMemory.set(groupId, { glory: n, changedAt: null }); return null; }
+  if (n > prev.glory) { gloryMemory.set(groupId, { glory: n, changedAt: new Date().toISOString() }); }
+  else if (n !== prev.glory) { gloryMemory.set(groupId, { ...prev, glory: n }); }
+  return gloryMemory.get(groupId).changedAt;
+}
+
+// Newest snapshot where total glory grew compared with the one before it.
+async function lastGrowthFromSnapshots(groupId) {
+  try {
+    const out = await groupAction_progress(groupId);
+    const snaps = (Array.isArray(out?.snapshots) ? out.snapshots : [])
+      .map((x) => ({ at: toIso(x.captured_at), glory: Number(x.total_glory) }))
+      .filter((x) => x.at && Number.isFinite(x.glory))
+      .sort((a, b) => a.at.localeCompare(b.at));
+    for (let i = snaps.length - 1; i > 0; i--) {
+      if (snaps[i].glory > snaps[i - 1].glory) return { at: snaps[i].at, gain: snaps[i].glory - snaps[i - 1].glory };
+    }
+  } catch (_) { /* optional */ }
+  return null;
+}
+const groupAction_progress = (groupId) => serialized(() => gloryCall('GET', '/api/client/glory-progression', {
+  query: { group_id: groupId }, timeoutMs: 15000,
+}));
+
+async function loadDetails(groupId, fresh = false, listRow = null) {
   const hit = detailsCache.get(groupId);
   if (!fresh && hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
 
@@ -153,9 +171,6 @@ async function loadDetails(groupId, fresh = false) {
   try { g = await groupAction('get-glory', groupId); } catch (e) { errors.glory = errText(e); }
   try { c = await groupAction('get-clan-info', groupId); } catch (e) { errors.clan = errText(e); }
 
-  let snap = null;
-  try { snap = await lastSnapshot(groupId); } catch (_) { /* optional */ }
-
   if (g === null && c === null) {
     if (hit) return { ...hit.data, stale: true, errors };
     const err = new GloryError(`Live info unavailable — ${Object.entries(errors).map(([k, v]) => `${k}: ${v}`).join('; ')}`, { status: 502 });
@@ -163,29 +178,31 @@ async function loadDetails(groupId, fresh = false) {
   }
 
   const gloryVal = typeof g === 'number' ? g : dig(g, ['glory', 'total_glory', 'points', 'score', 'clan_glory']);
-  if (!loggedShape) {
-    loggedShape = true;
-    console.log('[glory] clan-info fields:', Object.keys(flat(c)).join(', '));
-    console.log('[glory] glory fields:', Object.keys(flat(typeof g === 'object' ? g : {})).join(', '));
-  }
   const data = {
-    clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name', 'guildName']) ?? dig(g, ['clan_name', 'clanName']),
-    level: dig(c, ['clan_level', 'clanLevel', 'guild_level', 'level']),
-    members: dig(c, ['member_num', 'member_count', 'memberCount', 'members', 'current_members', 'memberNum']),
-    capacity: dig(c, ['capacity', 'member_capacity', 'max_members', 'maxMembers', 'max_member', 'maxMember']),
+    clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name']) ?? dig(g, ['clan_name', 'clanName']),
+    level: dig(c, ['clan_level', 'clanLevel', 'level']),
+    members: dig(c, ['member_num', 'member_count', 'memberCount', 'members', 'current_members']),
+    capacity: dig(c, ['capacity', 'member_capacity', 'max_members', 'maxMembers', 'max_member']),
     captain: dig(c, ['captain_id', 'captainId', 'captain', 'leader_id', 'leader']),
-    glory: gloryVal ?? dig(c, ['glory', 'total_glory', 'clan_glory', 'score']) ?? (snap ? snap.glory : undefined),
-    lastSnap: snap,
-    games: dig(g, ['games', 'games_played', 'matches', 'match_count', 'matches_played', 'total_games', 'total_matches'])
-      ?? dig(c, ['games', 'matches']),
-    since: dig(g, ['since', 'last_match_at', 'last_match_time', 'last_match', 'last_match_since'])
-      ?? dig(c, ['since', 'last_match_at']),
-    ...pickLogo(c, g),
+    glory: gloryVal ?? dig(c, ['glory', 'total_glory', 'clan_glory']),
+    games: dig(g, GAMES_KEYS) ?? dig(c, GAMES_KEYS),
     clan: flat(c),
     gloryInfo: flat(typeof g === 'object' ? g : { glory: g }),
     errors,
     updatedAt: new Date().toISOString(),
+    raw: JSON.stringify({ glory: g, clan: c }).slice(0, 800),
   };
+  // Last match: explicit field > glory just went up > newest growth snapshot.
+  let lastMatchAt = toIso(dig(g, LAST_MATCH_KEYS) ?? dig(c, LAST_MATCH_KEYS) ?? (listRow && dig(listRow, LAST_MATCH_KEYS)));
+  let lastMatchSource = lastMatchAt ? 'upstream' : '';
+  const seen = noteGlory(groupId, data.glory);
+  if (!lastMatchAt && seen) { lastMatchAt = seen; lastMatchSource = 'live'; }
+  if (!lastMatchAt) {
+    const snap = await lastGrowthFromSnapshots(groupId);
+    if (snap) { lastMatchAt = snap.at; lastMatchSource = 'history'; data.lastMatchGain = snap.gain; }
+  }
+  data.lastMatchAt = lastMatchAt;
+  data.lastMatchSource = lastMatchSource;
   detailsCache.set(groupId, { at: Date.now(), data });
   return data;
 }
@@ -230,28 +247,13 @@ router.get('/groups', asyncHandler(async (req, res) => {
 
   const groups = mine.map((g) => {
     const l = live.get(g.groupId);
-    const botCount = l ? Number(l.container_count) || 0 : (g.botCount || 0);
-    const runningBots = l ? Number(l.running_count) || 0 : 0;
-    // "running" only counts when bots are actually up, otherwise the card
-    // would show a green light for a group that is still booting.
-    let state = 'unknown';
-    if (l) {
-      if (l.status === 'running') state = runningBots > 0 || !botCount ? 'running' : 'starting';
-      else state = l.status === 'stopped' ? 'stopped' : (l.status || 'unknown');
-    } else if (live.size) state = 'ended';
-    else state = g.status || 'unknown';
     return {
       groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
       price: g.price, createdAt: g.createdAt,
       status: l ? l.status : (live.size ? 'ended' : (g.status || 'unknown')),
-      state,
       uptime: l ? l.uptime : '',
-      botCount,
-      running: runningBots,
-      clanName: l ? dig(l, ['clan_name', 'clanName', 'name']) : undefined,
-      games: l ? dig(l, ['games', 'games_played', 'matches', 'match_count', 'total_games']) : undefined,
-      since: l ? dig(l, ['since', 'last_match_at', 'last_match_time', 'last_match']) : undefined,
-      ...(l ? pickLogo(l) : { logoUrl: '' }),
+      botCount: l ? l.container_count : (g.botCount || 0),
+      running: l ? l.running_count : 0,
     };
   }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
