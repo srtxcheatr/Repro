@@ -11,6 +11,7 @@ import { loadPidProducts } from '../src/resellerApiCatalog.js';
 import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
 import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
 import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
+import { getStock, setStock } from '../src/gloryStock.js';
 import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 
 const router = express.Router();
@@ -908,6 +909,28 @@ router.get('/users', asyncHandler(async (req, res) => {
 // devtools edit to what a page displays never persists past that one
 // page load.
 // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// FF GLORY BOT stock — how many glory groups can be running at once.
+// enabled=false means unlimited. Each live (running/stopped) group uses
+// one slot; deleting a group frees it.
+// ---------------------------------------------------------------
+router.get('/glory-stock', asyncHandler(async (req, res) => {
+  res.json({ success: true, ...(await getStock({ fresh: true })) });
+}));
+
+router.post('/glory-stock', asyncHandler(async (req, res) => {
+  if (typeof req.body?.enabled !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'enabled must be true or false' });
+  }
+  const total = Number(req.body?.total);
+  if (req.body.enabled && (!Number.isInteger(total) || total < 0 || total > 10000)) {
+    return res.status(400).json({ success: false, error: 'Stock must be a whole number from 0 to 10000' });
+  }
+  const stock = await setStock({ enabled: req.body.enabled, total: Number.isInteger(total) ? total : 0 });
+  telegramNotify(`🤖 <b>Glory Bot stock</b> set: ${stock.enabled ? `${stock.available} available of ${stock.total}` : 'unlimited'} (admin panel)`);
+  res.json({ success: true, ...stock });
+}));
+
 router.get('/policy', asyncHandler(async (req, res) => {
   const snap = await db().collection('config').doc('policy').get();
   const data = snap.exists ? snap.data() : {};
