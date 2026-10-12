@@ -12,6 +12,7 @@ import {
   normalizePanelLink, normalizeTikTokUser, normalizeTikTokName,
 } from '../src/profileRules.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
+import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -310,6 +311,27 @@ router.get('/leaderboard', asyncHandler(async (req, res) => {
 router.get('/public-profile', asyncHandler(async (req, res) => {
   const uid = String(req.query.uid || '').trim();
   if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+
+  // Admin-made promo entry on the leaderboard (not a real account).
+  if (isBotUid(uid)) {
+    const b = await getBot(botDocId(uid));
+    if (!b) return res.status(404).json({ success: false, error: 'User not found' });
+    return res.json({
+      success: true,
+      uid,
+      avatarUrl: b.logoUrl || '',
+      name: b.name,
+      email: '',
+      phone: b.number || '',
+      tiktokName: '',
+      tiktokUser: '',
+      panelLink: b.resellerLink || '',
+      role: b.resellerLink ? 'reseller' : 'user',
+      totalKeysBought: Number(b.keysBought || 0),
+      totalSpent: Number(b.spent || 0),
+      badge: b.badge || '',
+    });
+  }
 
   const snap = await getUserDoc(uid);
   if (!snap.exists) return res.status(404).json({ success: false, error: 'User not found' });
