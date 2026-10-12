@@ -13,6 +13,7 @@ import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
 import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
 import { getStock, setStock } from '../src/gloryStock.js';
 import { normalizeUrlField, RuleError } from '../src/profileRules.js';
+import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -929,6 +930,45 @@ router.post('/glory-stock', asyncHandler(async (req, res) => {
   const stock = await setStock({ enabled: req.body.enabled, total: Number.isInteger(total) ? total : 0 });
   telegramNotify(`🤖 <b>Glory Bot stock</b> set: ${stock.enabled ? `${stock.available} available of ${stock.total}` : 'unlimited'} (admin panel)`);
   res.json({ success: true, ...stock });
+}));
+
+// ---------------------------------------------------------------
+// LEADERBOARD PROMO ENTRIES — admin-made fake "bot" ids that appear on the
+// Top-10 leaderboard (name, logo, number, optional reseller link, custom
+// bought keys + spend, crown badge gold / silver / bronze).
+// See src/leaderboardBots.js.
+// ---------------------------------------------------------------
+const botErr = (res, e) => {
+  if (e instanceof RuleError) return res.status(e.status).json({ success: false, error: e.message });
+  throw e;
+};
+
+router.get('/leaderboard-bots', asyncHandler(async (req, res) => {
+  res.json({ success: true, bots: await listBots() });
+}));
+
+router.post('/leaderboard-bots', asyncHandler(async (req, res) => {
+  try {
+    const bot = await createBot(req.body || {});
+    leaderboardCache.invalidate();
+    res.json({ success: true, bot });
+  } catch (e) { botErr(res, e); }
+}));
+
+router.post('/leaderboard-bots/:id/edit', asyncHandler(async (req, res) => {
+  try {
+    const bot = await updateBot(req.params.id, req.body || {});
+    leaderboardCache.invalidate();
+    res.json({ success: true, bot });
+  } catch (e) { botErr(res, e); }
+}));
+
+router.post('/leaderboard-bots/:id/delete', asyncHandler(async (req, res) => {
+  try {
+    await deleteBot(req.params.id);
+    leaderboardCache.invalidate();
+    res.json({ success: true });
+  } catch (e) { botErr(res, e); }
 }));
 
 router.get('/policy', asyncHandler(async (req, res) => {
