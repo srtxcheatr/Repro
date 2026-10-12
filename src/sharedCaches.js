@@ -3,26 +3,32 @@
 // serves every user until the TTL expires or an admin write invalidates it.
 import { db } from './firebase.js';
 import { cachedLoader, TTL } from './cache.js';
+import { listBots, botToBoardRow } from './leaderboardBots.js';
 
 // Top 10 by lifetime keys bought. Only name/counts/avatar are exposed,
 // never email/phone/balance, since every logged-in user can see this list.
+// Admin-made promo entries (src/leaderboardBots.js) are merged in with their
+// customised keys / spend, then the combined list is sorted and cut to 10.
 export const leaderboardCache = cachedLoader(async () => {
-  const snap = await db().collection('users')
-    .orderBy('totalKeysBought', 'desc')
-    .limit(10)
-    .get();
-  return snap.docs
-    .map((doc) => {
-      const d = doc.data();
-      return {
-        uid: doc.id,
-        name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
-        avatarUrl: d.avatarUrl || '',
-        totalKeysBought: Number(d.totalKeysBought || 0),
-        totalSpent: Number(d.totalSpent || 0),
-      };
-    })
-    .filter((row) => row.totalKeysBought > 0);
+  const [snap, bots] = await Promise.all([
+    db().collection('users').orderBy('totalKeysBought', 'desc').limit(10).get(),
+    listBots().catch((e) => { console.error('[leaderboard] promo entries failed:', e.message); return []; }),
+  ]);
+  const real = snap.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      uid: doc.id,
+      name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
+      avatarUrl: d.avatarUrl || '',
+      totalKeysBought: Number(d.totalKeysBought || 0),
+      totalSpent: Number(d.totalSpent || 0),
+      badge: '',
+    };
+  });
+  return [...real, ...bots.map(botToBoardRow)]
+    .filter((row) => row.totalKeysBought > 0)
+    .sort((a, b) => b.totalKeysBought - a.totalKeysBought || b.totalSpent - a.totalSpent)
+    .slice(0, 10);
 }, { ttlMs: TTL.leaderboard, name: 'leaderboard', versionKey: 'leaderboard' });
 
 // Active announcements. Deliberately NOT .where('active').orderBy('createdAt')
