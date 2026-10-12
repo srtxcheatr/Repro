@@ -5,6 +5,7 @@ import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { telegramNotify, esc } from '../src/telegram.js';
 import { invalidateUserDoc } from '../src/userCache.js';
+import { getStock, reserveSlot, invalidateStock } from '../src/gloryStock.js';
 import { gloryCall, gloryConfigured, serialized, getRegions, nrpPriceForTier, GloryError } from '../src/glory.js';
 
 const router = express.Router();
@@ -228,36 +229,100 @@ router.get('/regions', asyncHandler(async (req, res) => {
         id: r.id, name: r.region_name, code: r.region_code, tier: r.tier,
         priceNrp: nrpPriceForTier(r.tier),
       }));
-    res.json({ success: true, configured: gloryConfigured(), regions, maxGroups: maxGroups() });
+    let stock = null;
+    try { stock = await getStock(); } catch (_) { /* stock is optional */ }
+    res.json({ success: true, configured: gloryConfigured(), regions, maxGroups: maxGroups(), stock });
   } catch (e) { return fail(res, e); }
 }));
 
-// GET /api/glory/groups — only THIS user's groups, merged with live status.
+// "8h goal" = 480 minutes of uptime. Parses upstream uptime like "7h 40m", "1d 2h", "7h14m0s".
+function uptimeMinutes(str) {
+  if (!str) return 0;
+  const m = String(str).match(/(?:(\d+)\s*d)?\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i) || [];
+  return (+m[1] || 0) * 1440 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+const ARCHIVE_GRACE_MS = 3 * 60 * 1000; // never archive a group that was only just launched
+
+// GET /api/glory/groups — only THIS user's LIVE groups, merged with live status.
+// Groups that have ENDED upstream (or finished their 8h goal and stopped) are
+// archived here: removed from this list, kept for the History page, and their
+// stock slot is freed.
 router.get('/groups', asyncHandler(async (req, res) => {
   const snap = await db().collection(COL).where('uid', '==', req.uid).get();
-  const mine = snap.docs.map((d) => d.data()).filter((g) => g.status !== 'deleted');
+  const mine = snap.docs.map((d) => d.data()).filter((g) => g.status === 'running' || g.status === 'stopped');
 
   let live = new Map();
+  let liveOk = false;
   if (mine.length && gloryConfigured()) {
     try {
       const list = await gloryCall('GET', '/api/client/my-groups');
-      live = new Map((Array.isArray(list) ? list : []).map((g) => [g.group_id, g]));
+      if (Array.isArray(list)) { live = new Map(list.map((g) => [g.group_id, g])); liveOk = true; }
     } catch (_) { /* show stored data if the upstream is down */ }
   }
 
-  const groups = mine.map((g) => {
+  const groups = [];
+  const toArchive = [];
+  const toSaveBots = []; // remember the real bot count so History can show it later
+  for (const g of mine) {
     const l = live.get(g.groupId);
-    return {
+    if (l && l.container_count && Number(g.botCount || 0) !== Number(l.container_count)) toSaveBots.push({ id: g.groupId, n: Number(l.container_count) });
+    const old = Date.now() - new Date(g.createdAt || 0).getTime() > ARCHIVE_GRACE_MS;
+    const status = l ? l.status : (liveOk ? 'ended' : (g.status || 'unknown'));
+    const finished = status === 'ended' || (status === 'stopped' && l && uptimeMinutes(l.uptime) >= 480);
+    if (finished && old && liveOk) { toArchive.push({ g, uptime: l ? l.uptime : '' }); continue; }
+    groups.push({
       groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
-      price: g.price, createdAt: g.createdAt,
-      status: l ? l.status : (live.size ? 'ended' : (g.status || 'unknown')),
+      price: g.price, createdAt: g.createdAt, status,
       uptime: l ? l.uptime : '',
       botCount: l ? l.container_count : (g.botCount || 0),
       running: l ? l.running_count : 0,
-    };
-  }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    });
+  }
 
+  if (toArchive.length || toSaveBots.length) {
+    try {
+      const batch = db().batch();
+      for (const t of toSaveBots) batch.set(db().collection(COL).doc(t.id), { botCount: t.n }, { merge: true });
+      for (const { g, uptime } of toArchive) {
+        batch.set(db().collection(COL).doc(g.groupId), {
+          status: 'ended', endedAt: new Date().toISOString(), lastUptime: uptime || '',
+          botCount: g.botCount || 0,
+        }, { merge: true });
+      }
+      await batch.commit();
+      if (toArchive.length) invalidateStock(); // ended groups free their slot
+    } catch (e) { console.error('[glory] archive failed', e); }
+  }
+
+  groups.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   res.json({ success: true, groups });
+}));
+
+// GET /api/glory/history — this user's finished launches (ended / deleted).
+router.get('/history', asyncHandler(async (req, res) => {
+  const snap = await db().collection(COL).where('uid', '==', req.uid).get();
+  const items = snap.docs.map((d) => d.data())
+    .filter((g) => (g.status === 'ended' || g.status === 'deleted') && !g.hiddenHistory)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((g) => ({
+      groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
+      price: Number(g.price || 0), botCount: Number(g.botCount || 0),
+      status: g.status, createdAt: g.createdAt, endedAt: g.endedAt || g.deletedAt || null,
+    }));
+  res.json({ success: true, history: items });
+}));
+
+// POST /api/glory/history-clear — hides this user's finished launches from their history.
+router.post('/history-clear', asyncHandler(async (req, res) => {
+  const snap = await db().collection(COL).where('uid', '==', req.uid).get();
+  const batch = db().batch();
+  let n = 0;
+  for (const d of snap.docs) {
+    const g = d.data();
+    if ((g.status === 'ended' || g.status === 'deleted') && !g.hiddenHistory) { batch.set(d.ref, { hiddenHistory: true }, { merge: true }); n++; }
+  }
+  if (n) await batch.commit();
+  res.json({ success: true, cleared: n });
 }));
 
 // POST /api/glory/launch { region, clan_id }
@@ -274,6 +339,7 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     return res.status(409).json({ success: false, error: 'A launch is already in progress.' });
   }
   launching.add(req.uid);
+  let releaseSlot = () => {};
 
   try {
     let region;
@@ -290,6 +356,16 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     if (active >= maxGroups()) {
       return res.status(403).json({ success: false, error: `You can run up to ${maxGroups()} groups at once. Stop or delete one first.` });
     }
+
+    // Stock: admin-set number of Glory Bot slots (off = unlimited).
+    const slot = await reserveSlot();
+    if (!slot.ok) {
+      return res.status(409).json({
+        success: false, code: 'OUT_OF_STOCK', stock: slot.stock,
+        error: 'FF Glory Bot is out of stock right now. Please check back soon.',
+      });
+    }
+    releaseSlot = slot.release;
 
     // 1) Charge NRP atomically (before calling upstream).
     const userRef = db().collection('users').doc(req.uid);
@@ -368,6 +444,7 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     telegramNotify(`🤖 <b>Glory launched</b>\n${esc(charged.label)}\nClan: ${esc(clanId)} · ${esc(region.id)} (${esc(region.tier)})\nNRP ${price} → balance ${charged.newBalance}`);
     res.json({ success: true, groupId: out.group_id, newBalance: charged.newBalance, group: record });
   } finally {
+    releaseSlot();
     launching.delete(req.uid);
   }
 }));
@@ -394,7 +471,7 @@ router.post('/action', rateLimit({ windowMs: 60_000, max: 40, name: 'glory-actio
 
     if (action === 'stop') await ref.set({ status: 'stopped' }, { merge: true });
     if (action === 'restart') await ref.set({ status: 'running' }, { merge: true });
-    if (action === 'delete') await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true });
+    if (action === 'delete') { await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); invalidateStock(); }
 
     res.json({ success: true, result: out });
   } catch (e) { return fail(res, e); }
