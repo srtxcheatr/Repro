@@ -5,8 +5,9 @@ import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { telegramNotify, esc } from '../src/telegram.js';
 import { invalidateUserDoc } from '../src/userCache.js';
-import { getStock, reserveSlot, invalidateStock } from '../src/gloryStock.js';
-import { gloryCall, gloryConfigured, serialized, getRegions, nrpPriceForTier, GloryError } from '../src/glory.js';
+import { getStock, reserveSlot } from '../src/gloryStock.js';
+import { gloryCall, gloryConfigured, serialized, getRegions, nrpPriceForRole, isBasicRegion, GloryError } from '../src/glory.js';
+import { getUserDoc } from '../src/userCache.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -223,11 +224,13 @@ async function ownGroup(req, res) {
 router.get('/regions', asyncHandler(async (req, res) => {
   try {
     const p = await getRegions();
+    const u = await getUserDoc(req.uid);
+    const priceNrp = nrpPriceForRole((u.data && u.data.role) || 'user');
     const regions = (p.regions || [])
-      .filter((r) => r.enabled)
+      .filter(isBasicRegion)
       .map((r) => ({
-        id: r.id, name: r.region_name, code: r.region_code, tier: r.tier,
-        priceNrp: nrpPriceForTier(r.tier),
+        id: r.id, name: r.region_name, code: r.region_code,
+        priceNrp,
       }));
     let stock = null;
     try { stock = await getStock(); } catch (_) { /* stock is optional */ }
@@ -245,8 +248,7 @@ const ARCHIVE_GRACE_MS = 3 * 60 * 1000; // never archive a group that was only j
 
 // GET /api/glory/groups — only THIS user's LIVE groups, merged with live status.
 // Groups that have ENDED upstream (or finished their 8h goal and stopped) are
-// archived here: removed from this list, kept for the History page, and their
-// stock slot is freed.
+// archived here: removed from this list and kept for the History page.
 router.get('/groups', asyncHandler(async (req, res) => {
   const snap = await db().collection(COL).where('uid', '==', req.uid).get();
   const mine = snap.docs.map((d) => d.data()).filter((g) => g.status === 'running' || g.status === 'stopped');
@@ -290,7 +292,6 @@ router.get('/groups', asyncHandler(async (req, res) => {
         }, { merge: true });
       }
       await batch.commit();
-      if (toArchive.length) invalidateStock(); // ended groups free their slot
     } catch (e) { console.error('[glory] archive failed', e); }
   }
 
@@ -339,16 +340,20 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     return res.status(409).json({ success: false, error: 'A launch is already in progress.' });
   }
   launching.add(req.uid);
-  let releaseSlot = () => {};
+  let slot = null;      // the squad taken from stock for this launch
+  let keepSlot = false; // true once the squad really exists (or may exist) upstream
 
   try {
     let region;
     try {
-      region = ((await getRegions()).regions || []).find((r) => r.id === regionId && r.enabled);
+      region = ((await getRegions()).regions || []).find((r) => r.id === regionId && isBasicRegion(r));
     } catch (e) { return fail(res, e); }
     if (!region) return res.status(400).json({ success: false, error: 'Invalid or disabled region.' });
 
-    const price = nrpPriceForTier(region.tier);
+    // Price depends on the account: users and resellers have separate prices (.env).
+    const udoc = await db().collection('users').doc(req.uid).get();
+    const role = (udoc.exists && udoc.data().role) || 'user';
+    const price = nrpPriceForRole(role);
 
     // Per-user group cap
     const existing = await db().collection(COL).where('uid', '==', req.uid).get();
@@ -358,14 +363,13 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     }
 
     // Stock: admin-set number of Glory Bot slots (off = unlimited).
-    const slot = await reserveSlot();
+    slot = await reserveSlot();
     if (!slot.ok) {
       return res.status(409).json({
         success: false, code: 'OUT_OF_STOCK', stock: slot.stock,
         error: 'FF Glory Bot is out of stock right now. Please check back soon.',
       });
     }
-    releaseSlot = slot.release;
 
     // 1) Charge NRP atomically (before calling upstream).
     const userRef = db().collection('users').doc(req.uid);
@@ -419,7 +423,8 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
       });
     } catch (e) {
       if (e instanceof GloryError && e.timeout) {
-        // The group may have been created — do NOT auto-refund; flag for manual review.
+        // The group may have been created — do NOT auto-refund (or return the squad); flag for manual review.
+        keepSlot = true;
         telegramNotify(`⚠️ <b>Glory launch TIMEOUT</b>\nUser: <code>${esc(req.uid)}</code>\nClan: ${esc(clanId)} · ${esc(region.id)}\nCharged NRP ${price} — check ffglory.pro and refund if no group exists.`);
         return res.status(504).json({ success: false, error: 'The service took too long. Your NRP was held — contact support if no group appears shortly.' });
       }
@@ -428,10 +433,12 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
       return fail(res, e);
     }
 
+    keepSlot = true; // launched: this squad is sold, stock stays down
+
     // 3) Remember who owns the group.
     const record = {
       uid: req.uid, groupId: out.group_id, clanId, region: region.id, regionName: region.region_name,
-      tier: region.tier, price, botCount: out.bot_count || 0, status: 'running',
+      tier: 'basic', role, price, botCount: out.bot_count || 0, status: 'running',
       createdAt: new Date().toISOString(),
     };
     try {
@@ -441,10 +448,10 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
       telegramNotify(`🚨 <b>Glory group launched but NOT saved</b>\nGroup: <code>${esc(out.group_id)}</code>\nUser: <code>${esc(req.uid)}</code>`);
     }
 
-    telegramNotify(`🤖 <b>Glory launched</b>\n${esc(charged.label)}\nClan: ${esc(clanId)} · ${esc(region.id)} (${esc(region.tier)})\nNRP ${price} → balance ${charged.newBalance}`);
+    telegramNotify(`🤖 <b>Glory launched</b>\n${esc(charged.label)}\nClan: ${esc(clanId)} · ${esc(region.id)} (${esc(role)})\nNRP ${price} → balance ${charged.newBalance}`);
     res.json({ success: true, groupId: out.group_id, newBalance: charged.newBalance, group: record });
   } finally {
-    releaseSlot();
+    if (slot && slot.ok && !keepSlot) await slot.release(); // launch never happened -> squad goes back to stock
     launching.delete(req.uid);
   }
 }));
@@ -471,7 +478,7 @@ router.post('/action', rateLimit({ windowMs: 60_000, max: 40, name: 'glory-actio
 
     if (action === 'stop') await ref.set({ status: 'stopped' }, { merge: true });
     if (action === 'restart') await ref.set({ status: 'running' }, { merge: true });
-    if (action === 'delete') { await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); invalidateStock(); }
+    if (action === 'delete') { await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); }
 
     res.json({ success: true, result: out });
   } catch (e) { return fail(res, e); }
