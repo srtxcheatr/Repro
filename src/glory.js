@@ -83,8 +83,15 @@ export async function getRegions() {
   }
 }
 
-export function nrpPriceForTier(tier) {
-  const basic = Number(process.env.GLORY_PRICE_BASIC_NRP || 250);
-  const premium = Number(process.env.GLORY_PRICE_PREMIUM_NRP || 500);
-  return tier === 'premium' ? premium : basic;
+// Only the Basic tier is sold. Premium regions from the upstream are ignored.
+export const isBasicRegion = (r) => !!r && r.enabled && String(r.tier || '').toLowerCase() !== 'premium';
+
+// Two prices, both set in .env (NRP per group):
+//   GLORY_PRICE_USER_NRP      — normal users            (falls back to GLORY_PRICE_BASIC_NRP, then 250)
+//   GLORY_PRICE_RESELLER_NRP  — accounts with role 'reseller' (falls back to the user price)
+const num = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 && String(v ?? '').trim() !== '' ? n : null; };
+export function nrpPriceForRole(role) {
+  const user = num(process.env.GLORY_PRICE_USER_NRP) ?? num(process.env.GLORY_PRICE_BASIC_NRP) ?? 250;
+  if (role === 'reseller') return num(process.env.GLORY_PRICE_RESELLER_NRP) ?? user;
+  return user;
 }
