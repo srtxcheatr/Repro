@@ -11,7 +11,7 @@ import { loadPidProducts } from '../src/resellerApiCatalog.js';
 import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
 import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
 import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
-import { getStock, setStock } from '../src/gloryStock.js';
+import { getStock, setStock, addStock } from '../src/gloryStock.js';
 import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
 
@@ -911,24 +911,34 @@ router.get('/users', asyncHandler(async (req, res) => {
 // page load.
 // ---------------------------------------------------------------
 // ---------------------------------------------------------------
-// FF GLORY BOT stock — how many glory groups can be running at once.
-// enabled=false means unlimited. Each live (running/stopped) group uses
-// one slot; deleting a group frees it.
+// FF GLORY BOT stock — a plain counter of bot squads for sale.
+// The admin sets / adds squads; every launch takes one automatically and the
+// store flips to "Out of stock" at 0. enabled=false means unlimited.
+// See src/gloryStock.js.
 // ---------------------------------------------------------------
 router.get('/glory-stock', asyncHandler(async (req, res) => {
   res.json({ success: true, ...(await getStock({ fresh: true })) });
 }));
 
+// body: { action: 'set', amount }   -> exact number available now
+//       { action: 'add', amount }   -> add to what is left (negative removes)
+//       { action: 'unlimited' }     -> no limit
 router.post('/glory-stock', asyncHandler(async (req, res) => {
-  if (typeof req.body?.enabled !== 'boolean') {
-    return res.status(400).json({ success: false, error: 'enabled must be true or false' });
+  const action = String(req.body?.action || '');
+  const amount = Number(req.body?.amount);
+  let stock;
+  if (action === 'unlimited') {
+    stock = await setStock({ enabled: false, available: 0 });
+  } else if (action === 'set' || action === 'add') {
+    const ok = action === 'set'
+      ? Number.isInteger(amount) && amount >= 0 && amount <= 10000
+      : Number.isInteger(amount) && amount >= -10000 && amount <= 10000 && amount !== 0;
+    if (!ok) return res.status(400).json({ success: false, error: 'Enter a whole number (0 to 10000).' });
+    stock = action === 'set' ? await setStock({ enabled: true, available: amount }) : await addStock(amount);
+  } else {
+    return res.status(400).json({ success: false, error: 'action must be set, add or unlimited' });
   }
-  const total = Number(req.body?.total);
-  if (req.body.enabled && (!Number.isInteger(total) || total < 0 || total > 10000)) {
-    return res.status(400).json({ success: false, error: 'Stock must be a whole number from 0 to 10000' });
-  }
-  const stock = await setStock({ enabled: req.body.enabled, total: Number.isInteger(total) ? total : 0 });
-  telegramNotify(`🤖 <b>Glory Bot stock</b> set: ${stock.enabled ? `${stock.available} available of ${stock.total}` : 'unlimited'} (admin panel)`);
+  telegramNotify(`🤖 <b>Glory Bot stock</b> ${action}: ${stock.enabled ? `${stock.available} available` : 'unlimited'} (admin panel)`);
   res.json({ success: true, ...stock });
 }));
 
