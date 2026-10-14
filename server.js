@@ -8,6 +8,8 @@ import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
 import resellerApiRoutes from './routes/reseller-api.js';
 import resellerPortalRoutes from './routes/reseller-portal.js';
+import telegramTopupRoutes from './routes/telegram-topup.js';
+import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors, db } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
@@ -165,6 +167,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/glory', gloryRoutes);
+// Telegram button presses (Load ✅ / Cancel ❌) for QR top-ups.
+app.use('/api/telegram', telegramTopupRoutes);
 
 // Reseller API: resellers' own servers call /api/reseller/v1 with an api_key +
 // master key (see routes/reseller-api.js). The portal routes are what the
@@ -184,4 +188,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`srtx-backend listening on port ${PORT}`);
+  registerTopupWebhook().catch(() => {});
 });
