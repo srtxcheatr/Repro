@@ -26,6 +26,7 @@ import { invalidateUserDoc } from './userCache.js';
 export const QR_MIN_AMOUNT = 100;
 export const QR_MAX_AMOUNT = 100000;
 export const QR_MAX_PENDING = 3;
+export const QR_PENDING_WINDOW_MS = 30 * 60_000; // a QR request only counts as "pending" for 30 minutes
 export const QR_METHOD = 'QR';
 
 export const botToken = () => process.env.TELEGRAM_TOPUP_AUTO_BOT || '';
