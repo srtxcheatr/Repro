@@ -5,7 +5,7 @@ import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { telegramNotify, esc } from '../src/telegram.js';
 import { invalidateUserDoc } from '../src/userCache.js';
-import { getStock, reserveSlot } from '../src/gloryStock.js';
+import { getStock, reserveSlot, returnSlot } from '../src/gloryStock.js';
 import { gloryCall, gloryConfigured, serialized, getRegions, nrpPriceForRole, isBasicRegion, GloryError } from '../src/glory.js';
 import { getUserDoc } from '../src/userCache.js';
 
@@ -31,8 +31,8 @@ function pickId(o) {
 
 // Fallback: newest upstream group for this clan that we haven't recorded yet.
 async function findNewGroup(clanId) {
-  const list = await gloryCall('GET', '/api/client/my-groups');
-  const cands = (Array.isArray(list) ? list : [])
+  const list = asList(await gloryCall('GET', '/api/client/my-groups')) || [];
+  const cands = list
     .filter((g) => String(g.clan_id) === clanId)
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   for (const g of cands) {
@@ -41,6 +41,9 @@ async function findNewGroup(clanId) {
   }
   return '';
 }
+
+// Upstream list endpoints are documented as plain arrays; accept {groups:[...]} etc. too.
+const asList = (v) => (Array.isArray(v) ? v : Array.isArray(v?.groups) ? v.groups : Array.isArray(v?.data) ? v.data : Array.isArray(v?.items) ? v.items : null);
 
 function fail(res, e) {
   if (e instanceof GloryError) return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: e.message });
@@ -213,7 +216,7 @@ async function ownGroup(req, res) {
   const gid = String(req.query.group_id || '').trim();
   if (!gid) { res.status(400).json({ success: false, error: 'Missing group_id.' }); return null; }
   const doc = await db().collection(COL).doc(gid).get();
-  if (!doc.exists || doc.data().uid !== req.uid || doc.data().status === 'deleted') {
+  if (!doc.exists || doc.data().uid !== req.uid || ['deleted', 'refunded'].includes(doc.data().status)) {
     res.status(404).json({ success: false, error: 'Group not found.' });
     return null;
   }
@@ -257,8 +260,8 @@ router.get('/groups', asyncHandler(async (req, res) => {
   let liveOk = false;
   if (mine.length && gloryConfigured()) {
     try {
-      const list = await gloryCall('GET', '/api/client/my-groups');
-      if (Array.isArray(list)) { live = new Map(list.map((g) => [g.group_id, g])); liveOk = true; }
+      const list = asList(await gloryCall('GET', '/api/client/my-groups'));
+      if (list) { live = new Map(list.map((g) => [String(g.group_id), g])); liveOk = true; }
     } catch (_) { /* show stored data if the upstream is down */ }
   }
 
@@ -266,7 +269,7 @@ router.get('/groups', asyncHandler(async (req, res) => {
   const toArchive = [];
   const toSaveBots = []; // remember the real bot count so History can show it later
   for (const g of mine) {
-    const l = live.get(g.groupId);
+    const l = live.get(String(g.groupId));
     if (l && l.container_count && Number(g.botCount || 0) !== Number(l.container_count)) toSaveBots.push({ id: g.groupId, n: Number(l.container_count) });
     const old = Date.now() - new Date(g.createdAt || 0).getTime() > ARCHIVE_GRACE_MS;
     const status = l ? l.status : (liveOk ? 'ended' : (g.status || 'unknown'));
@@ -303,12 +306,12 @@ router.get('/groups', asyncHandler(async (req, res) => {
 router.get('/history', asyncHandler(async (req, res) => {
   const snap = await db().collection(COL).where('uid', '==', req.uid).get();
   const items = snap.docs.map((d) => d.data())
-    .filter((g) => (g.status === 'ended' || g.status === 'deleted'))
+    .filter((g) => ['ended', 'deleted', 'refunded'].includes(g.status))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .map((g) => ({
       groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
       price: Number(g.price || 0), botCount: Number(g.botCount || 0),
-      status: g.status, createdAt: g.createdAt, endedAt: g.endedAt || g.deletedAt || null,
+      status: g.status, createdAt: g.createdAt, endedAt: g.endedAt || g.deletedAt || g.refundedAt || null,
     }));
   res.json({ success: true, history: items });
 }));
@@ -459,7 +462,7 @@ router.post('/action', rateLimit({ windowMs: 60_000, max: 40, name: 'glory-actio
   const ref = db().collection(COL).doc(groupId);
   const doc = await ref.get();
   // Ownership check — a user can only touch their own groups.
-  if (!doc.exists || doc.data().uid !== req.uid || doc.data().status === 'deleted') {
+  if (!doc.exists || doc.data().uid !== req.uid || ['deleted', 'refunded'].includes(doc.data().status)) {
     return res.status(404).json({ success: false, error: 'Group not found.' });
   }
 
@@ -499,6 +502,120 @@ router.get('/progress', rateLimit({ windowMs: 60_000, max: 30, name: 'glory-prog
       snapshots: snaps.slice(-12).map((x) => ({ at: x.captured_at, glory: x.total_glory, hours: x.uptime_hours })),
     });
   } catch (e) { return fail(res, e); }
+}));
+
+// ---- Refund ----------------------------------------------------------
+// Flow: the user asks for a refund -> we ask ffglory.pro to refund the group
+// -> ONLY if ffglory.pro really gives the credit back to the reseller account
+// do we give the user their NRP back. If ffglory.pro refuses / errors, the user
+// sees ffglory.pro's own message and nothing is refunded.
+//
+// ffglory.pro's public doc has no "refund" endpoint, so the call is
+// configurable:  GLORY_REFUND_ACTION (default "refund") is sent to
+// POST /api/client/group-action. Whatever the reply says, a refund is only
+// trusted after we VERIFY it upstream (a new "refund" entry in the activity
+// log for this group, or the reseller credit balance going up).
+const refunding = new Set(); // groupId -> a refund is running right now
+const refundAction = () => String(process.env.GLORY_REFUND_ACTION || 'refund').trim();
+
+async function upstreamSnapshot(groupId) {
+  const snap = { credits: null, refunds: null };
+  try {
+    const me = await gloryCall('GET', '/api/auth/me', { timeoutMs: 15000 });
+    const b = Number(me && me.basic_credits);
+    if (Number.isFinite(b)) snap.credits = b;
+  } catch (_) { /* verified another way */ }
+  try {
+    const logs = asList(await gloryCall('GET', '/api/client/activity-log', { timeoutMs: 15000 })) || [];
+    snap.refunds = logs.filter((l) => String(l.action).toLowerCase() === 'refund' && String(l.group_id || '') === groupId).length;
+  } catch (_) { /* verified another way */ }
+  return snap;
+}
+
+// POST /api/glory/refund { group_id }
+router.post('/refund', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-refund' }), asyncHandler(async (req, res) => {
+  const groupId = String(req.body?.group_id || '').trim();
+  if (!groupId) return res.status(400).json({ success: false, error: 'Invalid request.' });
+  if (!gloryConfigured()) return res.status(503).json({ success: false, error: 'FF Glory is not available right now.' });
+
+  const ref = db().collection(COL).doc(groupId);
+  const doc = await ref.get();
+  if (!doc.exists || doc.data().uid !== req.uid || doc.data().status === 'deleted') {
+    return res.status(404).json({ success: false, error: 'Group not found.' });
+  }
+  const g = doc.data();
+  if (g.status === 'refunded' || g.refundedAt) return res.status(409).json({ success: false, error: 'This group was already refunded.' });
+  if (g.status === 'ended') return res.status(409).json({ success: false, error: 'This group has already ended and can no longer be refunded.' });
+  const price = Number(g.price || 0);
+  if (!(price > 0)) return res.status(409).json({ success: false, error: 'Nothing to refund for this group.' });
+  if (refunding.has(groupId)) return res.status(409).json({ success: false, error: 'A refund is already in progress for this group.' });
+  refunding.add(groupId);
+
+  try {
+    // 1) Ask ffglory.pro, and check that it really refunded the reseller account.
+    try {
+      await serialized(async () => {
+        const before = await upstreamSnapshot(groupId);
+        const out = await gloryCall('POST', '/api/client/group-action', {
+          body: { action: refundAction(), group_id: groupId }, timeoutMs: 40000,
+        });
+        if (out && typeof out === 'object' && (out.success === false || (out.error && out.success !== true))) {
+          throw new GloryError('FF Glory refused the refund.', { status: 409, upstream: String(out.error || out.message || '') });
+        }
+        const after = await upstreamSnapshot(groupId);
+        const logged = before.refunds !== null && after.refunds !== null && after.refunds > before.refunds;
+        const credited = before.credits !== null && after.credits !== null && after.credits > before.credits;
+        if (!logged && !credited) {
+          console.error('[glory] refund NOT confirmed upstream', groupId, JSON.stringify({ before, after, out }).slice(0, 400));
+          throw new GloryError('FF Glory did not refund this group.', {
+            status: 409, upstream: out && typeof out === 'object' ? String(out.message || '') : '',
+          });
+        }
+      });
+    } catch (e) {
+      if (!(e instanceof GloryError)) throw e;
+      // Show the user exactly what ffglory.pro said (falls back to our wording).
+      const msg = e.upstream || e.message;
+      if (e.timeout) {
+        telegramNotify(`⚠️ <b>Glory refund TIMEOUT</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nNRP ${price} — NOT refunded to the user. Check ffglory.pro.`);
+        return res.status(504).json({ success: false, error: 'FF Glory took too long to answer. No refund was made — please try again in a minute.' });
+      }
+      telegramNotify(`ℹ️ <b>Glory refund declined by ffglory.pro</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\n${esc(msg)}`);
+      return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: msg });
+    }
+
+    // 2) ffglory.pro refunded us -> give the user their NRP back (atomic + only once).
+    const userRef = db().collection('users').doc(req.uid);
+    let newBalance = null;
+    let lastErr = null;
+    for (let i = 0; i < 3 && newBalance === null; i++) {
+      try {
+        newBalance = await db().runTransaction(async (tx) => {
+          const [gs, us] = await Promise.all([tx.get(ref), tx.get(userRef)]);
+          if (gs.exists && (gs.data().status === 'refunded' || gs.data().refundedAt)) return Number((us.data() || {}).balance || 0);
+          const u = us.exists ? us.data() : {};
+          const balance = Number(u.balance || 0) + price;
+          const log = [...(u.adminLog || []), { delta: price, note: `Glory Bot refund — group ${groupId}`, resultingBalance: balance, at: new Date().toISOString() }];
+          tx.set(userRef, { balance, totalSpent: Math.max(0, Number(u.totalSpent || 0) - price), adminLog: log }, { merge: true });
+          tx.set(ref, { status: 'refunded', refundedAt: new Date().toISOString(), refundedAmount: price }, { merge: true });
+          return balance;
+        });
+      } catch (e) { lastErr = e; await sleep(400); }
+    }
+    if (newBalance === null) {
+      console.error('[glory] refund credit failed', groupId, lastErr);
+      telegramNotify(`🚨 <b>Glory refund: ffglory.pro REFUNDED but user NOT credited</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nCredit NRP ${price} manually!`);
+      return res.status(500).json({ success: false, error: 'Your refund was approved but could not be added to your balance yet. Support has been notified — you will be credited.' });
+    }
+
+    invalidateUserDoc(req.uid);
+    detailsCache.delete(groupId);
+    await returnSlot(); // the squad is available again
+    telegramNotify(`💸 <b>Glory refunded</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nNRP ${price} → balance ${newBalance}`);
+    res.json({ success: true, refunded: price, newBalance, groupId });
+  } finally {
+    refunding.delete(groupId);
+  }
 }));
 
 export default router;
