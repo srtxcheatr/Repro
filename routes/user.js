@@ -15,7 +15,7 @@ import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
 import { rateLimit } from '../src/security.js';
 import {
-  QR_MIN_AMOUNT, QR_MAX_AMOUNT, QR_MAX_PENDING, QR_METHOD, newReqId, sendRequestToBot,
+  QR_MIN_AMOUNT, QR_MAX_AMOUNT, QR_MAX_PENDING, QR_PENDING_WINDOW_MS, QR_METHOD, newReqId, sendRequestToBot,
 } from '../src/topupQr.js';
 
 const router = express.Router();
@@ -131,6 +131,13 @@ router.get('/balance', asyncHandler(async (req, res) => {
     totalKeysBought: Number(data.totalKeysBought || 0),
     totalSpent: Number(data.totalSpent || 0),
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
+    // Newest QR top-up that was approved (Load ✅). The browser shows "your order has been
+    // completed" once per reqId (remembered locally) — no extra request or write needed.
+    qrApproved: (() => {
+      const ok = (data.topupRequests || []).filter((t) => t.method === 'QR' && t.status === 'APPROVED');
+      const t = ok[ok.length - 1];
+      return t ? { reqId: t.reqId, amount: Number(t.amount || 0), at: t.reviewedAt || t.date } : null;
+    })(),
     // Fake-payment strikes from cancelled QR top-ups. Shown as a warning on the
     // store/top-up pages. count 0 / null = clean account.
     fakePayment: data.fakePayment && data.fakePayment.count
@@ -305,7 +312,15 @@ router.post('/topup-qr', rateLimit({ windowMs: 10 * 60_000, max: 8, name: 'topup
       if (used.exists) throw new Error('This transaction ID was already submitted');
       const d = u.exists ? u.data() : {};
       const list = Array.isArray(d.topupRequests) ? d.topupRequests : [];
-      if (list.filter((t) => t.status === 'PENDING').length >= QR_MAX_PENDING) throw new Error('You already have pending top-ups. Please wait for them to be checked.');
+      // Only RECENT QR requests count. Old accounts carry stale PENDING entries from the previous
+      // top-up flow (never reviewed) — those must not block new top-ups.
+      const recentCut = Date.now() - QR_PENDING_WINDOW_MS;
+      const recentPending = list.filter((t) => t.status === 'PENDING' && t.method === QR_METHOD && new Date(t.date).getTime() > recentCut);
+      if (recentPending.length >= QR_MAX_PENDING) {
+        const oldest = Math.min(...recentPending.map((t) => new Date(t.date).getTime()));
+        const mins = Math.max(1, Math.ceil((oldest + QR_PENDING_WINDOW_MS - Date.now()) / 60000));
+        throw new Error(`You already have ${recentPending.length} top-ups waiting to be checked. You can send a new one in about ${mins} min.`);
+      }
       const entry = { date, amount, paymentAccount: 'QR (SRT X CHEATS)', method: QR_METHOD, txCode, status: 'PENDING', uid: req.uid, email: req.email, reqId, ip };
       tx.set(userRef, { topupRequests: [...list, entry] }, { merge: true });
       tx.set(txRef, { uid: req.uid, reqId, at: date });
@@ -328,6 +343,18 @@ router.post('/topup-qr', rateLimit({ windowMs: 10 * 60_000, max: 8, name: 'topup
   } catch (e) { console.warn('[topup-qr] announce failed:', e?.name || 'error'); }
 
   res.json({ success: true, reqId, status: 'PENDING' });
+}));
+
+// GET /api/user/topup-history — the user's own payment (top-up) requests, newest first.
+// Only safe display fields are returned.
+router.get('/topup-history', asyncHandler(async (req, res) => {
+  const snap = await getUserDoc(req.uid);
+  const list = snap.exists ? (snap.data.topupRequests || []) : [];
+  const payments = [...list].reverse().slice(0, 200).map((t) => ({
+    date: t.date || '', amount: Number(t.amount || 0), method: t.method || 'OTHER',
+    status: t.status || 'PENDING', txCode: t.txCode || '', reviewedAt: t.reviewedAt || '',
+  }));
+  res.json({ success: true, payments });
 }));
 
 // GET /api/user/balance-history — the user's own deposit/adjustment
