@@ -13,6 +13,10 @@ import {
 } from '../src/profileRules.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
+import { rateLimit } from '../src/security.js';
+import {
+  QR_MIN_AMOUNT, QR_MAX_AMOUNT, QR_MAX_PENDING, QR_METHOD, newReqId, sendRequestToBot,
+} from '../src/topupQr.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -127,6 +131,11 @@ router.get('/balance', asyncHandler(async (req, res) => {
     totalKeysBought: Number(data.totalKeysBought || 0),
     totalSpent: Number(data.totalSpent || 0),
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
+    // Fake-payment strikes from cancelled QR top-ups. Shown as a warning on the
+    // store/top-up pages. count 0 / null = clean account.
+    fakePayment: data.fakePayment && data.fakePayment.count
+      ? { count: Number(data.fakePayment.count), max: 3, text: data.fakePayment.text || '', lastTx: data.fakePayment.lastTx || '', lastAt: data.fakePayment.lastAt || '' }
+      : null,
     // Extra fields so the browser cache can answer these WITHOUT more
     // requests: avatar for the drawer/profile, the policy flag for the
     // dashboard modal, and the reseller thresholds so the dashboard's
@@ -269,6 +278,56 @@ router.post('/topup', asyncHandler(async (req,res)=>{
     await telegramNotify(notifyText,'balance');
     return res.json({success:true,request:entry});
   } catch(e) { res.status(409).json({success:false,error:e.message}); }
+}));
+
+// POST /api/user/topup-qr { amount, txCode }
+// QR top-up: user paid the QR, now sends the transaction ID. We store a PENDING
+// request, then post it to the owner's Telegram bot with [Load ✅] [Cancel ❌].
+// Load credits the balance, Cancel counts as a fake-payment strike (see src/topupQr.js).
+router.post('/topup-qr', rateLimit({ windowMs: 10 * 60_000, max: 8, name: 'topup-qr' }), asyncHandler(async (req, res) => {
+  const amount = Number(req.body?.amount);
+  const txCode = String(req.body?.txCode || '').trim().toUpperCase();
+  if (!Number.isInteger(amount) || amount < QR_MIN_AMOUNT) return res.status(400).json({ success: false, error: `Minimum top-up is Rs ${QR_MIN_AMOUNT}` });
+  if (amount > QR_MAX_AMOUNT) return res.status(400).json({ success: false, error: 'Amount is too large' });
+  if (!/^[A-Z0-9_-]{6,40}$/.test(txCode)) return res.status(400).json({ success: false, error: 'Enter a valid transaction ID (6-40 letters/numbers)' });
+
+  const reqId = newReqId();
+  const userRef = db().collection('users').doc(req.uid);
+  const txRef = db().collection('topupTx').doc(txCode);      // one transaction ID can only ever be used once, across ALL accounts
+  const idxRef = db().collection('topupQr').doc(reqId);
+  const date = new Date().toISOString();
+  const ip = req.ip || '';
+
+  let profile;
+  try {
+    profile = await db().runTransaction(async (tx) => {
+      const [u, used] = await Promise.all([tx.get(userRef), tx.get(txRef)]);
+      if (used.exists) throw new Error('This transaction ID was already submitted');
+      const d = u.exists ? u.data() : {};
+      const list = Array.isArray(d.topupRequests) ? d.topupRequests : [];
+      if (list.filter((t) => t.status === 'PENDING').length >= QR_MAX_PENDING) throw new Error('You already have pending top-ups. Please wait for them to be checked.');
+      const entry = { date, amount, paymentAccount: 'QR (SRT X CHEATS)', method: QR_METHOD, txCode, status: 'PENDING', uid: req.uid, email: req.email, reqId, ip };
+      tx.set(userRef, { topupRequests: [...list, entry] }, { merge: true });
+      tx.set(txRef, { uid: req.uid, reqId, at: date });
+      tx.set(idxRef, { uid: req.uid, txCode, amount, status: 'PENDING', createdAt: date, messages: [] });
+      return d;
+    });
+  } catch (e) {
+    return res.status(409).json({ success: false, error: e.message });
+  }
+  invalidateUserDoc(req.uid);
+
+  // Announce to the owner's bot. A Telegram outage must not fail the user's request
+  // (it is saved as PENDING and also visible in the admin panel).
+  try {
+    const messages = await sendRequestToBot(reqId, {
+      name: profile.profileName || '', uid: req.uid, email: profile.email || req.email, phone: profile.profilePhone || '',
+      balance: Number(profile.balance || 0), amount, txCode, date, ip,
+    });
+    if (messages.length) await idxRef.set({ messages }, { merge: true });
+  } catch (e) { console.warn('[topup-qr] announce failed:', e?.name || 'error'); }
+
+  res.json({ success: true, reqId, status: 'PENDING' });
 }));
 
 // GET /api/user/balance-history — the user's own deposit/adjustment
