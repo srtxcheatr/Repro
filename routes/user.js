@@ -229,11 +229,10 @@ router.get('/history', asyncHandler(async (req, res) => {
   res.json({ success: true, history: [...purchases].reverse() });
 }));
 
-// POST /api/user/history-clear
+// POST /api/user/history-clear (disabled — see below)
+// Purchase history is permanent — users can no longer delete it.
 router.post('/history-clear', asyncHandler(async (req, res) => {
-  await db().collection('users').doc(req.uid).set({ purchaseHistory: [] }, { merge: true });
-  invalidateUserDoc(req.uid);
-  res.json({ success: true });
+  res.status(403).json({ success: false, error: 'Purchase history cannot be deleted.' });
 }));
 
 // POST /api/user/topup { amount, txCode, paymentAccount }
