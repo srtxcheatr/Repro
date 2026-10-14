@@ -1,3 +1,4 @@
+import { activeBan } from '../src/ban.js';
 import express from 'express';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, userCors } from '../src/firebase.js';
@@ -66,6 +67,9 @@ router.get('/', asyncHandler(async (req, res) => {
     ? { id: uid, data: () => ownerSnap.data }
     : null;
 
+  if (owner && activeBan(owner.data())) {
+    return res.status(403).json({ success: false, code: 'BANNED', error: 'Your account has been banned by admin.' });
+  }
   if (!owner) {
     return res.status(401).json({ success: false, error: 'Invalid or revoked API key' });
   }
