@@ -303,7 +303,7 @@ router.get('/groups', asyncHandler(async (req, res) => {
 router.get('/history', asyncHandler(async (req, res) => {
   const snap = await db().collection(COL).where('uid', '==', req.uid).get();
   const items = snap.docs.map((d) => d.data())
-    .filter((g) => (g.status === 'ended' || g.status === 'deleted') && !g.hiddenHistory)
+    .filter((g) => (g.status === 'ended' || g.status === 'deleted'))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .map((g) => ({
       groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
@@ -313,17 +313,9 @@ router.get('/history', asyncHandler(async (req, res) => {
   res.json({ success: true, history: items });
 }));
 
-// POST /api/glory/history-clear — hides this user's finished launches from their history.
+// POST /api/glory/history-clear — disabled: Glory Bot history is permanent.
 router.post('/history-clear', asyncHandler(async (req, res) => {
-  const snap = await db().collection(COL).where('uid', '==', req.uid).get();
-  const batch = db().batch();
-  let n = 0;
-  for (const d of snap.docs) {
-    const g = d.data();
-    if ((g.status === 'ended' || g.status === 'deleted') && !g.hiddenHistory) { batch.set(d.ref, { hiddenHistory: true }, { merge: true }); n++; }
-  }
-  if (n) await batch.commit();
-  res.json({ success: true, cleared: n });
+  res.status(403).json({ success: false, error: 'History cannot be deleted.' });
 }));
 
 // POST /api/glory/launch { region, clan_id }
