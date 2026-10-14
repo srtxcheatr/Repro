@@ -5,10 +5,11 @@
 const BASE = () => String(process.env.GLORY_BASE_URL || 'https://ffglory.pro').replace(/\/+$/, '');
 
 export class GloryError extends Error {
-  constructor(message, { status = 502, timeout = false } = {}) {
+  constructor(message, { status = 502, timeout = false, upstream = '' } = {}) {
     super(message);
     this.status = status;
     this.timeout = timeout;
+    this.upstream = upstream; // the upstream's own error text, untouched (used by refunds)
   }
 }
 
@@ -36,10 +37,10 @@ function friendly(status, upstreamMsg) {
   return 'FF Glory service error. Please try again.';
 }
 
-export async function gloryCall(method, path, { body, query, auth = true, timeoutMs = 25000 } = {}) {
-  if (auth && !gloryConfigured()) {
-    throw new GloryError('FF Glory is not configured on the server.', { status: 503 });
-  }
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// One HTTP attempt. Throws GloryError on network failure / timeout / bad reply.
+async function gloryOnce(method, path, { body, query, auth, timeoutMs }) {
   const url = new URL(BASE() + path);
   if (auth) url.searchParams.set('api_key', process.env.GLORY_API_KEY);
   for (const [k, v] of Object.entries(query || {})) url.searchParams.set(k, v);
@@ -50,9 +51,10 @@ export async function gloryCall(method, path, { body, query, auth = true, timeou
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  let r;
+  let r, text;
   try {
     r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal });
+    text = await r.text();
   } catch (e) {
     if (e?.name === 'AbortError') throw new GloryError('FF Glory service timed out.', { status: 504, timeout: true });
     throw new GloryError('Could not reach the FF Glory service.', { status: 502 });
@@ -61,12 +63,37 @@ export async function gloryCall(method, path, { body, query, auth = true, timeou
   }
 
   let data = null;
-  try { data = await r.json(); } catch (_) { /* non-JSON body */ }
+  try { data = text ? JSON.parse(text) : null; } catch (_) { /* non-JSON body (HTML error page, Cloudflare...) */ }
+  const upstreamMsg = data && typeof data === 'object' ? String(data.error || data.message || '') : '';
+
   if (!r.ok) {
-    console.error('[glory] upstream', method, path, r.status, data && data.error);
-    throw new GloryError(friendly(r.status, data && data.error), { status: r.status });
+    console.error('[glory] upstream', method, path, r.status, upstreamMsg || text.slice(0, 120));
+    throw new GloryError(friendly(r.status, upstreamMsg), { status: r.status, upstream: upstreamMsg });
+  }
+  if (data === null) {
+    // 200 but not JSON -> an error/challenge page. Never hand `null` to callers.
+    console.error('[glory] upstream non-JSON reply', method, path, text.slice(0, 120));
+    throw new GloryError('FF Glory service returned an unreadable reply. Please try again.', { status: 502 });
   }
   return data;
+}
+
+// GET requests are safe to repeat, so a network blip / 502 / 503 / 504 gets up to
+// 2 more tries. Anything that changes something (POST) is tried exactly once.
+export async function gloryCall(method, path, { body, query, auth = true, timeoutMs = 25000 } = {}) {
+  if (auth && !gloryConfigured()) {
+    throw new GloryError('FF Glory is not configured on the server.', { status: 503 });
+  }
+  const maxTries = method === 'GET' ? 3 : 1;
+  for (let i = 1; ; i++) {
+    try {
+      return await gloryOnce(method, path, { body, query, auth, timeoutMs });
+    } catch (e) {
+      const transient = e instanceof GloryError && !e.timeout && [502, 503, 504].includes(e.status);
+      if (i < maxTries && transient) { await sleepMs(600 * i); continue; }
+      throw e;
+    }
+  }
 }
 
 // ---- Region list (public endpoint), cached 10 minutes ----
