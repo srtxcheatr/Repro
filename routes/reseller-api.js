@@ -36,6 +36,7 @@ import { keyToString } from '../src/apiMatch.js';
 import { authenticateClient, getApiSettings, touchLastUsed, sha256 } from '../src/apiClients.js';
 import { listApiProducts, findApiProduct } from '../src/resellerApiCatalog.js';
 import { telegramNotify, esc } from '../src/telegram.js';
+import { activeBan } from '../src/ban.js';
 
 const router = express.Router();
 router.use(express.urlencoded({ extended: false, limit: '8kb' }));
@@ -317,6 +318,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
   const auth = await authenticateClient(apiKey, masterKey);
   if (!auth.ok) return send(fail(auth.status, auth.code, auth.error));
+  if (activeBan(auth.user)) return send(fail(403, 'BANNED', 'Your account has been banned by admin.'));
   touchLastUsed(auth.clientRef, auth.uid);
 
   const action = String(body.action ?? '').trim().toLowerCase();
