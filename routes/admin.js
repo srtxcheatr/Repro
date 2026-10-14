@@ -64,6 +64,7 @@ router.get('/lookup', asyncHandler(async (req, res) => {
     adminLog: [...(data.adminLog || [])].reverse().slice(0, 50),
     purchases: [...(data.purchaseHistory || [])].reverse().slice(0, 50),
     topupRequests: [...(data.topupRequests || [])].reverse().slice(0, 50),
+    fakePaymentStrikes: Number(data.fakePayment?.count || 0),
     requestStatus: data.requestStatus || 'Active',
     adminMessage: data.adminMessage || '',
     profileName: data.profileName || '',
@@ -971,6 +972,19 @@ router.post('/ban', asyncHandler(async (req, res) => {
   invalidateUserDoc(uid);
   telegramNotify(`🚫 <b>User banned</b> — ${esc(ban.label)}\nUID: <code>${esc(uid)}</code>\n${esc(d.email || '')}`);
   res.json({ success: true, uid, ban });
+}));
+
+// POST /api/admin/reset-fake-strikes { uid } — clears the QR top-up fake-payment strikes
+// (use after a wrongly cancelled request). Does not lift an active ban: use /unban for that.
+router.post('/reset-fake-strikes', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+  const userRef = db().collection('users').doc(uid);
+  const snap = await userRef.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'No user found with that uid' });
+  await userRef.set({ fakePayment: admin.firestore.FieldValue.delete() }, { merge: true });
+  invalidateUserDoc(uid);
+  res.json({ success: true, uid });
 }));
 
 router.post('/unban', asyncHandler(async (req, res) => {
