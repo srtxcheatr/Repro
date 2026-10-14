@@ -4,7 +4,8 @@ import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
-import { telegramNotify, telegramFormat } from '../src/telegram.js';
+import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
+import admin from 'firebase-admin';
 import { notifyBalanceChange } from '../src/balanceAlerts.js';
 import { normDuration, apiLabel, API_DURATION_RE, findLabelConflict } from '../src/apiMatch.js';
 import { loadPidProducts } from '../src/resellerApiCatalog.js';
@@ -12,6 +13,7 @@ import { getApiSettings, setApiEnabled } from '../src/apiClients.js';
 import { invalidateUserDoc, invalidateAllUserDocs } from '../src/userCache.js';
 import { announcementCache, policyCache, leaderboardCache } from '../src/sharedCaches.js';
 import { getStock, setStock, addStock } from '../src/gloryStock.js';
+import { activeBan, makeBan, BAN_DURATIONS } from '../src/ban.js';
 import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
 
@@ -67,6 +69,7 @@ router.get('/lookup', asyncHandler(async (req, res) => {
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
     role: data.role || 'user',
+    ban: activeBan(data),
   });
 }));
 
@@ -940,6 +943,62 @@ router.post('/glory-stock', asyncHandler(async (req, res) => {
   }
   telegramNotify(`🤖 <b>Glory Bot stock</b> ${action}: ${stock.enabled ? `${stock.available} available` : 'unlimited'} (admin panel)`);
   res.json({ success: true, ...stock });
+}));
+
+// ---------------------------------------------------------------
+// BAN / UNBAN — see src/ban.js.
+//   POST /api/admin/ban    { uid, duration: '1h'|'12h'|'1d'|'3d'|'7d'|'permanent' }
+//   POST /api/admin/unban  { uid }
+//   GET  /api/admin/banned            -> everyone currently banned
+// Takes effect immediately: the ban is checked on every signed-in request.
+// ---------------------------------------------------------------
+router.post('/ban', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  const duration = String(req.body?.duration || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+  if (!BAN_DURATIONS[duration]) {
+    return res.status(400).json({ success: false, error: `duration must be one of: ${Object.keys(BAN_DURATIONS).join(', ')}` });
+  }
+  const userRef = db().collection('users').doc(uid);
+  const snap = await userRef.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'No user found with that uid' });
+
+  const ban = makeBan(duration);
+  const d = snap.data();
+  const log = d.adminLog || [];
+  log.push({ delta: 0, note: `Banned — ${ban.label}`, resultingBalance: Number(d.balance || 0), at: new Date().toISOString() });
+  await userRef.set({ ban, banned: true, adminLog: log }, { merge: true });
+  invalidateUserDoc(uid);
+  telegramNotify(`🚫 <b>User banned</b> — ${esc(ban.label)}\nUID: <code>${esc(uid)}</code>\n${esc(d.email || '')}`);
+  res.json({ success: true, uid, ban });
+}));
+
+router.post('/unban', asyncHandler(async (req, res) => {
+  const uid = String(req.body?.uid || '').trim();
+  if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
+  const userRef = db().collection('users').doc(uid);
+  const snap = await userRef.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'No user found with that uid' });
+
+  const d = snap.data();
+  const log = d.adminLog || [];
+  log.push({ delta: 0, note: 'Unbanned', resultingBalance: Number(d.balance || 0), at: new Date().toISOString() });
+  await userRef.set({ ban: admin.firestore.FieldValue.delete(), banned: admin.firestore.FieldValue.delete(), adminLog: log }, { merge: true });
+  invalidateUserDoc(uid);
+  telegramNotify(`✅ <b>User unbanned</b>\nUID: <code>${esc(uid)}</code>\n${esc(d.email || '')}`);
+  res.json({ success: true, uid });
+}));
+
+router.get('/banned', asyncHandler(async (req, res) => {
+  const q = await db().collection('users').where('banned', '==', true).limit(200).get();
+  const banned = [];
+  for (const doc of q.docs) {
+    const data = doc.data();
+    const ban = activeBan(data);
+    if (ban) banned.push({ uid: doc.id, email: data.email || '', profileName: data.profileName || '', ...ban });
+  }
+  banned.sort((a, b) => (b.at || 0) - (a.at || 0));
+  res.json({ success: true, banned });
 }));
 
 // ---------------------------------------------------------------
