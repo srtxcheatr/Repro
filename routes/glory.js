@@ -42,11 +42,41 @@ async function findNewGroup(clanId) {
   return '';
 }
 
+// The upstream sometimes CREATES the group but answers with something we can't read.
+// Never lose that group: look for the id in the raw text, then for a brand-new group of
+// this clan in my-groups (not in the "before" snapshot, not already owned in our DB).
+async function upstreamGroupIds() {
+  try { return new Set((asList(await gloryCall('GET', '/api/client/my-groups', { timeoutMs: 15000 })) || []).map((g) => String(g.group_id))); }
+  catch (_) { return null; }
+}
+async function recoverLaunchedGroup(clanId, before, rawText) {
+  const m = String(rawText || '').match(/group_?id["'\s:=]+(\d{6,})/i);
+  if (m) return m[1];
+  for (let i = 0; i < 4; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const list = asList(await gloryCall('GET', '/api/client/my-groups', { timeoutMs: 15000 })) || [];
+      const cands = list
+        .filter((g) => String(g.clan_id) === clanId && !(before && before.has(String(g.group_id))))
+        .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+      for (const g of cands) {
+        const known = await db().collection(COL).doc(String(g.group_id)).get();
+        if (!known.exists) return String(g.group_id);
+      }
+    } catch (_) { /* try again */ }
+  }
+  return '';
+}
+
 // Upstream list endpoints are documented as plain arrays; accept {groups:[...]} etc. too.
 const asList = (v) => (Array.isArray(v) ? v : Array.isArray(v?.groups) ? v.groups : Array.isArray(v?.data) ? v.data : Array.isArray(v?.items) ? v.items : null);
 
 function fail(res, e) {
-  if (e instanceof GloryError) return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: e.message });
+  if (e instanceof GloryError) {
+    // GLORY_DEBUG=1 (Render env) appends the upstream's real reply to the message, for troubleshooting only.
+    const extra = process.env.GLORY_DEBUG === '1' && e.detail ? ` [${String(e.detail).slice(0, 220)}]` : '';
+    return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: e.message + extra });
+  }
   throw e;
 }
 
@@ -473,9 +503,20 @@ router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch
     let out;
     try {
       out = await serialized(async () => {
-        const r = await gloryCall('POST', '/api/client/auto-clan-group', {
-          body: { region: region.id, clan_id: clanId },
-        });
+        const before = await upstreamGroupIds();
+        let r;
+        try {
+          r = await gloryCall('POST', '/api/client/auto-clan-group', {
+            body: { region: region.id, clan_id: clanId },
+          });
+        } catch (e) {
+          if (!(e instanceof GloryError && e.unreadable)) throw e;
+          console.error('[glory] launch reply unreadable, trying to recover the group:', e.detail);
+          const rid = await recoverLaunchedGroup(clanId, before, e.rawText);
+          if (!rid) throw e;
+          console.log('[glory] recovered launched group', rid);
+          r = { success: true, group_id: rid, recovered: true };
+        }
         let id = pickId(r);
         if (!id && !(r && r.success === false)) {
           // Upstream said OK but we couldn't read the id — find the new group by clan.
