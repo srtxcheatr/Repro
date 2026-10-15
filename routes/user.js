@@ -742,9 +742,9 @@ router.get('/welcome-redirect', asyncHandler(async (req, res) => {
   if (data.welcomeRedirectDone) return res.json({ success: true, show: false });
   const cfg = await db().collection('config').doc('welcomePopup').get();
   const c = cfg.exists ? cfg.data() : {};
-  const url = String(c.url || '');
-  const show = c.enabled !== false && /^https?:\/\//i.test(url);
-  res.json({ success: true, show, url: show ? url : '' });
+  const url = /^https?:\/\//i.test(String(c.url || '')) ? String(c.url) : '';
+  // show = admin hasn't switched it off. url may be '' (no link saved) — the site then uses its default link.
+  res.json({ success: true, show: c.enabled !== false, url });
 }));
 
 router.post('/welcome-redirect', asyncHandler(async (req, res) => {
