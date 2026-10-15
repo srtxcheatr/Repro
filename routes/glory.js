@@ -167,6 +167,72 @@ const groupAction_progress = (groupId) => serialized(() => gloryCall('GET', '/ap
   query: { group_id: groupId }, timeoutMs: 15000,
 }));
 
+
+// ---- Total vs weekly glory ------------------------------------------
+// get-glory / get-clan-info can contain several glory-like numbers (weekly
+// glory, clan total glory...). Instead of grabbing the first "glory" key we
+// collect them all, then classify by key name, falling back to size
+// (the clan total is always much bigger than one week's glory).
+const GLORY_KEY = /glory|score|point|honou?r|trophy/i;
+const NOT_GLORY = /rank|level|member|capacity|limit|goal|target|id$|_id|count$|num$|max|min|time|date|_at$/i;
+function gloryCandidates(objs) {
+  const out = [];
+  const walk = (o, path, depth) => {
+    if (!o || typeof o !== 'object' || depth > 4) return;
+    for (const [k, v] of Object.entries(o)) {
+      const p = path ? `${path}.${k}` : k;
+      if (v && typeof v === 'object') { if (!Array.isArray(v)) walk(v, p, depth + 1); continue; }
+      if (!GLORY_KEY.test(k) || NOT_GLORY.test(k)) continue;
+      if (typeof v === 'boolean' || v === '' || v === null) continue;
+      const n = Number(v);
+      if (Number.isFinite(n)) out.push({ key: k, path: p, n });
+    }
+  };
+  objs.forEach((o) => walk(o, '', 0));
+  return out;
+}
+function classifyGlory(g, c) {
+  const cands = gloryCandidates([g, c]);
+  const isWeek = (x) => /week/i.test(x.path);
+  const isTotal = (x) => !isWeek(x) && /total|all.?time|lifetime|overall|cumulative|season|clan_?(glory|score|point)/i.test(x.path);
+  const weekly = cands.filter(isWeek);
+  const total = cands.filter(isTotal);
+  const rest = cands.filter((x) => !isWeek(x) && !isTotal(x));
+  let weeklyVal; let totalVal;
+  if (weekly.length) weeklyVal = weekly[0].n;
+  if (total.length) totalVal = Math.max(...total.map((x) => x.n));
+  // Nothing labelled? use size: biggest number = clan total, smaller = weekly.
+  const pool = rest.map((x) => x.n);
+  if (totalVal === undefined && pool.length) {
+    const big = Math.max(...pool);
+    if (weeklyVal === undefined && pool.some((n) => n < big)) { totalVal = big; weeklyVal = Math.max(...pool.filter((n) => n < big)); }
+    else if (weeklyVal === undefined || big > weeklyVal) totalVal = big;
+  }
+  if (weeklyVal === undefined && pool.length && totalVal !== undefined) {
+    const smaller = pool.filter((n) => n < totalVal);
+    if (smaller.length) weeklyVal = Math.max(...smaller);
+  }
+  return {
+    weekly: weeklyVal, total: totalVal,
+    keys: cands.slice(0, 20).map((x) => `${x.path}=${x.n}`),
+  };
+}
+
+// Scan any key that looks like "last match / last game / last played" with a timestamp value.
+const LAST_MATCH_RX = /last.*(match|game|battle|play|round)|(match|game|battle).*(time|at|ts|date)$/i;
+function findLastMatchDeep(objs) {
+  let found;
+  const walk = (o, depth) => {
+    if (found || !o || typeof o !== 'object' || depth > 4) return;
+    for (const [k, v] of Object.entries(o)) {
+      if (v && typeof v === 'object') { if (!Array.isArray(v)) walk(v, depth + 1); continue; }
+      if (LAST_MATCH_RX.test(k)) { const iso = toIso(v); if (iso) { found = iso; return; } }
+    }
+  };
+  objs.forEach((o) => walk(o, 0));
+  return found;
+}
+
 async function loadDetails(groupId, fresh = false, listRow = null) {
   const hit = detailsCache.get(groupId);
   if (!fresh && hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
@@ -183,13 +249,20 @@ async function loadDetails(groupId, fresh = false, listRow = null) {
   }
 
   const gloryVal = typeof g === 'number' ? g : dig(g, ['glory', 'total_glory', 'points', 'score', 'clan_glory']);
+  const split = classifyGlory(typeof g === 'object' ? g : null, c);
+  // A bare number from get-glory is this group's glory for the week.
+  const weeklyGlory = typeof g === 'number' ? g : split.weekly;
+  const totalGlory = split.total;
   const data = {
+    weeklyGlory,
+    totalGlory,
+    gloryKeys: split.keys,
     clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name']) ?? dig(g, ['clan_name', 'clanName']),
     level: dig(c, ['clan_level', 'clanLevel', 'level']),
     members: dig(c, ['member_num', 'member_count', 'memberCount', 'members', 'current_members']),
     capacity: dig(c, ['capacity', 'member_capacity', 'max_members', 'maxMembers', 'max_member']),
     captain: dig(c, ['captain_id', 'captainId', 'captain', 'leader_id', 'leader']),
-    glory: gloryVal ?? dig(c, ['glory', 'total_glory', 'clan_glory']),
+    glory: weeklyGlory ?? gloryVal ?? 0, // this group's glory (weekly)
     games: dig(g, GAMES_KEYS) ?? dig(c, GAMES_KEYS),
     clan: flat(c),
     gloryInfo: flat(typeof g === 'object' ? g : { glory: g }),
@@ -198,7 +271,7 @@ async function loadDetails(groupId, fresh = false, listRow = null) {
     raw: JSON.stringify({ glory: g, clan: c }).slice(0, 800),
   };
   // Last match: explicit field > glory just went up > newest growth snapshot.
-  let lastMatchAt = toIso(dig(g, LAST_MATCH_KEYS) ?? dig(c, LAST_MATCH_KEYS) ?? (listRow && dig(listRow, LAST_MATCH_KEYS)));
+  let lastMatchAt = toIso(dig(g, LAST_MATCH_KEYS) ?? dig(c, LAST_MATCH_KEYS) ?? (listRow && dig(listRow, LAST_MATCH_KEYS))) || findLastMatchDeep([g, c, listRow]) || null;
   let lastMatchSource = lastMatchAt ? 'upstream' : '';
   const seen = noteGlory(groupId, data.glory);
   if (!lastMatchAt && seen) { lastMatchAt = seen; lastMatchSource = 'live'; }
