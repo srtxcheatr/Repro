@@ -5,8 +5,9 @@
 const BASE = () => String(process.env.GLORY_BASE_URL || 'https://ffglory.pro').replace(/\/+$/, '');
 
 export class GloryError extends Error {
-  constructor(message, { status = 502, timeout = false, upstream = '' } = {}) {
+  constructor(message, { status = 502, timeout = false, upstream = '', detail = '' } = {}) {
     super(message);
+    this.detail = detail; // short diagnostic (status / content-type / first bytes of the reply)
     this.status = status;
     this.timeout = timeout;
     this.upstream = upstream; // the upstream's own error text, untouched (used by refunds)
@@ -45,35 +46,65 @@ async function gloryOnce(method, path, { body, query, auth, timeoutMs }) {
   if (auth) url.searchParams.set('api_key', process.env.GLORY_API_KEY);
   for (const [k, v] of Object.entries(query || {})) url.searchParams.set(k, v);
 
-  const headers = { Accept: 'application/json' };
+  // Browser-like headers: some CDNs/WAFs answer a bare Node request with an HTML
+  // page (HTTP 200) instead of JSON, which showed up as "unreadable reply".
+  const headers = {
+    Accept: 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'User-Agent': process.env.GLORY_USER_AGENT
+      || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    Origin: BASE(),
+    Referer: BASE() + '/',
+  };
   if (auth) headers['x-api-key'] = process.env.GLORY_MASTER_KEY;
   if (body) headers['Content-Type'] = 'application/json';
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  let r, text;
+  let r, text, finalUrl = url;
   try {
-    r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal });
+    // Follow redirects ourselves so a POST stays a POST (fetch turns a 301/302
+    // POST into a GET, which returns an HTML page instead of JSON).
+    for (let hop = 0; ; hop++) {
+      r = await fetch(finalUrl, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal, redirect: 'manual' });
+      if ([301, 302, 303, 307, 308].includes(r.status) && r.headers.get('location') && hop < 4) {
+        finalUrl = new URL(r.headers.get('location'), finalUrl);
+        // keep the secret only on the same host
+        if (finalUrl.host !== url.host) { delete headers['x-api-key']; finalUrl.searchParams.delete('api_key'); }
+        await r.arrayBuffer().catch(() => {});
+        continue;
+      }
+      break;
+    }
     text = await r.text();
   } catch (e) {
     if (e?.name === 'AbortError') throw new GloryError('FF Glory service timed out.', { status: 504, timeout: true });
-    throw new GloryError('Could not reach the FF Glory service.', { status: 502 });
+    console.error('[glory] network error', method, path, e?.cause?.code || e?.message);
+    throw new GloryError('Could not reach the FF Glory service.', { status: 502, detail: String(e?.cause?.code || e?.message || '') });
   } finally {
     clearTimeout(timer);
   }
 
+  // Lenient JSON: strip a BOM / junk and, if the body is text around a JSON
+  // object or array, pull that out.
   let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch (_) { /* non-JSON body (HTML error page, Cloudflare...) */ }
+  const clean = String(text || '').replace(/^\uFEFF/, '').trim();
+  try { data = clean ? JSON.parse(clean) : null; } catch (_) {
+    const m = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])\s*$/);
+    if (m) { try { data = JSON.parse(m[1]); } catch (__) { /* not JSON */ } }
+  }
+  const ctype = r.headers.get('content-type') || '';
   const upstreamMsg = data && typeof data === 'object' ? String(data.error || data.message || '') : '';
+  const diag = `HTTP ${r.status} ${ctype.split(';')[0]} ${finalUrl.host}${finalUrl.pathname} :: ${clean.slice(0, 160).replace(/\s+/g, ' ')}`;
 
   if (!r.ok) {
-    console.error('[glory] upstream', method, path, r.status, upstreamMsg || text.slice(0, 120));
-    throw new GloryError(friendly(r.status, upstreamMsg), { status: r.status, upstream: upstreamMsg });
+    console.error('[glory] upstream', method, path, diag);
+    throw new GloryError(friendly(r.status, upstreamMsg), { status: r.status, upstream: upstreamMsg, detail: diag });
   }
   if (data === null) {
     // 200 but not JSON -> an error/challenge page. Never hand `null` to callers.
-    console.error('[glory] upstream non-JSON reply', method, path, text.slice(0, 120));
-    throw new GloryError('FF Glory service returned an unreadable reply. Please try again.', { status: 502 });
+    console.error('[glory] upstream non-JSON reply', method, path, diag);
+    throw new GloryError('FF Glory service returned an unreadable reply. Please try again.', { status: 502, detail: diag });
   }
   return data;
 }
