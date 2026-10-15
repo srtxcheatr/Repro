@@ -5,8 +5,10 @@
 const BASE = () => String(process.env.GLORY_BASE_URL || 'https://ffglory.pro').replace(/\/+$/, '');
 
 export class GloryError extends Error {
-  constructor(message, { status = 502, timeout = false, upstream = '', detail = '' } = {}) {
+  constructor(message, { status = 502, timeout = false, upstream = '', detail = '', unreadable = false, rawText = '' } = {}) {
     super(message);
+    this.unreadable = unreadable; // HTTP 200 but the body was not JSON (the action may still have happened upstream)
+    this.rawText = rawText;
     this.detail = detail; // short diagnostic (status / content-type / first bytes of the reply)
     this.status = status;
     this.timeout = timeout;
@@ -89,9 +91,24 @@ async function gloryOnce(method, path, { body, query, auth, timeoutMs }) {
   // object or array, pull that out.
   let data = null;
   const clean = String(text || '').replace(/^\uFEFF/, '').trim();
-  try { data = clean ? JSON.parse(clean) : null; } catch (_) {
-    const m = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])\s*$/);
-    if (m) { try { data = JSON.parse(m[1]); } catch (__) { /* not JSON */ } }
+  const tryJson = (t) => { try { return JSON.parse(t); } catch (_) { return undefined; } };
+  data = clean ? tryJson(clean) : null;
+  if (data === undefined) {
+    // Several JSON lines (progress + result), "data: {...}" event-stream lines,
+    // or JSON wrapped in other text: take the best JSON object found.
+    const found = [];
+    for (const line of clean.split(/\r?\n/)) {
+      const t = line.replace(/^\s*data:\s*/i, '').trim();
+      if (!t) continue;
+      const v = tryJson(t);
+      if (v !== undefined && v !== null && typeof v === 'object') found.push(v);
+    }
+    if (!found.length) {
+      const m = clean.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+      if (m) { const v = tryJson(m[0]); if (v !== undefined) found.push(v); }
+    }
+    const withId = [...found].reverse().find((o) => o && (o.group_id || o.groupId || o.success !== undefined));
+    data = withId || found[found.length - 1] || null;
   }
   const ctype = r.headers.get('content-type') || '';
   const upstreamMsg = data && typeof data === 'object' ? String(data.error || data.message || '') : '';
@@ -104,7 +121,7 @@ async function gloryOnce(method, path, { body, query, auth, timeoutMs }) {
   if (data === null) {
     // 200 but not JSON -> an error/challenge page. Never hand `null` to callers.
     console.error('[glory] upstream non-JSON reply', method, path, diag);
-    throw new GloryError('FF Glory service returned an unreadable reply. Please try again.', { status: 502, detail: diag });
+    throw new GloryError('FF Glory service returned an unreadable reply. Please try again.', { status: 502, detail: diag, unreadable: true, rawText: clean.slice(0, 2000) });
   }
   return data;
 }
@@ -152,4 +169,24 @@ export function nrpPriceForRole(role) {
   const user = num(process.env.GLORY_PRICE_USER_NRP) ?? num(process.env.GLORY_PRICE_BASIC_NRP) ?? 250;
   if (role === 'reseller') return num(process.env.GLORY_PRICE_RESELLER_NRP) ?? user;
   return user;
+}
+
+// ---- Safe self-test (GET only — never launches anything, never spends credits) ----
+const redact = (t) => {
+  let out = String(t);
+  for (const k of [process.env.GLORY_API_KEY, process.env.GLORY_MASTER_KEY]) if (k) out = out.split(k).join('***');
+  return out;
+};
+export async function diagnoseGlory() {
+  const lines = [];
+  for (const [path, auth] of [['/api/pricing', false], ['/api/auth/me', true], ['/api/client/my-groups', true]]) {
+    try {
+      const r = await gloryCall('GET', path, { auth, timeoutMs: 15000 });
+      const n = Array.isArray(r) ? ` (${r.length} items)` : '';
+      lines.push(`${path} OK${n} ${redact(JSON.stringify(r)).slice(0, 200)}`);
+    } catch (e) {
+      lines.push(`${path} FAIL ${e.message} | ${redact(e.detail || '')}`);
+    }
+  }
+  return lines;
 }
