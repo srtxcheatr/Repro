@@ -149,6 +149,7 @@ router.get('/balance', asyncHandler(async (req, res) => {
     // progress card is computed locally from the cached profile.
     avatarUrl: data.avatarUrl || '',
     policyAcknowledged: !!data.policyAcknowledged,
+    welcomeRedirectDone: !!data.welcomeRedirectDone,
     minKeys: RESELLER_MIN_KEYS,
     minBalance: RESELLER_MIN_BALANCE,
   });
@@ -723,6 +724,33 @@ router.post('/policy-ack', asyncHandler(async (req, res) => {
   await db().collection('users').doc(req.uid).set({
     policyAcknowledged: true,
     policyAcknowledgedAt: Date.now(),
+  }, { merge: true });
+  invalidateUserDoc(req.uid);
+  res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------
+// Welcome popup ("watch the guide videos, then REDIRECT").
+// The link is set by the admin (config/welcomePopup). The popup is shown to
+// every account until it has been redirected ONCE — the flag lives on the
+// user's own Firestore doc (always req.uid, nothing to spoof) so it follows
+// the account, not the browser, and then the popup is off for that account.
+// ---------------------------------------------------------------
+router.get('/welcome-redirect', asyncHandler(async (req, res) => {
+  const snap = await getUserDoc(req.uid);
+  const data = snap.exists ? snap.data : {};
+  if (data.welcomeRedirectDone) return res.json({ success: true, show: false });
+  const cfg = await db().collection('config').doc('welcomePopup').get();
+  const c = cfg.exists ? cfg.data() : {};
+  const url = String(c.url || '');
+  const show = c.enabled !== false && /^https?:\/\//i.test(url);
+  res.json({ success: true, show, url: show ? url : '' });
+}));
+
+router.post('/welcome-redirect', asyncHandler(async (req, res) => {
+  await db().collection('users').doc(req.uid).set({
+    welcomeRedirectDone: true,
+    welcomeRedirectAt: Date.now(),
   }, { merge: true });
   invalidateUserDoc(req.uid);
   res.json({ success: true });

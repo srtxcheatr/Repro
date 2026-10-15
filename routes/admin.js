@@ -1073,6 +1073,27 @@ router.post('/policy', asyncHandler(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------
+// WELCOME POPUP — the link users are sent to by the REDIRECT button of the
+// "Welcome to SRT X CHEATS" popup (see GET /api/user/welcome-redirect).
+// ---------------------------------------------------------------
+router.get('/welcome-popup', asyncHandler(async (req, res) => {
+  const snap = await db().collection('config').doc('welcomePopup').get();
+  const d = snap.exists ? snap.data() : {};
+  res.json({ success: true, url: d.url || '', enabled: d.enabled !== false, updatedAt: d.updatedAt || null });
+}));
+
+router.post('/welcome-popup', asyncHandler(async (req, res) => {
+  const url = String(req.body?.url || '').trim();
+  const enabled = req.body?.enabled !== false;
+  if (enabled && !/^https?:\/\/[^\s]+$/i.test(url)) {
+    return res.status(400).json({ success: false, error: 'Enter a full link starting with http:// or https://' });
+  }
+  if (url.length > 500) return res.status(400).json({ success: false, error: 'Link is too long' });
+  await db().collection('config').doc('welcomePopup').set({ url, enabled, updatedAt: Date.now() }, { merge: true });
+  res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------
 // RESELLER API management — see routes/reseller-api.js for the API itself.
 //   * One global ON/OFF switch (emergency brake for the whole API)
 //   * Per-reseller: list, disable/enable, revoke
