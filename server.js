@@ -13,6 +13,7 @@ import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/catalog.js';
 import { userCors, db } from './src/firebase.js';
 import { telegramNotify } from './src/telegram.js';
+import { diagnoseGlory, gloryConfigured } from './src/glory.js';
 import { rateLimit, securityHeaders } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
 import { policyCache } from './src/sharedCaches.js';
@@ -189,4 +190,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`srtx-backend listening on port ${PORT}`);
   registerTopupWebhook().catch(() => {});
+  // Read-only self-test of the ffglory.pro link (GET only, spends nothing). Result goes to the Render log.
+  if (gloryConfigured() && process.env.GLORY_DIAG_ON_START !== '0') {
+    setTimeout(() => diagnoseGlory().then((l) => l.forEach((x) => console.log('[glory-diag]', x))).catch(() => {}), 3000);
+  }
 });
