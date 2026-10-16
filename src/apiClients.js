@@ -15,6 +15,7 @@
 //     (header). Wrong either way gives the same generic 401, so an attacker
 //     can't tell which half was right.
 
+import { isResellerTier } from './proTier.js';
 import crypto from 'crypto';
 import { db } from './firebase.js';
 
@@ -143,7 +144,7 @@ export async function authenticateClient(apiKey, masterKey) {
   const uid = clientDoc.id;
   const userSnap = await db().collection('users').doc(uid).get();
   const user = userSnap.exists ? userSnap.data() : null;
-  if (!user || (user.role || 'user') !== 'reseller') {
+  if (!user || !isResellerTier(user.role || 'user')) {
     return fail(403, 'NOT_RESELLER', 'The reseller API is only available to reseller accounts.');
   }
   if (user.requestStatus === 'Banned') {

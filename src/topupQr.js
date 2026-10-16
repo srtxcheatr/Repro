@@ -22,6 +22,7 @@ import { db } from './firebase.js';
 import { esc, formatNepaliDateTime } from './telegram.js';
 import { makeBan } from './ban.js';
 import { invalidateUserDoc } from './userCache.js';
+import { depositUpdate } from './proTier.js';
 
 export const QR_MIN_AMOUNT = 100;
 export const QR_MAX_AMOUNT = 100000;
@@ -38,7 +39,7 @@ export function chatIds() {
   if (load.length) return load;
   return [process.env.TELEGRAM_CHAT_ID_1, process.env.TELEGRAM_CHAT_ID_2, process.env.TELEGRAM_CHAT_ID].filter(Boolean).map(String);
 }
-const adminIds = () => String(process.env.TELEGRAM_TOPUP_ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+export const adminIds = () => String(process.env.TELEGRAM_TOPUP_ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
 
 /** Secret Telegram echoes back in X-Telegram-Bot-Api-Secret-Token — derived from the token so it needs no extra setup. */
 export function webhookSecret() {
@@ -50,7 +51,7 @@ export function safeEqual(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-async function tg(method, body) {
+export async function tg(method, body) {
   const token = botToken();
   if (!token) return null;
   const ctl = new AbortController();
@@ -81,9 +82,16 @@ export async function registerTopupWebhook() {
   }
   const r = await tg('setWebhook', {
     url: `${base}/api/telegram/topup-webhook`, secret_token: webhookSecret(),
-    allowed_updates: ['callback_query'], drop_pending_updates: false,
+    allowed_updates: ['callback_query', 'message'], drop_pending_updates: false,
   });
   if (r?.ok) console.log('[topup-bot] webhook registered');
+  // Slash-command menu inside Telegram (best-effort).
+  await tg('setMyCommands', { commands: [
+    { command: 'addbalance', description: 'Add balance to a user' },
+    { command: 'getdetail', description: 'Get a user\'s details' },
+    { command: 'mode', description: 'Change mode: user / reseller / pro reseller' },
+    { command: 'cancel', description: 'Cancel the current command' },
+  ] });
 }
 
 const nrp = (n) => `NRP ${Number(n || 0).toLocaleString('en-US')}`;
@@ -175,8 +183,11 @@ export async function resolveRequest(reqId, decision, by = 'telegram') {
       const after = before + Number(r.amount || 0);
       next[i] = { ...r, status: 'APPROVED', reviewedAt: now, reviewedBy: by };
       upd.balance = after;
-      upd.adminLog = [...(d.adminLog || []), { delta: Number(r.amount), note: `QR top-up approved (txCode: ${r.txCode})`, resultingBalance: after, at: now }];
-      result = { ok: true, decision, before, after, amount: Number(r.amount), txCode: r.txCode };
+      // PRO RESELLER: a fresh top-up after approval counts toward the activation deposit.
+      const pro = depositUpdate(d, r.amount, after, now);
+      Object.assign(upd, pro.fields);
+      upd.adminLog = [...(d.adminLog || []), { delta: Number(r.amount), note: `QR top-up approved (txCode: ${r.txCode})`, resultingBalance: after, at: now }, ...pro.log];
+      result = { ok: true, decision, before, after, amount: Number(r.amount), txCode: r.txCode, proActivated: pro.activated };
     } else {
       const count = Number(d.fakePayment?.count || 0) + 1;
       const step = strikeStep(count);

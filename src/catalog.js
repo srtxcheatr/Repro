@@ -12,10 +12,11 @@
 
 import { CATALOG } from './catalog1.js';
 import { CATALOG_RESELLER } from './catalog2.js';
+import { CATALOG_PRO } from './catalog3.js';
 import { db } from './firebase.js';
 import { cachedLoader, TTL } from './cache.js';
 
-export { CATALOG, CATALOG_RESELLER };
+export { CATALOG, CATALOG_RESELLER, CATALOG_PRO };
 
 /**
  * Looks up a product by sku for a given role.
@@ -27,7 +28,10 @@ export { CATALOG, CATALOG_RESELLER };
  */
 export function catalogFind(sku, role = 'user') {
   let p;
-  if (role === 'reseller') {
+  if (role === 'pro_reseller') {
+    // lowest tier: pro price -> reseller price -> retail
+    p = CATALOG_PRO[sku] ?? CATALOG_RESELLER[sku] ?? CATALOG[sku] ?? null;
+  } else if (role === 'reseller') {
     p = CATALOG_RESELLER[sku] ?? CATALOG[sku] ?? null;
   } else {
     p = CATALOG[sku] ?? null;
@@ -36,13 +40,21 @@ export function catalogFind(sku, role = 'user') {
   return applyCustomRole(customProductCache[sku], role); // whatsapp-redirect products are deliberately excluded — they never go through checkout
 }
 
+/** Price a role pays for an admin-added product / override doc: pro -> reseller -> retail. */
+export function tierPrice(p, role) {
+  if (role === 'pro_reseller') return p.priceProReseller ?? p.priceReseller ?? p.price;
+  if (role === 'reseller') return p.priceReseller ?? p.price;
+  return p.price;
+}
+
 function applyCustomRole(p, role) {
   if (!p) return null;
-  return { ...p, price: role === 'reseller' ? (p.priceReseller ?? p.price) : p.price };
+  return { ...p, price: tierPrice(p, role) };
 }
 
 /** Returns the full catalog object appropriate for a role (static, no overrides applied). */
 export function catalogForRole(role = 'user') {
+  if (role === 'pro_reseller') return { ...CATALOG_RESELLER, ...CATALOG_PRO };
   return role === 'reseller' ? CATALOG_RESELLER : CATALOG;
 }
 
@@ -277,7 +289,7 @@ export async function getLiveCatalog(role = 'user') {
       ...(o.name !== undefined ? { name: o.name } : {}),
       ...(o.duration !== undefined ? { duration: o.duration } : {}),
       ...(o.pid !== undefined ? { pid: o.pid } : {}),
-      ...(o.price !== undefined ? { price: role === 'reseller' ? (o.priceReseller ?? o.price) : o.price } : {}),
+      ...(o.price !== undefined ? { price: tierPrice(o, role) } : {}),
     };
   }
   return applyRatings(merged);
