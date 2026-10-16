@@ -17,6 +17,8 @@
 // rankings, purchase history, deducting balance. Rotating or deleting
 // EMPLOYEE_SECRET on Render cuts the employee off instantly without
 // touching your own ADMIN_SECRET.
+import { depositUpdate } from '../src/proTier.js';
+import { announceProActivated } from '../src/proReseller.js';
 import express from 'express';
 import { invalidateUserDoc } from '../src/userCache.js';
 import { asyncHandler } from '../src/asyncHandler.js';
@@ -133,7 +135,10 @@ router.post('/load-balance', asyncHandler(async (req, res) => {
       at: new Date().toISOString(),
     });
 
-    tx.set(userRef, { balance: after, adminLog: log }, { merge: true });
+    // PRO RESELLER: an employee top-up made after approval counts toward activation.
+    const pro = depositUpdate(data, amount, after);
+    log.push(...pro.log);
+    tx.set(userRef, { balance: after, adminLog: log, ...pro.fields }, { merge: true });
     tx.set(todayRef, {
       total: dayLoadedToday + amount,
       byUser: { [uid]: userLoadedToday + amount },
@@ -142,12 +147,14 @@ router.post('/load-balance', asyncHandler(async (req, res) => {
 
     return {
       before, after, email: data.email || '',
+      proAct: pro.activated ? { name: data.profileName, deposited: pro.fields.proReseller.depositSinceApproval } : null,
       ...remaining({ userLoadedToday: userLoadedToday + amount, dayLoadedToday: dayLoadedToday + amount, limits: LIMITS }),
     };
   }).catch((e) => ({ error: e.message }));
 
   if (result.error) return res.status(400).json({ success: false, error: result.error });
   invalidateUserDoc(uid); // balance changed — cached readers must not serve the old one
+  if (result.proAct) announceProActivated({ uid, email: result.email, ...result.proAct });
 
   // Audit trail to the owner's dedicated balance-load Telegram channel —
   // every employee load is visible to you in real time, and also stamped

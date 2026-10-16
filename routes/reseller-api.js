@@ -23,6 +23,7 @@
 // No CORS headers on purpose: this is a server-to-server API (PHP / Node /
 // Python), and browsers should not be able to call it from some random site.
 
+import { isResellerTier } from '../src/proTier.js';
 import express from 'express';
 import crypto from 'crypto';
 import admin from 'firebase-admin';
@@ -177,7 +178,7 @@ async function processBuy(auth, body) {
       if (orderSnap.exists) { replay = orderSnap.data(); return; }
 
       const u = userSnap.exists ? userSnap.data() : {};
-      if ((u.role || 'user') !== 'reseller' || u.requestStatus === 'Banned') {
+      if (!isResellerTier(u.role || 'user') || u.requestStatus === 'Banned') {
         insufficient = { notAllowed: true };
         return;
       }

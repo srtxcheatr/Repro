@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
-import { CATALOG, CATALOG_RESELLER, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
+import { CATALOG, CATALOG_RESELLER, CATALOG_PRO, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/catalog.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
 import admin from 'firebase-admin';
 import { notifyBalanceChange } from '../src/balanceAlerts.js';
@@ -16,6 +16,8 @@ import { getStock, setStock, addStock } from '../src/gloryStock.js';
 import { activeBan, makeBan, BAN_DURATIONS } from '../src/ban.js';
 import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
+import { ROLES, depositUpdate, roleChangeUpdate, proPublicState } from '../src/proTier.js';
+import { resolveProRequest, announceProActivated } from '../src/proReseller.js';
 
 const router = express.Router();
 router.use(adminCors);
@@ -70,11 +72,34 @@ router.get('/lookup', asyncHandler(async (req, res) => {
     profileName: data.profileName || '',
     profilePhone: data.profilePhone || '',
     role: data.role || 'user',
+    proReseller: proPublicState(data),
     ban: activeBan(data),
   });
 }));
 
-// POST /api/admin/set-role  { uid, role: "user"|"reseller" }
+// GET /api/admin/pro-requests — Pro Reseller applications still waiting for a decision
+// (same list the Telegram bot shows). Backup for when Telegram is down.
+router.get('/pro-requests', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').where('proReseller.status', '==', 'pending').limit(100).get();
+  const requests = snap.docs.map((d) => {
+    const x = d.data(); const pr = x.proReseller || {};
+    return { uid: d.id, reqId: pr.reqId || '', email: x.email || '', storeName: x.profileName || '', requestedAt: pr.requestedAt || '', details: pr.details || {} };
+  }).sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
+  res.json({ success: true, requests });
+}));
+
+// POST /api/admin/pro-review  { reqId, action: "approve"|"reject" }
+router.post('/pro-review', asyncHandler(async (req, res) => {
+  const reqId = String(req.body?.reqId || '').trim();
+  const action = String(req.body?.action || '');
+  if (!/^[a-f0-9]{12}$/.test(reqId)) return res.status(400).json({ success: false, error: 'Invalid request id' });
+  if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: 'action must be "approve" or "reject"' });
+  const r = await resolveProRequest(reqId, action, 'admin-panel');
+  if (!r.ok) return res.status(409).json({ success: false, error: r.reason });
+  res.json({ success: true, status: action === 'approve' ? 'approved' : 'rejected' });
+}));
+
+// POST /api/admin/set-role  { uid, role: "user"|"reseller"|"pro_reseller" }
 // Changes which catalog/prices a user sees and can check out at.
 // 'user' -> CATALOG (retail/high price), 'reseller' -> CATALOG_RESELLER
 // (your custom reseller price). Takes effect immediately — the
@@ -85,8 +110,8 @@ router.post('/set-role', asyncHandler(async (req, res) => {
   const role = String(req.body?.role || '').trim();
 
   if (!uid) return res.status(400).json({ success: false, error: 'Provide a uid' });
-  if (!['user', 'reseller'].includes(role)) {
-    return res.status(400).json({ success: false, error: 'role must be "user" or "reseller"' });
+  if (!ROLES.includes(role)) {
+    return res.status(400).json({ success: false, error: 'role must be "user", "reseller" or "pro_reseller"' });
   }
 
   const userRef = db().collection('users').doc(uid);
@@ -95,10 +120,9 @@ router.post('/set-role', asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'No user found with that uid' });
   }
 
-  const log = snap.data().adminLog || [];
-  log.push({ delta: 0, note: `Role changed to "${role}"`, resultingBalance: Number(snap.data().balance || 0), at: new Date().toISOString() });
-
-  await userRef.set({ role, adminLog: log }, { merge: true });
+  // roleChangeUpdate keeps users/{uid}.proReseller.status in step with the role.
+  const upd = roleChangeUpdate(snap.data(), role, 'admin-panel');
+  await userRef.set({ ...upd.fields, adminLog: [...(snap.data().adminLog || []), ...upd.log] }, { merge: true });
   invalidateUserDoc(uid);
   res.json({ success: true, uid, role });
 }));
@@ -120,6 +144,7 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
   try {
     let beforeBalance = 0;
     let userEmail = '';
+    let proAct = null;
     const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const current = snap.exists ? Number(snap.data().balance || 0) : 0;
@@ -130,13 +155,19 @@ router.post('/adjust-balance', asyncHandler(async (req, res) => {
       const log = snap.exists ? (snap.data().adminLog || []) : [];
       log.push({ delta, note, resultingBalance: updated, at: new Date().toISOString() });
 
-      tx.set(userRef, { balance: updated, adminLog: log }, { merge: true });
+      // PRO RESELLER: an admin top-up made after approval counts toward activation.
+      const pro = snap.exists && delta > 0 ? depositUpdate(snap.data(), delta, updated) : { fields: {}, log: [], activated: false };
+      log.push(...pro.log);
+      proAct = pro.activated ? { name: snap.data().profileName, deposited: pro.fields.proReseller.depositSinceApproval } : null;
+
+      tx.set(userRef, { balance: updated, adminLog: log, ...pro.fields }, { merge: true });
       beforeBalance = current;
       userEmail = snap.exists ? (snap.data().email || '') : '';
       return updated;
     });
     invalidateUserDoc(uid);
-    res.json({ success: true, newBalance });
+    res.json({ success: true, newBalance, proActivated: !!proAct });
+    if (proAct) announceProActivated({ uid, email: userEmail, ...proAct });
 
     // Telegram alert on the dedicated balance-load channel (after the
     // response, so a slow/failed Telegram call can never delay or fail
@@ -189,6 +220,7 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
 
   const userRef = db().collection('users').doc(uid);
   let approvedAmount = 0;
+  let proAct = null;
   try {
     const newBalance = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
@@ -220,6 +252,11 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
           delta: amount, note: `Top-up approved (txCode: ${txCode})`,
           resultingBalance: balance, at: new Date().toISOString(),
         });
+        // PRO RESELLER: a fresh approved top-up counts toward activation.
+        const pro = depositUpdate(data, amount, balance);
+        log.push(...pro.log);
+        Object.assign(update, pro.fields);
+        proAct = pro.activated ? { name: data.profileName, email: data.email, deposited: pro.fields.proReseller.depositSinceApproval } : null;
         update.balance = balance;
         update.adminLog = log;
       }
@@ -228,7 +265,8 @@ router.post('/topup-review', asyncHandler(async (req, res) => {
       return balance;
     });
     invalidateUserDoc(uid);
-    res.json({ success: true, newBalance });
+    res.json({ success: true, newBalance, proActivated: !!proAct });
+    if (proAct) announceProActivated({ uid, ...proAct });
     if (action === 'approve') {
       // Admin credited a customer's top-up: same dedicated channel as
       // every other staff balance load.
@@ -313,6 +351,7 @@ router.get('/products', asyncHandler(async (req, res) => {
     return {
       sku, pid: p.pid, row: p.row, name: p.name, duration: p.duration, image: p.image,
       price: p.price, priceReseller: CATALOG[sku] ? pr.price : (p.priceReseller ?? p.price),
+      priceProReseller: CATALOG[sku] ? (CATALOG_PRO[sku]?.price ?? o?.priceProReseller ?? pr.price) : (p.priceProReseller ?? p.priceReseller ?? p.price),
       downloadLink: p.downloadLink || '',
       tags: Array.isArray(p.tags) ? p.tags : [],
       apiDuration: p.apiDuration || '', apiLabel: apiLabel(p),
@@ -462,12 +501,15 @@ router.post('/products/create', asyncHandler(async (req, res) => {
     const apiDuration = String(d?.apiDuration || '').trim();
     const price = Number(d?.price);
     const priceReseller = d?.priceReseller !== undefined && d?.priceReseller !== '' ? Number(d.priceReseller) : price;
+    // PRO RESELLER price — optional, defaults to the reseller price.
+    const priceProReseller = d?.priceProReseller !== undefined && d?.priceProReseller !== '' ? Number(d.priceProReseller) : priceReseller;
     if (!name || !duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: name and duration label are required` });
     if (!price || price <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: user price must be a positive number` });
     if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: reseller price must be a positive number` });
+    if (!priceProReseller || priceProReseller <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: pro reseller price must be a positive number` });
 
     const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
-    const product = { pid, row, name, duration, price, priceReseller, image, tags, createdAt: Date.now(), ...(apiDuration ? { apiDuration } : {}), ...(downloadLink ? { downloadLink } : {}) };
+    const product = { pid, row, name, duration, price, priceReseller, priceProReseller, image, tags, createdAt: Date.now(), ...(apiDuration ? { apiDuration } : {}), ...(downloadLink ? { downloadLink } : {}) };
     batch.set(db().collection('customProducts').doc(sku), product);
     created.push({ sku, ...product });
   }
@@ -502,6 +544,11 @@ router.post('/products/:sku/edit', asyncHandler(async (req, res) => {
     const v = Number(req.body.priceReseller);
     if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
     fields.priceReseller = v;
+  }
+  if (req.body?.priceProReseller !== undefined) {
+    const v = Number(req.body.priceProReseller);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Pro reseller price must be a positive number' });
+    fields.priceProReseller = v;
   }
   if (req.body?.tags !== undefined) {
     const v = normalizeTags(req.body.tags);
@@ -590,6 +637,7 @@ router.post('/products/create-whatsapp', asyncHandler(async (req, res) => {
   const name = String(req.body?.name || '').trim();
   const price = Number(req.body?.price);
   const priceReseller = req.body?.priceReseller !== undefined && req.body?.priceReseller !== '' ? Number(req.body.priceReseller) : price;
+  const priceProReseller = req.body?.priceProReseller !== undefined && req.body?.priceProReseller !== '' ? Number(req.body.priceProReseller) : priceReseller;
   const whatsappNumber = String(req.body?.whatsappNumber || '').replace(/[^\d]/g, '');
   const whatsappMessage = String(req.body?.whatsappMessage || '').trim().slice(0, 400);
   const viewDetails = String(req.body?.viewDetails || '').trim().slice(0, 1000);
@@ -598,10 +646,11 @@ router.post('/products/create-whatsapp', asyncHandler(async (req, res) => {
   if (!name) return res.status(400).json({ success: false, error: 'Product name is required' });
   if (!price || price <= 0) return res.status(400).json({ success: false, error: 'User price must be a positive number' });
   if (!priceReseller || priceReseller <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
+  if (!priceProReseller || priceProReseller <= 0) return res.status(400).json({ success: false, error: 'Pro reseller price must be a positive number' });
   if (!whatsappNumber) return res.status(400).json({ success: false, error: 'WhatsApp number is required (digits only, with country code)' });
 
   const id = `wa_${Date.now().toString(36)}`;
-  const product = { image, name, price, priceReseller, whatsappNumber, whatsappMessage, viewDetails, createdAt: Date.now() };
+  const product = { image, name, price, priceReseller, priceProReseller, whatsappNumber, whatsappMessage, viewDetails, createdAt: Date.now() };
   await db().collection('whatsappProducts').doc(id).set(product);
   invalidateWhatsappProductCache();
   res.json({ success: true, id, ...product });
@@ -631,6 +680,11 @@ router.post('/products/whatsapp/:id/edit', asyncHandler(async (req, res) => {
     const v = Number(req.body.priceReseller);
     if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Reseller price must be a positive number' });
     fields.priceReseller = v;
+  }
+  if (req.body?.priceProReseller !== undefined) {
+    const v = Number(req.body.priceProReseller);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: 'Pro reseller price must be a positive number' });
+    fields.priceProReseller = v;
   }
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
 

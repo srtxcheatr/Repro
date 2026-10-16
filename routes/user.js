@@ -14,6 +14,9 @@ import {
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
 import { rateLimit } from '../src/security.js';
+import { isResellerTier, proPublicState, PRO_MIN_TOPUP } from '../src/proTier.js';
+import { sendProRequestToBot } from '../src/proReseller.js';
+import { newReqId as newProReqId } from '../src/topupQr.js';
 import {
   QR_MIN_AMOUNT, QR_MAX_AMOUNT, QR_MAX_PENDING, QR_PENDING_WINDOW_MS, QR_METHOD, newReqId, sendRequestToBot,
 } from '../src/topupQr.js';
@@ -24,7 +27,7 @@ router.use(requireFirebaseUid);
 
 const DEFAULTS = (email) => ({
   email,
-  role: 'user', // 'user' (retail catalog) or 'reseller' (reseller catalog) - admin-only to change
+  role: 'user', // 'user' (retail) | 'reseller' | 'pro_reseller' (lowest price) - changed by admin / bot / pro-reseller flow only
   profileName: '',
   profilePhone: '',
   tiktokName: '',
@@ -128,6 +131,7 @@ router.get('/balance', asyncHandler(async (req, res) => {
     profileLimits: LIMITS_MS,
     email: data.email || req.email,
     role: data.role || 'user',
+    proReseller: proPublicState(data),
     totalKeysBought: Number(data.totalKeysBought || 0),
     totalSpent: Number(data.totalSpent || 0),
     hasCompletedFirstTopup: (data.topupRequests || []).some((t) => t.status === 'APPROVED'),
@@ -211,7 +215,7 @@ router.post('/profile', asyncHandler(async (req, res) => {
     if (has('panelLink')) {
       const link = normalizePanelLink(body.panelLink);
       if (link !== String(cur.panelLink || '')) {
-        if ((cur.role || 'user') !== 'reseller') throw new RuleError('Only reseller accounts can add a panel link.', 403);
+        if (!isResellerTier(cur.role || 'user')) throw new RuleError('Only reseller accounts can add a panel link.', 403);
         assertUnlocked(cur, 'panelLink', now);
         stamps.panelLink = now;
         update.panelLink = link;
@@ -432,7 +436,7 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
     phone: d.profilePhone || '',
     tiktokName: d.tiktokName || '',
     tiktokUser: d.tiktokUser || '',
-    panelLink: (d.role === 'reseller' && d.panelLink) ? d.panelLink : '',
+    panelLink: (isResellerTier(d.role) && d.panelLink) ? d.panelLink : '',
     role: d.role || 'user',
     totalKeysBought: Number(d.totalKeysBought || 0),
     totalSpent: Number(d.totalSpent || 0),
@@ -589,7 +593,7 @@ router.post('/apply-reseller', asyncHandler(async (req, res) => {
     const snap = await tx.get(userRef);
     const data = snap.exists ? snap.data() : {};
 
-    if ((data.role || 'user') === 'reseller') {
+    if (isResellerTier(data.role || 'user')) {
       return { ok: false, error: 'You are already a reseller' };
     }
 
@@ -645,8 +649,78 @@ router.get('/reseller-progress', asyncHandler(async (req, res) => {
     balance,
     minKeys: RESELLER_MIN_KEYS,
     minBalance: RESELLER_MIN_BALANCE,
-    eligible: (data.role || 'user') !== 'reseller' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
+    eligible: (data.role || 'user') === 'user' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
   });
+}));
+
+// ---------------------------------------------------------------
+// PRO RESELLER — third mode (user -> reseller -> pro_reseller).
+//
+//  1. POST /pro-reseller/apply  { name, whatsapp, phone, tiktok }
+//       status 'pending'; the admin gets it in Telegram with
+//       [ Approved ✅ ] [ CANCEL ❌ ] (src/proReseller.js).
+//  2. Admin approves -> status 'approved'. Role and prices do NOT change yet.
+//  3. The user makes a NEW top-up (old balance never counts). Once new top-ups
+//     reach NRP PRO_MIN_TOPUP the role flips to 'pro_reseller' and the store
+//     shows the pro prices (see depositUpdate() in src/proTier.js, called from
+//     every top-up path: QR, admin panel, employee, Telegram /addbalance).
+// ---------------------------------------------------------------
+const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
+
+router.post('/pro-reseller/apply', rateLimit({ windowMs: 10 * 60_000, max: 6, name: 'pro-apply' }), asyncHandler(async (req, res) => {
+  const name = clean(req.body?.name, 60);
+  const whatsapp = clean(req.body?.whatsapp, 20).replace(/[^\d+]/g, '');
+  const phone = clean(req.body?.phone, 20).replace(/[^\d+]/g, '');
+  const tiktok = clean(req.body?.tiktok, 40).replace(/^@+/, '');
+  if (!name || !whatsapp || !phone || !tiktok) return res.status(400).json({ success: false, error: 'Please fill all 4 fields' });
+  if (name.length < 2) return res.status(400).json({ success: false, error: 'Enter your full name' });
+  if (whatsapp.replace(/\D/g, '').length < 7 || phone.replace(/\D/g, '').length < 7) {
+    return res.status(400).json({ success: false, error: 'Enter valid WhatsApp business and phone numbers' });
+  }
+  if (!/^[A-Za-z0-9._]{2,40}$/.test(tiktok)) return res.status(400).json({ success: false, error: 'Enter your TikTok id (letters, numbers, . and _ only)' });
+
+  const reqId = newProReqId();
+  const userRef = db().collection('users').doc(req.uid);
+  const idxRef = db().collection('proRequests').doc(reqId);
+  const now = new Date().toISOString();
+
+  let user;
+  try {
+    user = await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      const d = snap.exists ? snap.data() : {};
+      const pr = d.proReseller || {};
+      if ((d.role || 'user') === 'pro_reseller' || pr.status === 'active') throw new Error('You are already a PRO RESELLER');
+      if (pr.status === 'pending') throw new Error('Your details are already being verified by admin');
+      if (pr.status === 'approved') throw new Error('You are already approved — just top up to activate PRO RESELLER');
+      tx.set(userRef, {
+        proReseller: { status: 'pending', reqId, requestedAt: now, details: { name, whatsapp, phone, tiktok }, requiredDeposit: PRO_MIN_TOPUP, depositSinceApproval: 0 },
+      }, { merge: true });
+      tx.set(idxRef, { uid: req.uid, status: 'PENDING', createdAt: now, messages: [] });
+      return d;
+    });
+  } catch (e) {
+    return res.status(409).json({ success: false, error: e.message });
+  }
+  invalidateUserDoc(req.uid);
+
+  // A Telegram outage must not fail the user's request: it stays 'pending' and
+  // is also listed in the admin panel (GET /api/admin/pro-requests).
+  try {
+    const messages = await sendProRequestToBot(reqId, {
+      storeName: user.profileName || '', email: user.email || req.email, uid: req.uid, name, whatsapp, phone, tiktok,
+    });
+    if (messages.length) await idxRef.set({ messages }, { merge: true });
+  } catch (e) { console.warn('[pro-reseller] announce failed:', e?.name || 'error'); }
+
+  res.json({ success: true, status: 'pending' });
+}));
+
+// GET /api/user/pro-reseller — current state (also included in /balance).
+router.get('/pro-reseller', asyncHandler(async (req, res) => {
+  const snap = await getUserDoc(req.uid);
+  const d = snap.exists ? snap.data : {};
+  res.json({ success: true, role: d.role || 'user', ...proPublicState(d) });
 }));
 
 // ---------------------------------------------------------------

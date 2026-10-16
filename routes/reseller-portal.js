@@ -7,6 +7,7 @@
 // Every route here requires a verified Firebase login AND role === 'reseller',
 // re-read from Firestore on each call, so a demoted user loses access at once.
 
+import { isResellerTier } from '../src/proTier.js';
 import express from 'express';
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
@@ -24,7 +25,7 @@ export const API_PATH = '/api/reseller/v1';
 const requireReseller = asyncHandler(async (req, res, next) => {
   const snap = await db().collection('users').doc(req.uid).get();
   const data = snap.exists ? snap.data() : {};
-  if ((data.role || 'user') !== 'reseller') {
+  if (!isResellerTier(data.role || 'user')) {
     return res.status(403).json({
       success: false, code: 'NOT_RESELLER',
       error: 'The reseller API is only available to reseller accounts.',
