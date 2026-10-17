@@ -657,6 +657,7 @@ router.get('/reseller-progress', asyncHandler(async (req, res) => {
 // PRO RESELLER — third mode (user -> reseller -> pro_reseller).
 //
 //  1. POST /pro-reseller/apply  { name, whatsapp, phone, tiktok }
+//       (only allowed once the account is in RESELLER mode)
 //       status 'pending'; the admin gets it in Telegram with
 //       [ Approved ✅ ] [ CANCEL ❌ ] (src/proReseller.js).
 //  2. Admin approves -> status 'approved'. Role and prices do NOT change yet.
@@ -691,6 +692,8 @@ router.post('/pro-reseller/apply', rateLimit({ windowMs: 10 * 60_000, max: 6, na
       const d = snap.exists ? snap.data() : {};
       const pr = d.proReseller || {};
       if ((d.role || 'user') === 'pro_reseller' || pr.status === 'active') throw new Error('You are already a PRO RESELLER');
+      // PRO RESELLER is only for accounts that already unlocked RESELLER mode.
+      if ((d.role || 'user') !== 'reseller') throw new Error('Unlock RESELLER mode first, then you can send your details for PRO RESELLER approval');
       if (pr.status === 'pending') throw new Error('Your details are already being verified by admin');
       if (pr.status === 'approved') throw new Error('You are already approved — just top up to activate PRO RESELLER');
       tx.set(userRef, {
@@ -700,7 +703,7 @@ router.post('/pro-reseller/apply', rateLimit({ windowMs: 10 * 60_000, max: 6, na
       return d;
     });
   } catch (e) {
-    return res.status(409).json({ success: false, error: e.message });
+    return res.status(e.message.startsWith('Unlock RESELLER') ? 403 : 409).json({ success: false, error: e.message });
   }
   invalidateUserDoc(req.uid);
 
