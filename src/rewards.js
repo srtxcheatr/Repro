@@ -37,6 +37,10 @@ export const MISSIONS = [
   { id: 'm250', keys: 250, title: 'Sell 250 Keys', badge: 'R', banner: 'comet', profile: 'comet_aura' },
   // ★ STAR tier — 500 keys: badge / banner / profile effect open TODAY.
   { id: 'm500', keys: 500, title: 'Sell 500 Keys — STAR', badge: 'S', banner: 'star_royal', profile: 'star_aura' },
+  // NEW legendary effects (effects only — no money). Change the key counts here if you want them easier / harder.
+  { id: 'm750',  keys: 750,  title: 'Sell 750 Keys — INFERNO', banner: 'inferno_flow', profile: 'inferno_aura' },
+  { id: 'm1000', keys: 1000, title: 'Sell 1000 Keys — AURORA', banner: 'aurora_flow', profile: 'aurora_aura' },
+  { id: 'm1500', keys: 1500, title: 'Sell 1500 Keys — NEON', banner: 'neon_flow', profile: 'neon_aura' },
 
   // --- CASHBACK missions (cb: true) ---------------------------------------------
   // STOPPED until STAR_CASHBACK_FROM (20 Oct 2026, 00:00 Nepal). They count ONLY keys
@@ -49,8 +53,8 @@ export const MISSIONS = [
 
 // The ids the website knows how to draw (assets/js/rewards-ui.js + rewards.css).
 export const BADGES = ['silver_crown', 'gold_crown', 'diamond', 'T', 'R', 'S'];
-export const BANNERS = ['gold_flow', 'dark_flow', 'comet', 'star_royal'];
-export const PROFILES = ['gold_aura', 'dark_aura', 'comet_aura', 'star_aura'];
+export const BANNERS = ['gold_flow', 'dark_flow', 'comet', 'star_royal', 'inferno_flow', 'aurora_flow', 'neon_flow'];
+export const PROFILES = ['gold_aura', 'dark_aura', 'comet_aura', 'star_aura', 'inferno_aura', 'aurora_aura', 'neon_aura'];
 
 const missionById = (id) => MISSIONS.find((m) => m.id === id) || null;
 const rewardsRef = (uid) => db().collection(COL).doc(uid);
