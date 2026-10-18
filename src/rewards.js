@@ -19,6 +19,14 @@ import { activeBan } from './ban.js';
 
 const COL = 'userRewards';
 
+// ---- STAR cashback (change the amount / date here, or via env) --------------
+// STAR CASHBACK: a claim that opens on STAR_CASHBACK_FROM. Only keys bought AFTER that
+// moment are counted (users/{uid}.starCb.keys starts from 0 then) — old purchases never count.
+// Every STAR_CB_EVERY new keys = one claim of STAR_CB_AMOUNT (NRP). Needs the STAR mission (500 keys).
+export const STAR_CB_EVERY = Number(process.env.STAR_CB_EVERY) > 0 ? Number(process.env.STAR_CB_EVERY) : 10;
+export const STAR_CB_AMOUNT = Number(process.env.STAR_CB_AMOUNT) > 0 ? Number(process.env.STAR_CB_AMOUNT) : 300;
+export const STAR_CASHBACK_FROM = Date.parse(process.env.STAR_CASHBACK_FROM || '2026-10-20T00:00:00+05:45');
+
 // ---- the missions (edit here to change thresholds / rewards) ---------------
 export const MISSIONS = [
   { id: 'm10',  keys: 10,  title: 'Sell 10 Keys',  cashback: 100 },
@@ -28,12 +36,14 @@ export const MISSIONS = [
   { id: 'm70',  keys: 70,  title: 'Sell 70 Keys',  badge: 'diamond', banner: 'gold_flow', profile: 'gold_aura' },
   { id: 'm100', keys: 100, title: 'Sell 100 Keys', cashback: 300, badge: 'T', banner: 'dark_flow', profile: 'dark_aura' },
   { id: 'm250', keys: 250, title: 'Sell 250 Keys', cashback: 1000, badge: 'R', banner: 'comet', profile: 'comet_aura' },
+  // ★ STAR tier — 500 keys. The badge / banner / profile effect open TODAY.
+  { id: 'm500', keys: 500, title: 'Sell 500 Keys — STAR', badge: 'S', banner: 'star_royal', profile: 'star_aura' },
 ];
 
 // The ids the website knows how to draw (assets/js/rewards-ui.js + rewards.css).
-export const BADGES = ['silver_crown', 'gold_crown', 'diamond', 'T', 'R'];
-export const BANNERS = ['gold_flow', 'dark_flow', 'comet'];
-export const PROFILES = ['gold_aura', 'dark_aura', 'comet_aura'];
+export const BADGES = ['silver_crown', 'gold_crown', 'diamond', 'T', 'R', 'S'];
+export const BANNERS = ['gold_flow', 'dark_flow', 'comet', 'star_royal'];
+export const PROFILES = ['gold_aura', 'dark_aura', 'comet_aura', 'star_aura'];
 
 const missionById = (id) => MISSIONS.find((m) => m.id === id) || null;
 const rewardsRef = (uid) => db().collection(COL).doc(uid);
@@ -72,9 +82,10 @@ export function botCosmetics(b) {
 }
 
 /** Full state for the Reward Center page. */
-export async function getRewardState(uid, totalKeysBought) {
+export async function getRewardState(uid, totalKeysBought, userData = {}) {
   const snap = await rewardsRef(uid).get();
   const r = snap.exists ? snap.data() : {};
+  const u = userData || {};
   const claimed = r.claimed || {};
   const total = Number(totalKeysBought || 0);
   return {
@@ -84,6 +95,12 @@ export async function getRewardState(uid, totalKeysBought) {
       cashback: m.cashback || 0, badge: m.badge || '', banner: m.banner || '', profile: m.profile || '',
       claimed: !!claimed[m.id], claimedAt: claimed[m.id] || null, ready: total >= m.keys,
     })),
+    star: {
+      member: !!claimed.m500, from: STAR_CASHBACK_FROM, active: Date.now() >= STAR_CASHBACK_FROM,
+      every: STAR_CB_EVERY, amount: STAR_CB_AMOUNT,
+      newKeys: Number(u.starCb?.keys || 0), claimedCount: Number(r.starClaimed || 0), earned: Number(r.starEarned || 0),
+      available: Date.now() >= STAR_CASHBACK_FROM && claimed.m500 ? Math.max(0, Math.floor(Number(u.starCb?.keys || 0) / STAR_CB_EVERY) - Number(r.starClaimed || 0)) : 0,
+    },
     unlocked: unlockedFrom(claimed),
     equipped: cleanEquipped(r.equipped, claimed),
   };
@@ -168,3 +185,38 @@ export async function cosmeticsFor(uids) {
   return out;
 }
 export const NO_COSMETICS = Object.freeze({ badge: '', banner: '', profile: '' });
+
+// ---- STAR cashback: count NEW keys only -------------------------------------
+/** Fields to merge into the user doc when keys are bought. Empty before STAR_CASHBACK_FROM, so old buys never count. */
+export function newKeyFields(keys, now = Date.now()) {
+  if (now < STAR_CASHBACK_FROM || !(keys > 0)) return {};
+  return { starCb: { keys: admin.firestore.FieldValue.increment(keys) } };
+}
+
+/** Claim every finished batch of new keys. Locked until STAR_CASHBACK_FROM. One transaction = no double pay. */
+export async function claimStarCashback(uid) {
+  if (Date.now() < STAR_CASHBACK_FROM) {
+    const d = new Date(STAR_CASHBACK_FROM).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kathmandu' });
+    throw new RuleError(`STAR cashback opens on ${d}, 12:00 AM.`, 403, { code: 'NOT_OPEN_YET', startsAt: STAR_CASHBACK_FROM });
+  }
+  const userRef = db().collection('users').doc(uid);
+  const rRef = rewardsRef(uid);
+  return db().runTransaction(async (tx) => {
+    const [uSnap, rSnap] = await Promise.all([tx.get(userRef), tx.get(rRef)]);
+    const u = uSnap.exists ? uSnap.data() : {};
+    const r = rSnap.exists ? rSnap.data() : {};
+    if (activeBan(u)) throw new RuleError('Your account is banned.', 403);
+    if (!(r.claimed && r.claimed.m500)) throw new RuleError('Claim the STAR mission (500 keys) first.', 403);
+    const newKeys = Number(u.starCb?.keys || 0);
+    const done = Number(r.starClaimed || 0);
+    const batches = Math.floor(newKeys / STAR_CB_EVERY) - done;
+    if (batches < 1) throw new RuleError(`Buy ${STAR_CB_EVERY - (newKeys % STAR_CB_EVERY)} more new key(s) to unlock the next cashback.`, 400);
+    const cash = round2(batches * STAR_CB_AMOUNT);
+    const newBalance = round2(Number(u.balance || 0) + cash);
+    const log = Array.isArray(u.adminLog) ? [...u.adminLog] : [];
+    log.push({ delta: cash, note: `STAR cashback — ${batches} x ${STAR_CB_EVERY} new keys`, resultingBalance: newBalance, at: new Date().toISOString() });
+    tx.set(userRef, { balance: newBalance, adminLog: log }, { merge: true });
+    tx.set(rRef, { starClaimed: done + batches, starEarned: round2(Number(r.starEarned || 0) + cash), updatedAt: Date.now() }, { merge: true });
+    return { cash, batches, newBalance, user: u };
+  });
+}
