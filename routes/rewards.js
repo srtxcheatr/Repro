@@ -26,7 +26,7 @@ const fail = (res, e) => {
 router.get('/', asyncHandler(async (req, res) => {
   const snap = await getUserDoc(req.uid);
   const total = snap.exists ? Number(snap.data.totalKeysBought || 0) : 0;
-  res.json({ success: true, ...(await getRewardState(req.uid, total)) });
+  res.json({ success: true, ...(await getRewardState(req.uid, total, snap.exists ? snap.data : {})) });
 }));
 
 router.post('/claim', asyncHandler(async (req, res) => {

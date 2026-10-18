@@ -1,4 +1,5 @@
 import express from 'express';
+import { isStarMember, starCashback, starCashbackFields, STAR_CASHBACK_PCT } from '../src/rewards.js';
 import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { asyncHandler } from '../src/asyncHandler.js';
@@ -244,6 +245,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
 
     const result = await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
+      const star = await isStarMember(uid, tx);   // STAR cashback (new purchases only)
       const currentBalance = snap.exists ? Number(snap.data().balance || 0) : 0;
 
       if (currentBalance < realPrice) {
@@ -258,7 +260,8 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       setJob(jobId, { percent: 80, label: 'Server connected...' });
 
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
-      const newBalance = currentBalance - realPrice;
+      const cash = starCashback(star, realPrice);
+      const newBalance = Math.round((currentBalance - realPrice + cash) * 100) / 100;
       const historyEntry = {
         at: new Date().toISOString(), sku, row: product.row, name: product.name, duration: product.duration,
         price: realPrice, key, buyerName, buyerWa,
@@ -266,15 +269,23 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
       purchaseHistory.push(historyEntry);
 
+      const extra = {};
+      if (cash > 0) {
+        const log = snap.exists && Array.isArray(snap.data().adminLog) ? [...snap.data().adminLog] : [];
+        log.push({ delta: cash, note: `STAR cashback ${STAR_CASHBACK_PCT}% — ${product.name}`, resultingBalance: newBalance, at: new Date().toISOString() });
+        extra.adminLog = log;
+        Object.assign(extra, starCashbackFields(1, cash));
+      }
       tx.set(userRef, {
         balance: newBalance, purchaseHistory,
         totalKeysBought: admin.firestore.FieldValue.increment(1),
         totalSpent: admin.firestore.FieldValue.increment(realPrice),
+        ...extra,
       }, { merge: true });
       // currentBalance/newBalance travel out of the transaction here so
       // the Telegram message below can show the before/after NRP amounts
       // — they weren't being returned at all before this change.
-      return { key, newBalance, currentBalance, entry: historyEntry };
+      return { key, newBalance, currentBalance, entry: historyEntry, cashback: cash };
     });
     invalidateUserDoc(uid);
     leaderboardCache.invalidate(); // this sale may change the top-10 (next read = one 10-doc query)
