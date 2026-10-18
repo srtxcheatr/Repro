@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
 import resellerApiRoutes from './routes/reseller-api.js';
 import resellerPortalRoutes from './routes/reseller-portal.js';
+import rewardsRoutes from './routes/rewards.js';
 import telegramTopupRoutes from './routes/telegram-topup.js';
 import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/catalog.js';
@@ -168,6 +169,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/glory', gloryRoutes);
+// Reward Center: missions, cashback, badges + banner / profile effects.
+app.use('/api/rewards', rewardsRoutes);
 // Telegram button presses (Load ✅ / Cancel ❌) for QR top-ups.
 app.use('/api/telegram', telegramTopupRoutes);
 
