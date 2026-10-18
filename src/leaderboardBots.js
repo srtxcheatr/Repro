@@ -11,9 +11,9 @@
 //   keysBought    "Bought key"  — fully customizable
 //   spent         "Spend"       — fully customizable (NRP)
 //   badge         '' | 'gold' | 'silver' | 'bronze'  (crown badge)
-//   avatarBadge   '' | silver_crown | gold_crown | diamond | T | R      (Reward Center badge)
-//   bannerEffect  '' | gold_flow | dark_flow | comet                    (leaderboard banner effect)
-//   profileEffect '' | gold_aura | dark_aura | comet_aura               (profile view effect)
+//   avatarBadge   '' | silver_crown | gold_crown | diamond | T | R | S      (Reward Center badge)
+//   bannerEffect  '' | gold_flow | dark_flow | comet | star_royal                    (leaderboard banner effect)
+//   profileEffect '' | gold_aura | dark_aura | comet_aura | star_aura               (profile view effect)
 //
 // Their board id is  "bot_<docId>"  so the website's "View" button and
 // /api/user/public-profile can tell them apart from real Firebase uids.
