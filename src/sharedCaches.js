@@ -4,6 +4,7 @@
 import { db } from './firebase.js';
 import { cachedLoader, TTL } from './cache.js';
 import { listBots, botToBoardRow } from './leaderboardBots.js';
+import { cosmeticsFor, NO_COSMETICS } from './rewards.js';
 
 // Top 10 by lifetime keys bought. Only name/counts/avatar are exposed,
 // never email/phone/balance, since every logged-in user can see this list.
@@ -23,8 +24,14 @@ export const leaderboardCache = cachedLoader(async () => {
       totalKeysBought: Number(d.totalKeysBought || 0),
       totalSpent: Number(d.totalSpent || 0),
       badge: '',
+      cosmetics: NO_COSMETICS,
     };
   });
+  // Reward Center: what each real player chose to wear (one batched read, cached with the board).
+  try {
+    const worn = await cosmeticsFor(real.map((r) => r.uid));
+    real.forEach((r) => { r.cosmetics = worn.get(r.uid) || NO_COSMETICS; });
+  } catch (e) { console.error('[leaderboard] cosmetics failed:', e.message); }
   return [...real, ...bots.map(botToBoardRow)]
     .filter((row) => row.totalKeysBought > 0)
     .sort((a, b) => b.totalKeysBought - a.totalKeysBought || b.totalSpent - a.totalSpent)

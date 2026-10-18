@@ -11,11 +11,15 @@
 //   keysBought    "Bought key"  — fully customizable
 //   spent         "Spend"       — fully customizable (NRP)
 //   badge         '' | 'gold' | 'silver' | 'bronze'  (crown badge)
+//   avatarBadge   '' | silver_crown | gold_crown | diamond | T | R      (Reward Center badge)
+//   bannerEffect  '' | gold_flow | dark_flow | comet                    (leaderboard banner effect)
+//   profileEffect '' | gold_aura | dark_aura | comet_aura               (profile view effect)
 //
 // Their board id is  "bot_<docId>"  so the website's "View" button and
 // /api/user/public-profile can tell them apart from real Firebase uids.
 import { db } from './firebase.js';
 import { normalizeUrlField, RuleError } from './profileRules.js';
+import { BADGES as AVATAR_BADGES, BANNERS, PROFILES, botCosmetics } from './rewards.js';
 
 const COL = 'leaderboardBots';
 export const BOT_PREFIX = 'bot_';
@@ -69,6 +73,22 @@ export function cleanBotInput(body, { partial = false } = {}) {
     if (!BADGES.includes(b)) throw new RuleError('Badge must be none, gold, silver or bronze.');
     out.badge = b;
   }
+  // Reward Center cosmetics — the admin can give a promo entry any of them.
+  if (has('avatarBadge')) {
+    const v = String(body.avatarBadge ?? '').trim();
+    if (v && !AVATAR_BADGES.includes(v)) throw new RuleError('Unknown avatar badge.');
+    out.avatarBadge = v;
+  }
+  if (has('bannerEffect')) {
+    const v = String(body.bannerEffect ?? '').trim();
+    if (v && !BANNERS.includes(v)) throw new RuleError('Unknown banner effect.');
+    out.bannerEffect = v;
+  }
+  if (has('profileEffect')) {
+    const v = String(body.profileEffect ?? '').trim();
+    if (v && !PROFILES.includes(v)) throw new RuleError('Unknown profile effect.');
+    out.profileEffect = v;
+  }
   return out;
 }
 
@@ -117,5 +137,6 @@ export function botToBoardRow(b) {
     totalKeysBought: Number(b.keysBought || 0),
     totalSpent: Number(b.spent || 0),
     badge: b.badge || '',
+    cosmetics: botCosmetics(b),
   };
 }
