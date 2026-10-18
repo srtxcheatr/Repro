@@ -29,15 +29,22 @@ export const STAR_CASHBACK_FROM = Date.parse(process.env.STAR_CASHBACK_FROM || '
 
 // ---- the missions (edit here to change thresholds / rewards) ---------------
 export const MISSIONS = [
-  { id: 'm10',  keys: 10,  title: 'Sell 10 Keys',  cashback: 100 },
-  { id: 'm20',  keys: 20,  title: 'Sell 20 Keys',  cashback: 100 },
+  // --- unlock badges / effects (counted on ALL keys bought, claimable now; no money) ---
   { id: 'm30',  keys: 30,  title: 'Sell 30 Keys',  badge: 'silver_crown' },
   { id: 'm45',  keys: 45,  title: 'Sell 45 Keys',  badge: 'gold_crown' },
   { id: 'm70',  keys: 70,  title: 'Sell 70 Keys',  badge: 'diamond', banner: 'gold_flow', profile: 'gold_aura' },
-  { id: 'm100', keys: 100, title: 'Sell 100 Keys', cashback: 300, badge: 'T', banner: 'dark_flow', profile: 'dark_aura' },
-  { id: 'm250', keys: 250, title: 'Sell 250 Keys', cashback: 1000, badge: 'R', banner: 'comet', profile: 'comet_aura' },
-  // ★ STAR tier — 500 keys. The badge / banner / profile effect open TODAY.
+  { id: 'm100', keys: 100, title: 'Sell 100 Keys', badge: 'T', banner: 'dark_flow', profile: 'dark_aura' },
+  { id: 'm250', keys: 250, title: 'Sell 250 Keys', badge: 'R', banner: 'comet', profile: 'comet_aura' },
+  // ★ STAR tier — 500 keys: badge / banner / profile effect open TODAY.
   { id: 'm500', keys: 500, title: 'Sell 500 Keys — STAR', badge: 'S', banner: 'star_royal', profile: 'star_aura' },
+
+  // --- CASHBACK missions (cb: true) ---------------------------------------------
+  // STOPPED until STAR_CASHBACK_FROM (20 Oct 2026, 00:00 Nepal). They count ONLY keys
+  // bought AFTER that moment (users/{uid}.starCb.keys) — old purchases never count.
+  { id: 'c10',  keys: 10,  title: 'Buy 10 New Keys',  cashback: 100, cb: true },
+  { id: 'c20',  keys: 20,  title: 'Buy 20 New Keys',  cashback: 100, cb: true },
+  { id: 'c100', keys: 100, title: 'Buy 100 New Keys', cashback: 300, cb: true },
+  { id: 'c250', keys: 250, title: 'Buy 250 New Keys', cashback: 1000, cb: true },
 ];
 
 // The ids the website knows how to draw (assets/js/rewards-ui.js + rewards.css).
@@ -90,11 +97,15 @@ export async function getRewardState(uid, totalKeysBought, userData = {}) {
   const total = Number(totalKeysBought || 0);
   return {
     totalKeysBought: total,
-    missions: MISSIONS.map((m) => ({
-      id: m.id, keys: m.keys, title: m.title,
-      cashback: m.cashback || 0, badge: m.badge || '', banner: m.banner || '', profile: m.profile || '',
-      claimed: !!claimed[m.id], claimedAt: claimed[m.id] || null, ready: total >= m.keys,
-    })),
+    missions: MISSIONS.map((m) => {
+      const open = !m.cb || Date.now() >= STAR_CASHBACK_FROM;
+      const have = m.cb ? (open ? Number(u.starCb?.keys || 0) : 0) : total;   // cashback missions: NEW keys only
+      return {
+        id: m.id, keys: m.keys, title: m.title, cb: !!m.cb, have, locked: !open, opensAt: m.cb ? STAR_CASHBACK_FROM : 0,
+        cashback: m.cashback || 0, badge: m.badge || '', banner: m.banner || '', profile: m.profile || '',
+        claimed: !!claimed[m.id], claimedAt: claimed[m.id] || null, ready: open && have >= m.keys,
+      };
+    }),
     star: {
       member: !!claimed.m500, from: STAR_CASHBACK_FROM, active: Date.now() >= STAR_CASHBACK_FROM,
       every: STAR_CB_EVERY, amount: STAR_CB_AMOUNT,
@@ -126,7 +137,10 @@ export async function claimMission(uid, missionId) {
     if (activeBan(u)) throw new RuleError('Your account is banned.', 403);
     const claimed = { ...(r.claimed || {}) };
     if (claimed[m.id]) throw new RuleError('You already claimed this reward.', 409);
-    const total = Number(u.totalKeysBought || 0);
+    if (m.cb && Date.now() < STAR_CASHBACK_FROM) {
+      throw new RuleError('Cashback opens on 20 October 2026, 12:00 AM.', 403, { code: 'NOT_OPEN_YET', startsAt: STAR_CASHBACK_FROM });
+    }
+    const total = m.cb ? Number(u.starCb?.keys || 0) : Number(u.totalKeysBought || 0);   // cashback = new keys only
     if (total < m.keys) throw new RuleError(`Not unlocked yet — you have ${total} of ${m.keys} keys.`, 400);
 
     claimed[m.id] = Date.now();
