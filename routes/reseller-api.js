@@ -23,7 +23,7 @@
 // No CORS headers on purpose: this is a server-to-server API (PHP / Node /
 // Python), and browsers should not be able to call it from some random site.
 
-import { isStarMember, starCashback, starCashbackFields, STAR_CASHBACK_PCT } from '../src/rewards.js';
+import { newKeyFields } from '../src/rewards.js';
 import { isResellerTier } from '../src/proTier.js';
 import express from 'express';
 import crypto from 'crypto';
@@ -227,26 +227,12 @@ async function processBuy(auth, body) {
     };
 
     try {
-      // STAR cashback: only on purchases made now (>= 20 Oct); old orders never count.
-      let cash = 0;
-      const extra = {};
-      if (delivered > 0) {
-        try {
-          cash = starCashback(await isStarMember(uid), charged);
-          if (cash > 0) {
-            extra.balance = admin.firestore.FieldValue.increment(round2(refund + cash));
-            extra.adminLog = admin.firestore.FieldValue.arrayUnion({ delta: cash, note: `STAR cashback ${STAR_CASHBACK_PCT}% — API order ${orderId}`, resultingBalance: round2(balanceAfter + cash), at: new Date().toISOString() });
-            Object.assign(extra, starCashbackFields(delivered, cash));
-            finished.cashback = cash; finished.balanceAfter = round2(balanceAfter + cash);
-          }
-        } catch (e) { console.error('[reseller-api] star cashback skipped', e.message); }
-      }
       const batch = db().batch();
       batch.update(userRef, {
         balance: admin.firestore.FieldValue.increment(refund),
         totalKeysBought: admin.firestore.FieldValue.increment(delivered),
         totalSpent: admin.firestore.FieldValue.increment(charged),
-        ...extra,
+        ...(delivered > 0 ? newKeyFields(delivered) : {}),   // new keys after 20 Oct only
       });
       batch.update(orderRef, finished);
       await batch.commit();

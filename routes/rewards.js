@@ -10,7 +10,7 @@ import { rateLimit } from '../src/security.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { leaderboardCache } from '../src/sharedCaches.js';
 import { RuleError } from '../src/profileRules.js';
-import { getRewardState, claimMission, setEquipped } from '../src/rewards.js';
+import { getRewardState, claimMission, setEquipped, claimStarCashback } from '../src/rewards.js';
 import { telegramNotify, esc } from '../src/telegram.js';
 
 const router = express.Router();
@@ -45,6 +45,14 @@ router.post('/claim', asyncHandler(async (req, res) => {
     success: true, id: r.mission.id, cashback: r.cashback, newBalance: r.newBalance,
     equipped: r.equipped, unlocked: r.unlocked,
   });
+}));
+
+router.post('/claim-star', asyncHandler(async (req, res) => {
+  let r;
+  try { r = await claimStarCashback(req.uid); } catch (e) { return fail(res, e); }
+  invalidateUserDoc(req.uid);
+  telegramNotify(`⭐ <b>STAR CASHBACK</b>\nNRP ${r.cash} (${r.batches} batch)\n✉️ ${esc(r.user.email || req.email || '—')}\n🆔 <code>${esc(req.uid)}</code>\nNRP balance now: ${esc(r.newBalance)}`, 'balance');
+  res.json({ success: true, cashback: r.cash, newBalance: r.newBalance });
 }));
 
 router.post('/equip', asyncHandler(async (req, res) => {
