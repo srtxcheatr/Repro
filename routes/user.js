@@ -13,6 +13,7 @@ import {
 } from '../src/profileRules.js';
 import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
+import { botCosmetics, cosmeticsFor, NO_COSMETICS } from '../src/rewards.js';
 import { rateLimit } from '../src/security.js';
 import { isResellerTier, proPublicState, PRO_MIN_TOPUP } from '../src/proTier.js';
 import { sendProRequestToBot } from '../src/proReseller.js';
@@ -250,6 +251,36 @@ router.get('/history', asyncHandler(async (req, res) => {
   res.json({ success: true, history: [...purchases].reverse() });
 }));
 
+// GET /api/user/api-history — the reseller's own API orders (placed through
+// /api/reseller/v1), newest first, for the "API" tab of history.php.
+// Every row carries the balance maths:  balanceBefore - paid = balanceAfter
+// (e.g. 1080 - 80 = 1000). Orders made before balanceBefore was recorded are
+// worked out from balanceAfter + paid, which is exactly the same number.
+router.get('/api-history', asyncHandler(async (req, res) => {
+  const snap = await db().collection('users').doc(req.uid).collection('apiOrders')
+    .orderBy('createdAt', 'desc').limit(100).get();
+  const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
+  const orders = snap.docs.map((d) => {
+    const o = d.data();
+    const qty = Number(o.quantity || 0);
+    const unit = Number(o.unitPrice || 0);
+    // Still processing: nothing is settled yet, the whole order is held (debited) up front.
+    const paid = o.status === 'processing' ? r2(qty * unit) : r2(o.charged);
+    const after = o.balanceAfter === undefined || o.balanceAfter === null ? null : r2(o.balanceAfter);
+    const before = o.balanceBefore !== undefined && o.balanceBefore !== null
+      ? r2(o.balanceBefore)
+      : (after === null ? null : r2(after + paid));
+    return {
+      orderId: o.orderId, status: o.status || 'processing', at: o.createdAt || 0,
+      product: o.productRow || o.productName || '—', duration: o.durationLabel || '',
+      quantity: qty, delivered: Number(o.delivered || 0), unitPrice: unit,
+      paid, refunded: r2(o.refunded), balanceBefore: before, balanceAfter: after,
+      keys: Array.isArray(o.keys) ? o.keys : [],
+    };
+  });
+  res.json({ success: true, orders });
+}));
+
 // POST /api/user/history-clear (disabled — see below)
 // Purchase history is permanent — users can no longer delete it.
 router.post('/history-clear', asyncHandler(async (req, res) => {
@@ -420,6 +451,7 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
       totalKeysBought: Number(b.keysBought || 0),
       totalSpent: Number(b.spent || 0),
       badge: b.badge || '',
+      cosmetics: botCosmetics(b),
     });
   }
 
@@ -427,9 +459,11 @@ router.get('/public-profile', asyncHandler(async (req, res) => {
   if (!snap.exists) return res.status(404).json({ success: false, error: 'User not found' });
 
   const d = snap.data;
+  const worn = await cosmeticsFor([uid]).catch(() => new Map()); // Reward Center badge + profile effect
   res.json({
     success: true,
     uid,
+    cosmetics: worn.get(uid) || NO_COSMETICS,
     avatarUrl: d.avatarUrl || '',
     name: d.profileName || (d.email ? d.email.split('@')[0] : 'Anonymous'),
     email: d.email || '',

@@ -186,6 +186,7 @@ async function processBuy(auth, body) {
       if (balance < total) { insufficient = { balance }; return; }
 
       balanceBefore = balance;
+      order.balanceBefore = round2(balance); // shown in history.php as  before − price = after
       order.balanceAfter = round2(balance - total);
       tx.update(userRef, { balance: order.balanceAfter });
       tx.set(orderRef, order);
