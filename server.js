@@ -31,7 +31,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(securityHeaders);
-app.use('/api/user/avatar', express.json({ limit: '800kb' }));
+app.use('/api/user/avatar', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
