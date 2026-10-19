@@ -1,5 +1,5 @@
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-const MAX_BASE64_CHARS = 700_000;
+const MAX_BASE64_CHARS = 1_500_000;
 
 function httpError(status, message) {
   const e = new Error(message);
