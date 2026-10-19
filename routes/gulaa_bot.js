@@ -1,0 +1,798 @@
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+import express from 'express';
+import admin from 'firebase-admin';
+import { asyncHandler } from '../src/asyncHandler.js';
+import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+import { rateLimit } from '../src/security.js';
+import { telegramNotify, esc } from '../src/telegram.js';
+import { invalidateUserDoc } from '../src/userCache.js';
+import { getStock, reserveSlot, returnSlot } from '../src/gloryStock.js';
+import { gloryCall, gloryConfigured, serialized, getRegions, nrpPriceForRole, isBasicRegion, GloryError } from '../src/gulaa_bot.js';
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+import { getUserDoc } from '../src/userCache.js';
+
+const router = express.Router();
+router.use(userCors);
+router.use(requireFirebaseUid);
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+const COL = 'gloryGroups';
+const maxGroups = () => Math.max(1, Number(process.env.GLORY_MAX_GROUPS_PER_USER || 5));
+
+const launching = new Set();
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+function pickId(o) {
+  if (!o || typeof o !== 'object') return '';
+  const v = o.group_id || o.groupId || o.id
+    || (o.group && (o.group.group_id || o.group.id))
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    || (o.data && (o.data.group_id || o.data.id));
+  return v ? String(v) : '';
+}
+
+async function findNewGroup(clanId) {
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const list = asList(await gloryCall('GET', '/api/client/my-groups')) || [];
+  const cands = list
+    .filter((g) => String(g.clan_id) === clanId)
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  for (const g of cands) {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const known = await db().collection(COL).doc(String(g.group_id)).get();
+    if (!known.exists) return String(g.group_id);
+  }
+  return '';
+}
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+async function upstreamGroupIds() {
+  try { return new Set((asList(await gloryCall('GET', '/api/client/my-groups', { timeoutMs: 15000 })) || []).map((g) => String(g.group_id))); }
+  catch (_) { return null; }
+}
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+async function recoverLaunchedGroup(clanId, before, rawText) {
+  const m = String(rawText || '').match(/group_?id["'\s:=]+(\d{6,})/i);
+  if (m) return m[1];
+  for (let i = 0; i < 4; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 3000));
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    try {
+      const list = asList(await gloryCall('GET', '/api/client/my-groups', { timeoutMs: 15000 })) || [];
+      const cands = list
+        .filter((g) => String(g.clan_id) === clanId && !(before && before.has(String(g.group_id))))
+        .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      for (const g of cands) {
+        const known = await db().collection(COL).doc(String(g.group_id)).get();
+        if (!known.exists) return String(g.group_id);
+      }
+    } catch (_) {  }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+  return '';
+}
+
+const asList = (v) => (Array.isArray(v) ? v : Array.isArray(v?.groups) ? v.groups : Array.isArray(v?.data) ? v.data : Array.isArray(v?.items) ? v.items : null);
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+function fail(res, e) {
+  if (e instanceof GloryError) {
+    const extra = process.env.GLORY_DEBUG === '1' && e.detail ? ` [${String(e.detail).slice(0, 220)}]` : '';
+    return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: e.message + extra });
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+  throw e;
+}
+
+function dig(o, keys, depth = 0) {
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (!o || typeof o !== 'object' || depth > 3) return undefined;
+  for (const k of keys) {
+    const v = o[k];
+    if (v !== undefined && v !== null && typeof v !== 'object') return v;
+  }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  for (const v of Object.values(o)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const r = dig(v, keys, depth + 1);
+      if (r !== undefined) return r;
+    }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+  return undefined;
+}
+function flat(o, prefix = '', out = {}, depth = 0) {
+  if (o === null || o === undefined) return out;
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (typeof o !== 'object') { out[prefix || 'value'] = o; return out; }
+  if (depth > 2) return out;
+  for (const [k, v] of Object.entries(o)) {
+    if (Object.keys(out).length >= 40) break;
+    if (v === null || v === undefined) continue;
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (Array.isArray(v)) out[prefix + k] = v.every((x) => typeof x !== 'object') ? v.join(', ') : `${v.length} items`;
+    else if (typeof v === 'object') flat(v, prefix + k + '.', out, depth + 1);
+    else out[prefix + k] = v;
+  }
+  return out;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}
+
+const detailsCache = new Map();
+const DETAILS_TTL = 40_000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+function groupAction(action, groupId, timeoutMs = 30000) {
+  return serialized(async () => {
+    for (let i = 0; ; i++) {
+      try {
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        const out = await gloryCall('POST', '/api/client/group-action', { body: { action, group_id: groupId }, timeoutMs });
+        if (out && typeof out === 'object' && (out.success === false || (out.error && out.success !== true))) {
+          throw new GloryError(String(out.error || 'Service returned an error.'), { status: 502 });
+        }
+        return out;
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      } catch (e) {
+        if (e instanceof GloryError && e.status === 409 && i < 2) { await sleep(1500); continue; }
+        throw e;
+      }
+    }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  });
+}
+const errText = (e) => (e instanceof GloryError ? `${e.message}${e.status ? ` (HTTP ${e.status})` : ''}` : 'Unexpected error');
+
+const LAST_MATCH_KEYS = [
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  'last_match_at', 'last_match_time', 'last_match', 'lastMatchAt', 'lastMatchTime', 'lastMatch',
+  'last_match_ts', 'last_game_at', 'last_game_time', 'last_game', 'last_played', 'last_played_at',
+  'last_active', 'last_activity',
+];
+const GAMES_KEYS = ['games', 'games_played', 'matches', 'match_count', 'matches_played', 'total_games', 'total_matches', 'game_count'];
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+function toIso(v) {
+  if (v === undefined || v === null || v === '') return null;
+  let d;
+  if (typeof v === 'number' || /^\d{9,13}$/.test(String(v))) {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const n = Number(v);
+    d = new Date(n < 1e12 ? n * 1000 : n);
+  } else {
+    let str = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(str)) str = str.replace(' ', 'T');
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) str += 'Z';
+    d = new Date(str);
+  }
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+const gloryMemory = new Map();
+function noteGlory(groupId, glory) {
+  const n = Number(glory);
+  if (!Number.isFinite(n)) return null;
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const prev = gloryMemory.get(groupId);
+  if (!prev) { gloryMemory.set(groupId, { glory: n, changedAt: null }); return null; }
+  if (n > prev.glory) { gloryMemory.set(groupId, { glory: n, changedAt: new Date().toISOString() }); }
+  else if (n !== prev.glory) { gloryMemory.set(groupId, { ...prev, glory: n }); }
+  return gloryMemory.get(groupId).changedAt;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}
+
+async function lastGrowthFromSnapshots(groupId) {
+  try {
+    const out = await groupAction_progress(groupId);
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const snaps = (Array.isArray(out?.snapshots) ? out.snapshots : [])
+      .map((x) => ({ at: toIso(x.captured_at), glory: Number(x.total_glory) }))
+      .filter((x) => x.at && Number.isFinite(x.glory))
+      .sort((a, b) => a.at.localeCompare(b.at));
+    for (let i = snaps.length - 1; i > 0; i--) {
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      if (snaps[i].glory > snaps[i - 1].glory) return { at: snaps[i].at, gain: snaps[i].glory - snaps[i - 1].glory };
+    }
+  } catch (_) {  }
+  return null;
+}
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+const groupAction_progress = (groupId) => serialized(() => gloryCall('GET', '/api/client/glory-progression', {
+  query: { group_id: groupId }, timeoutMs: 15000,
+}));
+
+const GLORY_KEY = /glory|score|point|honou?r|trophy/i;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+const NOT_GLORY = /rank|level|member|capacity|limit|goal|target|id$|_id|count$|num$|max|min|time|date|_at$/i;
+function gloryCandidates(objs) {
+  const out = [];
+  const walk = (o, path, depth) => {
+    if (!o || typeof o !== 'object' || depth > 4) return;
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    for (const [k, v] of Object.entries(o)) {
+      const p = path ? `${path}.${k}` : k;
+      if (v && typeof v === 'object') { if (!Array.isArray(v)) walk(v, p, depth + 1); continue; }
+      if (!GLORY_KEY.test(k) || NOT_GLORY.test(k)) continue;
+      if (typeof v === 'boolean' || v === '' || v === null) continue;
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      const n = Number(v);
+      if (Number.isFinite(n)) out.push({ key: k, path: p, n });
+    }
+  };
+  objs.forEach((o) => walk(o, '', 0));
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  return out;
+}
+function classifyGlory(g, c) {
+  const cands = gloryCandidates([g, c]);
+  const isWeek = (x) => /week/i.test(x.path);
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const isTotal = (x) => !isWeek(x) && /total|all.?time|lifetime|overall|cumulative|season|clan_?(glory|score|point)/i.test(x.path);
+  const weekly = cands.filter(isWeek);
+  const total = cands.filter(isTotal);
+  const rest = cands.filter((x) => !isWeek(x) && !isTotal(x));
+  let weeklyVal; let totalVal;
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (weekly.length) weeklyVal = weekly[0].n;
+  if (total.length) totalVal = Math.max(...total.map((x) => x.n));
+  const pool = rest.map((x) => x.n);
+  if (totalVal === undefined && pool.length) {
+    const big = Math.max(...pool);
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (weeklyVal === undefined && pool.some((n) => n < big)) { totalVal = big; weeklyVal = Math.max(...pool.filter((n) => n < big)); }
+    else if (weeklyVal === undefined || big > weeklyVal) totalVal = big;
+  }
+  if (weeklyVal === undefined && pool.length && totalVal !== undefined) {
+    const smaller = pool.filter((n) => n < totalVal);
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (smaller.length) weeklyVal = Math.max(...smaller);
+  }
+  return {
+    weekly: weeklyVal, total: totalVal,
+    keys: cands.slice(0, 20).map((x) => `${x.path}=${x.n}`),
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  };
+}
+
+const LAST_MATCH_RX = /last.*(match|game|battle|play|round)|(match|game|battle).*(time|at|ts|date)$/i;
+function findLastMatchDeep(objs) {
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  let found;
+  const walk = (o, depth) => {
+    if (found || !o || typeof o !== 'object' || depth > 4) return;
+    for (const [k, v] of Object.entries(o)) {
+      if (v && typeof v === 'object') { if (!Array.isArray(v)) walk(v, depth + 1); continue; }
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      if (LAST_MATCH_RX.test(k)) { const iso = toIso(v); if (iso) { found = iso; return; } }
+    }
+  };
+  objs.forEach((o) => walk(o, 0));
+  return found;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}
+
+async function loadDetails(groupId, fresh = false, listRow = null) {
+  const hit = detailsCache.get(groupId);
+  if (!fresh && hit && Date.now() - hit.at < DETAILS_TTL) return hit.data;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+  const errors = {};
+  let g = null; let c = null;
+  try { g = await groupAction('get-glory', groupId); } catch (e) { errors.glory = errText(e); }
+  try { c = await groupAction('get-clan-info', groupId); } catch (e) { errors.clan = errText(e); }
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+  if (g === null && c === null) {
+    if (hit) return { ...hit.data, stale: true, errors };
+    const err = new GloryError(`Live info unavailable — ${Object.entries(errors).map(([k, v]) => `${k}: ${v}`).join('; ')}`, { status: 502 });
+    throw err;
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+
+  const gloryVal = typeof g === 'number' ? g : dig(g, ['glory', 'total_glory', 'points', 'score', 'clan_glory']);
+  const split = classifyGlory(typeof g === 'object' ? g : null, c);
+  const weeklyGlory = typeof g === 'number' ? g : split.weekly;
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const totalGlory = split.total;
+  const data = {
+    weeklyGlory,
+    totalGlory,
+    gloryKeys: split.keys,
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    clanName: dig(c, ['clan_name', 'clanName', 'name', 'guild_name']) ?? dig(g, ['clan_name', 'clanName']),
+    level: dig(c, ['clan_level', 'clanLevel', 'level']),
+    members: dig(c, ['member_num', 'member_count', 'memberCount', 'members', 'current_members']),
+    capacity: dig(c, ['capacity', 'member_capacity', 'max_members', 'maxMembers', 'max_member']),
+    captain: dig(c, ['captain_id', 'captainId', 'captain', 'leader_id', 'leader']),
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    glory: weeklyGlory ?? gloryVal ?? 0,
+    games: dig(g, GAMES_KEYS) ?? dig(c, GAMES_KEYS),
+    clan: flat(c),
+    gloryInfo: flat(typeof g === 'object' ? g : { glory: g }),
+    errors,
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    updatedAt: new Date().toISOString(),
+    raw: JSON.stringify({ glory: g, clan: c }).slice(0, 800),
+  };
+  let lastMatchAt = toIso(dig(g, LAST_MATCH_KEYS) ?? dig(c, LAST_MATCH_KEYS) ?? (listRow && dig(listRow, LAST_MATCH_KEYS))) || findLastMatchDeep([g, c, listRow]) || null;
+  let lastMatchSource = lastMatchAt ? 'upstream' : '';
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const seen = noteGlory(groupId, data.glory);
+  if (!lastMatchAt && seen) { lastMatchAt = seen; lastMatchSource = 'live'; }
+  if (!lastMatchAt) {
+    const snap = await lastGrowthFromSnapshots(groupId);
+    if (snap) { lastMatchAt = snap.at; lastMatchSource = 'history'; data.lastMatchGain = snap.gain; }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+  data.lastMatchAt = lastMatchAt;
+  data.lastMatchSource = lastMatchSource;
+  detailsCache.set(groupId, { at: Date.now(), data });
+  return data;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}
+
+async function ownGroup(req, res) {
+  const gid = String(req.query.group_id || '').trim();
+  if (!gid) { res.status(400).json({ success: false, error: 'Missing group_id.' }); return null; }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const doc = await db().collection(COL).doc(gid).get();
+  if (!doc.exists || doc.data().uid !== req.uid || ['deleted', 'refunded'].includes(doc.data().status)) {
+    res.status(404).json({ success: false, error: 'Group not found.' });
+    return null;
+  }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  return doc.data();
+}
+
+router.get('/regions', asyncHandler(async (req, res) => {
+  try {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const p = await getRegions();
+    const u = await getUserDoc(req.uid);
+    const priceNrp = nrpPriceForRole((u.data && u.data.role) || 'user');
+    const regions = (p.regions || [])
+      .filter(isBasicRegion)
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      .map((r) => ({
+        id: r.id, name: r.region_name, code: r.region_code,
+        priceNrp,
+      }));
+    let stock = null;
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    try { stock = await getStock(); } catch (_) {  }
+    res.json({ success: true, configured: gloryConfigured(), regions, maxGroups: maxGroups(), stock });
+  } catch (e) { return fail(res, e); }
+}));
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+function uptimeMinutes(str) {
+  if (!str) return 0;
+  const m = String(str).match(/(?:(\d+)\s*d)?\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i) || [];
+  return (+m[1] || 0) * 1440 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+const ARCHIVE_GRACE_MS = 3 * 60 * 1000;
+
+router.get('/groups', asyncHandler(async (req, res) => {
+  const snap = await db().collection(COL).where('uid', '==', req.uid).get();
+  const mine = snap.docs.map((d) => d.data()).filter((g) => g.status === 'running' || g.status === 'stopped');
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+  let live = new Map();
+  let liveOk = false;
+  if (mine.length && gloryConfigured()) {
+    try {
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      const list = asList(await gloryCall('GET', '/api/client/my-groups'));
+      if (list) { live = new Map(list.map((g) => [String(g.group_id), g])); liveOk = true; }
+    } catch (_) {  }
+  }
+
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const groups = [];
+  const toArchive = [];
+  const toSaveBots = [];
+  for (const g of mine) {
+    const l = live.get(String(g.groupId));
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (l && l.container_count && Number(g.botCount || 0) !== Number(l.container_count)) toSaveBots.push({ id: g.groupId, n: Number(l.container_count) });
+    const old = Date.now() - new Date(g.createdAt || 0).getTime() > ARCHIVE_GRACE_MS;
+    const status = l ? l.status : (liveOk ? 'ended' : (g.status || 'unknown'));
+    const finished = status === 'ended' || (status === 'stopped' && l && uptimeMinutes(l.uptime) >= 480);
+    if (finished && old && liveOk) { toArchive.push({ g, uptime: l ? l.uptime : '' }); continue; }
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    groups.push({
+      groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
+      price: g.price, createdAt: g.createdAt, status,
+      uptime: l ? l.uptime : '',
+      botCount: l ? l.container_count : (g.botCount || 0),
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      running: l ? l.running_count : 0,
+    });
+  }
+
+  if (toArchive.length || toSaveBots.length) {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    try {
+      const batch = db().batch();
+      for (const t of toSaveBots) batch.set(db().collection(COL).doc(t.id), { botCount: t.n }, { merge: true });
+      for (const { g, uptime } of toArchive) {
+        batch.set(db().collection(COL).doc(g.groupId), {
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          status: 'ended', endedAt: new Date().toISOString(), lastUptime: uptime || '',
+          botCount: g.botCount || 0,
+        }, { merge: true });
+      }
+      await batch.commit();
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    } catch (e) { console.error('[glory] archive failed', e); }
+  }
+
+  groups.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.json({ success: true, groups });
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}));
+
+router.get('/history', asyncHandler(async (req, res) => {
+  const snap = await db().collection(COL).where('uid', '==', req.uid).get();
+  const items = snap.docs.map((d) => d.data())
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    .filter((g) => ['ended', 'deleted', 'refunded'].includes(g.status))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((g) => ({
+      groupId: g.groupId, clanId: g.clanId, region: g.regionName || g.region,
+      price: Number(g.price || 0), botCount: Number(g.botCount || 0),
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      status: g.status, createdAt: g.createdAt, endedAt: g.endedAt || g.deletedAt || g.refundedAt || null,
+    }));
+  res.json({ success: true, history: items });
+}));
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+router.post('/history-clear', asyncHandler(async (req, res) => {
+  res.status(403).json({ success: false, error: 'History cannot be deleted.' });
+}));
+
+router.post('/launch', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-launch' }), asyncHandler(async (req, res) => {
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const regionId = String(req.body?.region || '').trim();
+  const clanId = String(req.body?.clan_id || '').trim();
+  if (!/^\d{5,15}$/.test(clanId)) {
+    return res.status(400).json({ success: false, error: 'Enter a valid Clan ID (numbers only).' });
+  }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (!gloryConfigured()) {
+    return res.status(503).json({ success: false, error: 'FF Glory is not available right now.' });
+  }
+  if (launching.has(req.uid)) {
+    return res.status(409).json({ success: false, error: 'A launch is already in progress.' });
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  }
+  launching.add(req.uid);
+  let slot = null;
+  let keepSlot = false;
+
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  try {
+    let region;
+    try {
+      region = ((await getRegions()).regions || []).find((r) => r.id === regionId && isBasicRegion(r));
+    } catch (e) { return fail(res, e); }
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (!region) return res.status(400).json({ success: false, error: 'Invalid or disabled region.' });
+
+    const udoc = await db().collection('users').doc(req.uid).get();
+    const role = (udoc.exists && udoc.data().role) || 'user';
+    const price = nrpPriceForRole(role);
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+    const existing = await db().collection(COL).where('uid', '==', req.uid).get();
+    const active = existing.docs.filter((d) => d.data().status === 'running').length;
+    if (active >= maxGroups()) {
+      return res.status(403).json({ success: false, error: `You can run up to ${maxGroups()} groups at once. Stop or delete one first.` });
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    }
+
+    slot = await reserveSlot();
+    if (!slot.ok) {
+      return res.status(409).json({
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        success: false, code: 'OUT_OF_STOCK', stock: slot.stock,
+        error: 'FF Glory Bot is out of stock right now. Please check back soon.',
+      });
+    }
+
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const userRef = db().collection('users').doc(req.uid);
+    const charged = await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      const data = snap.exists ? snap.data() : {};
+      const balance = Number(data.balance || 0);
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      if (balance < price) return { ok: false, balance };
+      tx.set(userRef, {
+        balance: balance - price,
+        totalSpent: admin.firestore.FieldValue.increment(price),
+      }, { merge: true });
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      return { ok: true, balance, newBalance: balance - price, label: data.profileName || req.email };
+    });
+    if (!charged.ok) {
+      return res.status(402).json({
+        success: false, code: 'INSUFFICIENT_BALANCE',
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        error: `You need NRP ${price} to launch this group. Please top up first.`,
+        balance: charged.balance, required: price,
+      });
+    }
+    invalidateUserDoc(req.uid);
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+    const refund = async () => {
+      await userRef.set({
+        balance: admin.firestore.FieldValue.increment(price),
+        totalSpent: admin.firestore.FieldValue.increment(-price),
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      }, { merge: true });
+      invalidateUserDoc(req.uid);
+    };
+
+    let out;
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    try {
+      out = await serialized(async () => {
+        const before = await upstreamGroupIds();
+        let r;
+        try {
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          r = await gloryCall('POST', '/api/client/auto-clan-group', {
+            body: { region: region.id, clan_id: clanId },
+          });
+        } catch (e) {
+          if (!(e instanceof GloryError && e.unreadable)) throw e;
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          console.error('[glory] launch reply unreadable, trying to recover the group:', e.detail);
+          const rid = await recoverLaunchedGroup(clanId, before, e.rawText);
+          if (!rid) throw e;
+          console.log('[glory] recovered launched group', rid);
+          r = { success: true, group_id: rid, recovered: true };
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        }
+        let id = pickId(r);
+        if (!id && !(r && r.success === false)) {
+          console.error('[glory] launch reply had no group id:', JSON.stringify(r).slice(0, 500));
+          id = await findNewGroup(clanId);
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        }
+        if (!id) {
+          const err = new GloryError('FF Glory service returned an unexpected reply.', { status: 502 });
+          err.detail = JSON.stringify(r).slice(0, 300);
+          throw err;
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        }
+        return { ...(r || {}), group_id: id };
+      });
+    } catch (e) {
+      if (e instanceof GloryError && e.timeout) {
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        keepSlot = true;
+        telegramNotify(`⚠️ <b>Glory launch TIMEOUT</b>\nUser: <code>${esc(req.uid)}</code>\nClan: ${esc(clanId)} · ${esc(region.id)}\nCharged NRP ${price} — check ffglory.pro and refund if no group exists.`);
+        return res.status(504).json({ success: false, error: 'The service took too long. Your NRP was held — contact support if no group appears shortly.' });
+      }
+      await refund();
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      telegramNotify(`❌ <b>Glory launch failed</b> (refunded)\nUser: <code>${esc(req.uid)}</code>\nClan: ${esc(clanId)} · ${esc(region.id)}\n${esc(e.message)}${e.detail ? '\nReply: <code>' + esc(e.detail) + '</code>' : ''}`);
+      return fail(res, e);
+    }
+
+    keepSlot = true;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+    const record = {
+      uid: req.uid, groupId: out.group_id, clanId, region: region.id, regionName: region.region_name,
+      tier: 'basic', role, price, botCount: out.bot_count || 0, status: 'running',
+      createdAt: new Date().toISOString(),
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    };
+    try {
+      await db().collection(COL).doc(out.group_id).set(record);
+    } catch (e) {
+      console.error('[glory] failed to save ownership record', out.group_id, e);
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      telegramNotify(`🚨 <b>Glory group launched but NOT saved</b>\nGroup: <code>${esc(out.group_id)}</code>\nUser: <code>${esc(req.uid)}</code>`);
+    }
+
+    telegramNotify(`🤖 <b>Glory launched</b>\n${esc(charged.label)}\nClan: ${esc(clanId)} · ${esc(region.id)} (${esc(role)})\nNRP ${price} → balance ${charged.newBalance}`);
+    res.json({ success: true, groupId: out.group_id, newBalance: charged.newBalance, group: record });
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  } finally {
+    if (slot && slot.ok && !keepSlot) await slot.release();
+    launching.delete(req.uid);
+  }
+}));
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+const ACTIONS = new Set(['restart', 'stop', 'delete', 'get-glory', 'get-clan-info']);
+router.post('/action', rateLimit({ windowMs: 60_000, max: 40, name: 'glory-action' }), asyncHandler(async (req, res) => {
+  const groupId = String(req.body?.group_id || '').trim();
+  const action = String(req.body?.action || '').trim();
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (!groupId || !ACTIONS.has(action)) {
+    return res.status(400).json({ success: false, error: 'Invalid request.' });
+  }
+  const ref = db().collection(COL).doc(groupId);
+  const doc = await ref.get();
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (!doc.exists || doc.data().uid !== req.uid || ['deleted', 'refunded'].includes(doc.data().status)) {
+    return res.status(404).json({ success: false, error: 'Group not found.' });
+  }
+
+  try {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const run = () => gloryCall('POST', '/api/client/group-action', { body: { action, group_id: groupId } });
+    const mutating = action === 'restart' || action === 'stop' || action === 'delete';
+    const out = mutating ? await serialized(run) : await run();
+
+    if (action === 'stop') await ref.set({ status: 'stopped' }, { merge: true });
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    if (action === 'restart') await ref.set({ status: 'running' }, { merge: true });
+    if (action === 'delete') { await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); }
+
+    res.json({ success: true, result: out });
+  } catch (e) { return fail(res, e); }
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}));
+
+router.get('/details', rateLimit({ windowMs: 60_000, max: 60, name: 'glory-details' }), asyncHandler(async (req, res) => {
+  if (!(await ownGroup(req, res))) return;
+  try {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    const details = await loadDetails(String(req.query.group_id), req.query.fresh === '1');
+    res.json({ success: true, details });
+  } catch (e) { return fail(res, e); }
+}));
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+router.get('/progress', rateLimit({ windowMs: 60_000, max: 30, name: 'glory-progress' }), asyncHandler(async (req, res) => {
+  if (!(await ownGroup(req, res))) return;
+  try {
+    const out = await serialized(() => gloryCall('GET', '/api/client/glory-progression', {
+      query: { group_id: String(req.query.group_id) }, timeoutMs: 20000,
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    }));
+    const snaps = Array.isArray(out?.snapshots) ? out.snapshots : [];
+    res.json({
+      success: true,
+      clanId: out?.clan_id, gloryFarmed: out?.glory_farmed,
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      snapshots: snaps.slice(-12).map((x) => ({ at: x.captured_at, glory: x.total_glory, hours: x.uptime_hours })),
+    });
+  } catch (e) { return fail(res, e); }
+}));
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+const refunding = new Set();
+const refundAction = () => String(process.env.GLORY_REFUND_ACTION || 'refund').trim();
+
+async function upstreamSnapshot(groupId) {
+  const snap = { credits: null, refunds: null };
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  try {
+    const me = await gloryCall('GET', '/api/auth/me', { timeoutMs: 15000 });
+    const b = Number(me && me.basic_credits);
+    if (Number.isFinite(b)) snap.credits = b;
+  } catch (_) {  }
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  try {
+    const logs = asList(await gloryCall('GET', '/api/client/activity-log', { timeoutMs: 15000 })) || [];
+    snap.refunds = logs.filter((l) => String(l.action).toLowerCase() === 'refund' && String(l.group_id || '') === groupId).length;
+  } catch (_) {  }
+  return snap;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+}
+
+router.post('/refund', rateLimit({ windowMs: 60_000, max: 6, name: 'glory-refund' }), asyncHandler(async (req, res) => {
+  const groupId = String(req.body?.group_id || '').trim();
+  if (!groupId) return res.status(400).json({ success: false, error: 'Invalid request.' });
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  if (!gloryConfigured()) return res.status(503).json({ success: false, error: 'FF Glory is not available right now.' });
+
+  const ref = db().collection(COL).doc(groupId);
+  const doc = await ref.get();
+  if (!doc.exists || doc.data().uid !== req.uid || doc.data().status === 'deleted') {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    return res.status(404).json({ success: false, error: 'Group not found.' });
+  }
+  const g = doc.data();
+  if (g.status === 'refunded' || g.refundedAt) return res.status(409).json({ success: false, error: 'This group was already refunded.' });
+  if (g.status === 'ended') return res.status(409).json({ success: false, error: 'This group has already ended and can no longer be refunded.' });
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  const price = Number(g.price || 0);
+  if (!(price > 0)) return res.status(409).json({ success: false, error: 'Nothing to refund for this group.' });
+  if (refunding.has(groupId)) return res.status(409).json({ success: false, error: 'A refund is already in progress for this group.' });
+  refunding.add(groupId);
+
+  // src by SRT X CHEATS. Copy right SRT X CHEATS
+  try {
+    try {
+      await serialized(async () => {
+        const before = await upstreamSnapshot(groupId);
+        const out = await gloryCall('POST', '/api/client/group-action', {
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          body: { action: refundAction(), group_id: groupId }, timeoutMs: 40000,
+        });
+        if (out && typeof out === 'object' && (out.success === false || (out.error && out.success !== true))) {
+          throw new GloryError('FF Glory refused the refund.', { status: 409, upstream: String(out.error || out.message || '') });
+        }
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        const after = await upstreamSnapshot(groupId);
+        const logged = before.refunds !== null && after.refunds !== null && after.refunds > before.refunds;
+        const credited = before.credits !== null && after.credits !== null && after.credits > before.credits;
+        if (!logged && !credited) {
+          console.error('[glory] refund NOT confirmed upstream', groupId, JSON.stringify({ before, after, out }).slice(0, 400));
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          throw new GloryError('FF Glory did not refund this group.', {
+            status: 409, upstream: out && typeof out === 'object' ? String(out.message || '') : '',
+          });
+        }
+      });
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    } catch (e) {
+      if (!(e instanceof GloryError)) throw e;
+      const msg = e.upstream || e.message;
+      if (e.timeout) {
+        telegramNotify(`⚠️ <b>Glory refund TIMEOUT</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nNRP ${price} — NOT refunded to the user. Check ffglory.pro.`);
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        return res.status(504).json({ success: false, error: 'FF Glory took too long to answer. No refund was made — please try again in a minute.' });
+      }
+      telegramNotify(`ℹ️ <b>Glory refund declined by ffglory.pro</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\n${esc(msg)}`);
+      return res.status(e.status >= 400 && e.status < 600 ? e.status : 502).json({ success: false, error: msg });
+    }
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+
+    const userRef = db().collection('users').doc(req.uid);
+    let newBalance = null;
+    let lastErr = null;
+    for (let i = 0; i < 3 && newBalance === null; i++) {
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      try {
+        newBalance = await db().runTransaction(async (tx) => {
+          const [gs, us] = await Promise.all([tx.get(ref), tx.get(userRef)]);
+          if (gs.exists && (gs.data().status === 'refunded' || gs.data().refundedAt)) return Number((us.data() || {}).balance || 0);
+          const u = us.exists ? us.data() : {};
+          // src by SRT X CHEATS. Copy right SRT X CHEATS
+          const balance = Number(u.balance || 0) + price;
+          const log = [...(u.adminLog || []), { delta: price, note: `Glory Bot refund — group ${groupId}`, resultingBalance: balance, at: new Date().toISOString() }];
+          tx.set(userRef, { balance, totalSpent: Math.max(0, Number(u.totalSpent || 0) - price), adminLog: log }, { merge: true });
+          tx.set(ref, { status: 'refunded', refundedAt: new Date().toISOString(), refundedAmount: price }, { merge: true });
+          return balance;
+        // src by SRT X CHEATS. Copy right SRT X CHEATS
+        });
+      } catch (e) { lastErr = e; await sleep(400); }
+    }
+    if (newBalance === null) {
+      console.error('[glory] refund credit failed', groupId, lastErr);
+      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      telegramNotify(`🚨 <b>Glory refund: ffglory.pro REFUNDED but user NOT credited</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nCredit NRP ${price} manually!`);
+      return res.status(500).json({ success: false, error: 'Your refund was approved but could not be added to your balance yet. Support has been notified — you will be credited.' });
+    }
+
+    invalidateUserDoc(req.uid);
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    detailsCache.delete(groupId);
+    await returnSlot();
+    telegramNotify(`💸 <b>Glory refunded</b>\nUser: <code>${esc(req.uid)}</code>\nGroup: <code>${esc(groupId)}</code>\nNRP ${price} → balance ${newBalance}`);
+    res.json({ success: true, refunded: price, newBalance, groupId });
+  } finally {
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    refunding.delete(groupId);
+  }
+}));
+
+export default router;
+// src by SRT X CHEATS. Copy right SRT X CHEATS
