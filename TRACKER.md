@@ -36,3 +36,5 @@ Offline test: 26 checks + health monitor passed against a fake Firestore/Telegra
 - ⏳ Admin-panel page for `resellerReports`
 - ⏳ Pagination buttons for very long `/allusers_list`
 - ⏳ Optional: daily/monthly revenue in `/allrevenue`
+
+- v7: FIXED API/portal charging reseller price to PRO accounts (User 80 / Reseller 40 / Pro 20 -> Pro was charged 40). `resellerApiCatalog` now uses `tierPrice(p, role)`; `reseller-api.js` passes the account role to product lookup + products list and aborts with ROLE_CHANGED if the tier changes between auth and debit; `reseller-portal.js` lists role prices.
