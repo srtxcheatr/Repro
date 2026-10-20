@@ -123,3 +123,37 @@ git push -u origin main --force
 
 Push to Render, watch Logs — should say `srtx-backend listening on
 port ...` within seconds, not minutes. No gRPC compile step at all.
+
+
+## Telegram bots (v6)
+
+One bot per job. Every new variable falls back to the old bot, so nothing stops working while you set them up.
+
+| Bot | Token env | Chat env | What it does |
+|---|---|---|---|
+| Private admin bot (already there) | `TELEGRAM_TOPUP_AUTO_BOT` | `TELEGRAM_TOPUP_AUTO_CHAT_ID`, `TELEGRAM_TOPUP_ADMIN_IDS` | top-up requests + admin commands (below) |
+| **Public bot** (new) | `TELEGRAM_PUBLIC_BOT_TOKEN` | – | anyone sends a number / e-mail / UID, gets the user-details card with [Report] [Ok] |
+| **Purchase logs bot** (new) | `TELEGRAM_PURCHASE_BOT_TOKEN` | `TELEGRAM_PURCHASE_CHAT_ID` | every key purchase: attempt / success / rejected |
+| **Website health + issue bot** (new) | `TELEGRAM_HEALTH_BOT_TOKEN` | `TELEGRAM_HEALTH_CHAT_ID` | backend started, 401/403/429/5xx alerts, server errors, site/Firestore down + back up |
+| Bug report bot (already there) | `TELEGRAM_BUG_BOT_TOKEN` | (default chat ids) | bug reports sent from the website |
+
+Other new variables: `PUBLIC_BACKEND_URL` (https URL of this backend, needed so Telegram can reach both webhooks),
+`TELEGRAM_PUBLIC_WEBHOOK_SECRET` (optional), `PUBLIC_BOT_MASK_CONTACT=1` (optional, hides the middle of the number/e-mail in the public card),
+`TELEGRAM_REPORT_BOT_TOKEN` / `TELEGRAM_REPORT_CHAT_ID` (optional, only used if the private bot is not set),
+`HEALTH_CHECK_URLS` (comma separated, e.g. your website + `https://<backend>/health`), `HEALTH_CHECK_INTERVAL_MS` (default 300000),
+`HEALTH_CHECK_FIRESTORE=1`.
+
+Make sure every chat id has already sent `/start` to its bot (or the bot is added to the group) - otherwise Telegram refuses the message.
+Run **/notifytest** in the private bot to see which bot reaches you and the exact Telegram error for the ones that do not.
+
+### Private bot commands
+
+`/addbalance` `/cutbalance` `/alluserbalance` `/allrevenue` `/allusers_list` `/product_info` `/ban` `/unban` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`
+
+A user can be given as **UID, e-mail or phone number**.
+
+* `/alluserbalance` - total balance + every user who holds a balance (NRP 0 users are not shown)
+* `/allusers_list` - every user who loaded balance or bought keys (never-deposited / never-bought users are not shown)
+* `/product_info PHANTOM` - any part of a product name; lists every matching product with all durations and the User / Reseller / Pro Reseller price
+* `/annulment` - pick one of the user's last purchases, confirm, and it is refunded (balance back, history/counters reversed, record kept in `annulledPurchases`). The key itself stays with the user.
+* Reseller reports from the public bot are stored in the Firestore collection `resellerReports`.

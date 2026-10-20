@@ -13,6 +13,9 @@ import resellerApiRoutes from './routes/reseller-api.js';
 import resellerPortalRoutes from './routes/reseller-portal.js';
 import rewardsRoutes from './routes/rewards.js';
 import telegramTopupRoutes from './routes/telegram-topup.js';
+import telegramPublicRoutes from './routes/telegram-public.js';
+import { registerPublicWebhook } from './src/publicBot.js';
+import { startHealthMonitor } from './src/healthMonitor.js';
 import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/srt_storage_product.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -35,7 +38,10 @@ app.use('/api/user/avatar', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-app.use('/api', rateLimit({ windowMs: 60_000, max: 180, name: 'api' }));
+// Telegram webhooks all come from Telegram's own IPs and are protected by a secret header, so they
+// must not share the 180/min bucket with real traffic (that would silently drop bot updates).
+const apiLimiter = rateLimit({ windowMs: 60_000, max: 180, name: 'api' });
+app.use('/api', (req, res, next) => (req.path.startsWith('/telegram/') ? next() : apiLimiter(req, res, next)));
 
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
@@ -79,7 +85,8 @@ app.use((req, res, next) => {
       `IP: <code>${req.ip}</code>\n` +
       `Origin: ${origin}\n` +
       `Status: <b>${res.statusCode}</b>\n` +
-      `${Date.now() - start}ms`
+      `${Date.now() - start}ms`,
+      'health'
     );
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   });
@@ -147,6 +154,7 @@ app.use('/api/purchase', purchaseRoutes);
 app.use('/api/glory', gloryRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/telegram', telegramTopupRoutes);
+app.use('/api/telegram', telegramPublicRoutes);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
 app.use('/api/reseller/v1', resellerApiRoutes);
@@ -155,6 +163,7 @@ app.use('/api/reseller-portal', resellerPortalRoutes);
 app.use((err, req, res, next) => {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   console.error('[srtx-backend] Unhandled error:', err);
+  telegramNotify(`🔥 <b>Server error</b> ${req.method} ${req.path}\n${String(err?.message || err).slice(0, 300)}`, 'health');
   if (res.headersSent) return next(err);
   res.status(500).json({ success: false, error: 'Internal server error. Please try again.' });
 });
@@ -165,8 +174,22 @@ app.listen(PORT, () => {
   console.log(`srtx-backend listening on port ${PORT}`);
   loadVersions();
   registerTopupWebhook().catch(() => {});
+  registerPublicWebhook().catch(() => {});
+  startHealthMonitor();
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (gloryConfigured() && process.env.GLORY_DIAG_ON_START !== '0') {
     setTimeout(() => diagnoseGlory().then((l) => l.forEach((x) => console.log('[glory-diag]', x))).catch(() => {}), 3000);
   }
 });
+
+// A crash-class problem should reach you, not just the Render log.
+let lastFatalAlert = 0;
+function fatal(kind, err) {
+  console.error(`[srtx-backend] ${kind}:`, err);
+  if (Date.now() - lastFatalAlert < 60_000) return;
+  lastFatalAlert = Date.now();
+  telegramNotify(`🔥 <b>${kind}</b>\n${String(err?.stack || err?.message || err).slice(0, 600)}`, 'health');
+}
+process.on('unhandledRejection', (e) => fatal('Unhandled rejection', e));
+// after an uncaught exception the process state is unreliable: alert, then let Render restart it
+process.on('uncaughtException', (e) => { fatal('Uncaught exception', e); setTimeout(() => process.exit(1), 2500); });
