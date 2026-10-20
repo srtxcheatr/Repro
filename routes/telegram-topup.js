@@ -8,7 +8,7 @@ import {
 } from '../src/topupQr.js';
 import { strikeStep } from '../src/topupQr.js';
 import { resolveProRequest } from '../src/proReseller.js';
-import { handleMessage, handleBotCallback } from '../src/telegramBot.js';
+import { handleMessage, handleBotCallback, BOT_CALLBACK_RE } from '../src/telegramBot.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { PRO_MIN_TOPUP } from '../src/proTier.js';
 
@@ -98,7 +98,7 @@ router.post('/topup-webhook', asyncHandler(async (req, res) => {
     let m;
     if ((m = cb.data.match(/^tq:([LC]):([a-f0-9]{12})$/))) return await onQrCallback(cb, m);
     if ((m = cb.data.match(/^pr:([AC]):([a-f0-9]{12})$/))) return await onProCallback(cb, m);
-    if (/^(ab|md):/.test(cb.data)) return await handleBotCallback(cb);
+    if (BOT_CALLBACK_RE.test(cb.data)) return await handleBotCallback(cb);
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     return await answerCallback(cb.id, 'Unknown action');
   } catch (e) {

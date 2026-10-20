@@ -18,6 +18,10 @@ router.use(userCors);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 router.use(requireFirebaseUid);
 
+// Every purchase alert goes to the purchase-logs bot (TELEGRAM_PURCHASE_BOT_TOKEN / _CHAT_ID);
+// it falls back to the general bot until those are set.
+const notifyPurchase = (title, fields) => telegramNotify(telegramFormat(title, fields), 'purchase');
+
 const jobs = new Map();
 const JOB_TTL_MS = 3 * 60 * 1000;
 
@@ -114,13 +118,13 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
       if (justBanned) {
-        telegramNotify(telegramFormat('Checkout Banned (1h)', {
+        notifyPurchase('Checkout Banned (1h)', {
           username: userData.profileName || req.email, email: userData.email || req.email,
           phone: userData.profilePhone || '', product: roleProduct.name || sku,
           // src by SRT X CHEATS. Copy right SRT X CHEATS
           price: realPrice, uid: req.uid, status: 'failed',
           others: `2nd insufficient-balance attempt — banned until ${new Date(updates.checkoutBanUntil).toISOString()} (role: ${role})`,
-        }));
+        });
         return res.status(403).json({
           success: false,
           // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -236,12 +240,12 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
 
     setJob(jobId, { percent: 20, label: 'Checking product...' });
 
-    telegramNotify(telegramFormat('Purchase attempt', {
+    notifyPurchase('Purchase attempt', {
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       username: buyerName || email, email, phone: buyerWa, product: product.name,
       duration: product.duration, price: realPrice, uid, status: 'attempt',
       others: `role: ${role}`,
-    }));
+    });
 
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     setJob(jobId, { percent: 35, label: 'Checking balance...' });
@@ -281,27 +285,28 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       return { key, newBalance, currentBalance, entry: historyEntry };
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     });
-    invalidateUserDoc(uid);
-    leaderboardCache.invalidate();
+    // The key is already paid for and saved at this point - a cache hiccup must never turn
+    // a successful purchase into "Purchase rejected" or skip the success alert below.
+    try { invalidateUserDoc(uid); leaderboardCache.invalidate(); } catch (e) { console.error('[purchase] cache invalidate failed', e?.message || e); }
 
     setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance, entry: result.entry });
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-    telegramNotify(telegramFormat('Purchase success', {
+    notifyPurchase('Purchase success', {
       username: buyerName || email, email, phone: buyerWa, product: product.name,
       duration: product.duration, price: realPrice, key: result.key, uid, status: 'success',
       balanceBefore: result.currentBalance, balanceAfter: result.newBalance,
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    }));
+    });
   } catch (e) {
     setJob(jobId, { percent: 100, done: true, success: false, error: e.message, label: 'Failed' });
 
-    telegramNotify(telegramFormat('Purchase rejected', {
+    notifyPurchase('Purchase rejected', {
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       username: buyerName || email, email, phone: buyerWa, product: product ? product.name : sku,
       duration: product ? product.duration : '', price: realPrice, uid, status: 'failed',
       others: `${e.message} (role: ${role})`,
-    }));
+    });
   }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 }
