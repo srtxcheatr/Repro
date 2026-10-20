@@ -80,6 +80,15 @@ export async function registerTopupWebhook() {
   if (r?.ok) console.log('[topup-bot] webhook registered');
   await tg('setMyCommands', { commands: [
     { command: 'addbalance', description: 'Add balance to a user' },
+    { command: 'cutbalance', description: 'Cut balance from a user' },
+    { command: 'alluserbalance', description: 'Total balance + users holding balance' },
+    { command: 'allusers_list', description: 'Users who loaded balance / bought keys' },
+    { command: 'allrevenue', description: 'Total revenue and keys sold' },
+    { command: 'product_info', description: 'Prices for a product (any part of the name)' },
+    { command: 'ban', description: 'Ban a user' },
+    { command: 'unban', description: 'Unban a user' },
+    { command: 'annulment', description: 'Cancel a purchase and refund it' },
+    { command: 'notifytest', description: 'Test that every alert bot reaches you' },
     { command: 'getdetail', description: 'Get a user\'s details' },
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     { command: 'mode', description: 'Change mode: user / reseller / pro reseller' },
