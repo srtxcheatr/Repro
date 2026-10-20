@@ -38,7 +38,7 @@ router.get('/overview', requireReseller, asyncHandler(async (req, res) => {
   const [settings, clientSnap, products, ordersSnap] = await Promise.all([
     getApiSettings(),
     clientRef.get(),
-    listApiProducts(),
+    listApiProducts(req.userData.role || 'reseller'),
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     db().collection('users').doc(req.uid).collection('apiOrders').orderBy('createdAt', 'desc').limit(15).get(),
   ]);

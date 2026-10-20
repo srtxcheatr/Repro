@@ -75,6 +75,7 @@ function orderResponse(o, extra = {}) {
 }
 
 async function processBuy(auth, body) {
+  const priceRole = auth.user.role || 'reseller'; // price tier used for this order
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const pid = String(body.product_id ?? '').trim();
   const durationIn = String(body.duration ?? '').trim();
@@ -98,7 +99,7 @@ async function processBuy(auth, body) {
     return fail(400, 'INVALID_REQUEST_ID', 'request_id may only use letters, numbers and _ - : . (max 64).');
   }
 
-  const found = await findApiProduct(pid, durationIn);
+  const found = await findApiProduct(pid, durationIn, priceRole);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (found.error === 'NOT_FOUND') {
     return fail(404, 'PRODUCT_NOT_FOUND', 'No product matches that product_id + duration. Use action=products to see the exact values.');
@@ -174,6 +175,8 @@ async function processBuy(auth, body) {
         // src by SRT X CHEATS. Copy right SRT X CHEATS
         return;
       }
+      // Role changed (e.g. reseller -> pro) between auth and debit: never charge a stale tier price.
+      if ((u.role || 'user') !== priceRole) { insufficient = { roleChanged: true }; return; }
       const balance = Number(u.balance || 0);
       if (balance < total) { insufficient = { balance }; return; }
 
@@ -199,6 +202,9 @@ async function processBuy(auth, body) {
     }
     if (insufficient?.notAllowed) {
       return fail(403, 'NOT_RESELLER', 'The reseller API is only available to reseller accounts.');
+    }
+    if (insufficient?.roleChanged) {
+      return fail(409, 'ROLE_CHANGED', 'Your account tier changed while ordering. Please retry so the correct price is applied.');
     }
     if (insufficient) {
       // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -335,7 +341,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (action === 'products') {
-    const products = (await listApiProducts()).map((p) => ({
+    const products = (await listApiProducts(auth.user.role || 'reseller')).map((p) => ({
       product_name: p.row, product_id: p.pid, duration: p.label, price: p.price,
       status: p.status, requires_android_id: p.requiresAndroidId,
     }));
