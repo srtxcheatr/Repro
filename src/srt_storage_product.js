@@ -5,6 +5,7 @@ import { CATALOG_PRO } from './catalog3.js';
 import { db } from './firebase.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { cachedLoader, TTL } from './cache.js';
+import { DEFAULT_FEATURES } from './shopSrc.js';
 
 export { CATALOG, CATALOG_RESELLER, CATALOG_PRO };
 
@@ -191,6 +192,30 @@ export async function deleteWhatsappProduct(id) {
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+// "Shop project" (store source code) products - own collection, own purchase flow (routes/shopsrc.js).
+const shopSrcProducts = cachedLoader(async () => {
+  const snap = await db().collection('shopSrcProducts').get();
+  const map = {};
+  snap.forEach((d) => { map[d.id] = d.data(); });
+  return map;
+}, { ttlMs: TTL.catalog, name: 'shopSrcProducts', versionKey: 'catalog' });
+
+export function invalidateShopSrcProductCache() {
+  shopSrcProducts.invalidate();
+}
+
+export async function getShopSrcProductRaw(id) {
+  const snap = await db().collection('shopSrcProducts').doc(id).get();
+  return snap.exists ? snap.data() : null;
+}
+
+export async function deleteShopSrcProduct(id) {
+  await db().collection('shopSrcProducts').doc(id).delete();
+  invalidateShopSrcProductCache();
+}
+
 export async function getLiveCatalog(role = 'user') {
   let base = { ...catalogForRole(role) };
 
@@ -211,6 +236,18 @@ export async function getLiveCatalog(role = 'user') {
     }
   } catch (e) {
     console.error('[catalog] whatsapp products unavailable:', e);
+  }
+
+  try {
+    const shop = await shopSrcProducts.get();
+    for (const [id, p] of Object.entries(shop)) {
+      base[id] = {
+        ...applyCustomRole(p, role), type: 'shopsrc', row: p.name, name: p.name, pinned: true,
+        features: Array.isArray(p.features) && p.features.length ? p.features : DEFAULT_FEATURES,
+      };
+    }
+  } catch (e) {
+    console.error('[catalog] shop-source products unavailable:', e);
   }
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS

@@ -29,7 +29,7 @@ function normalizeImage(input) {
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-export async function uploadAvatar(imageInput, uid) {
+export async function uploadImage(imageInput, namePrefix) {
   const key = process.env.IMGBB_API_KEY;
   if (!key) throw httpError(500, 'Image upload is not configured (IMGBB_API_KEY missing on the server).');
   const endpoint = process.env.IMGBB_ENDPOINT || 'https://api.imgbb.com/1/upload';
@@ -41,7 +41,7 @@ export async function uploadAvatar(imageInput, uid) {
   body.set('key', key);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   body.set('image', image);
-  body.set('name', `avatar_${String(uid).slice(0, 12)}_${Date.now()}`);
+  body.set('name', `${namePrefix}_${Date.now()}`);
 
   let res;
   try {
@@ -78,3 +78,5 @@ export async function uploadAvatar(imageInput, uid) {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   return url;
 }
+
+export const uploadAvatar = (imageInput, uid) => uploadImage(imageInput, `avatar_${String(uid).slice(0, 12)}`);
