@@ -7,7 +7,7 @@ import { db, requireAdmin, adminCors } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { cachedLoader } from '../src/cache.js';
 import { CATALOG, CATALOG_RESELLER, CATALOG_PRO, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct, invalidateShopSrcProductCache, getShopSrcProductRaw, deleteShopSrcProduct } from '../src/srt_storage_product.js';
-import { parseFeatures, DEFAULT_FEATURES } from '../src/shopSrc.js';
+import { parseFeatures, DEFAULT_FEATURES, STAGES, stageFields, timeline } from '../src/shopSrc.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
 import admin from 'firebase-admin';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -775,6 +775,59 @@ router.post('/products/shopsrc/:id/delete', asyncHandler(async (req, res) => {
   if (!(await getShopSrcProductRaw(id))) return res.status(404).json({ success: false, error: 'Unknown product' });
   await deleteShopSrcProduct(id);
   res.json({ success: true, id });
+}));
+
+
+// ---- shop-project ORDER TRACKING (admin moves each order through the stages) ----
+router.get('/shop-orders', asyncHandler(async (req, res) => {
+  const snap = await db().collection('shopOrders').orderBy('createdAt', 'desc').limit(100).get();
+  res.json({
+    success: true,
+    orders: snap.docs.map((d) => {
+      const o = d.data();
+      return {
+        id: d.id, uid: o.uid, email: o.email || '', buyerName: o.details?.name || '', productName: o.productName, price: o.price,
+        submitted: !!o.submitted, stageIndex: Number(o.stageIndex || 0), createdAt: o.createdAt || null,
+      };
+    }),
+  });
+}));
+
+router.get('/shop-orders/:id', asyncHandler(async (req, res) => {
+  const snap = await db().collection('shopOrders').doc(String(req.params.id)).get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'Order not found' });
+  const o = snap.data();
+  res.json({ success: true, order: { id: snap.id, ...o, timeline: timeline(o) } });
+}));
+
+router.post('/shop-orders/:id/stage', asyncHandler(async (req, res) => {
+  const n = Number(req.body?.stage);
+  if (!Number.isInteger(n) || n < 0 || n > 5) return res.status(400).json({ success: false, error: 'Stage must be 0-5 (finish the order with "Send details")' });
+  const ref = db().collection('shopOrders').doc(String(req.params.id));
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'Order not found' });
+  const o = snap.data();
+  if (!o.submitted) return res.status(409).json({ success: false, error: 'The buyer has not submitted the form yet' });
+  const f = stageFields(o, n);
+  await ref.set(f, { merge: true });
+  res.json({ success: true, stageIndex: n, timeline: timeline({ ...o, ...f }) });
+}));
+
+router.post('/shop-orders/:id/deliver', asyncHandler(async (req, res) => {
+  const pick = (k, max) => String(req.body?.[k] ?? '').trim().slice(0, max);
+  const delivery = { storeLink: pick('storeLink', 300), adminLink: pick('adminLink', 300), unlockUrl: pick('unlockUrl', 300), password: pick('password', 200) };
+  for (const [k, v] of Object.entries(delivery)) {
+    if (!v) return res.status(400).json({ success: false, error: `${k} is required` });
+    if (k !== 'password' && !/^https?:\/\//i.test(v)) return res.status(400).json({ success: false, error: `${k} must start with http:// or https://` });
+  }
+  const ref = db().collection('shopOrders').doc(String(req.params.id));
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ success: false, error: 'Order not found' });
+  const o = snap.data();
+  if (!o.submitted) return res.status(409).json({ success: false, error: 'The buyer has not submitted the form yet' });
+  const f = stageFields(o, STAGES.length);
+  await ref.set({ ...f, delivery, deliveredAt: Date.now() }, { merge: true });
+  res.json({ success: true, stageIndex: STAGES.length });
 }));
 
 function generateRedeemCode() {

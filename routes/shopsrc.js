@@ -18,7 +18,7 @@ import { uploadImage } from '../src/imgbb.js';
 import { rateLimit } from '../src/security.js';
 import {
   shopDomains, shopSrcPrice, cleanSub, MAX_SUBMITS, MAX_DOWNLOADS,
-  signDownloadToken, verifyDownloadToken, consumeNonce,
+  signDownloadToken, verifyDownloadToken, consumeNonce, timeline,
 } from '../src/shopSrc.js';
 
 // ---------------------------------------------------------------- authed router (/api/shopsrc)
@@ -113,6 +113,15 @@ router.post('/buy', asyncHandler(async (req, res) => {
   }
 }));
 
+// The buyer's own shop-project orders (used by the history page to link to the tracker).
+router.get('/my-orders', asyncHandler(async (req, res) => {
+  const snap = await db().collection('shopOrders').where('uid', '==', req.uid).get();
+  const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 20)
+    .map((o) => ({ id: o.id, productName: o.productName, submitted: !!o.submitted, stageIndex: Number(o.stageIndex || 0), createdAt: o.createdAt || null }));
+  res.json({ success: true, orders });
+}));
+
 // Everything the registration page needs.
 router.get('/order/:id', asyncHandler(async (req, res) => {
   try {
@@ -124,6 +133,8 @@ router.get('/order/:id', asyncHandler(async (req, res) => {
       domains: shopDomains(),
       logoUrl: o.logoUrl || '',
       details: o.details || null,
+      stageIndex: Number(o.stageIndex || 0), timeline: timeline(o), submittedAt: o.submittedAt || null, createdAt: o.createdAt || null,
+      delivery: Number(o.stageIndex || 0) >= 6 ? (o.delivery || null) : null,
     });
   } catch (e) { send(res, e); }
 }));
@@ -148,7 +159,7 @@ router.post('/order/:id/submit', rateLimit({ windowMs: 60_000, max: 10, name: 's
   try {
     const { ref, id, data: o } = await ownOrder(req);
     if (o.status !== 'paid') throw fail(409, 'This order is not active.');
-    if ((o.submitCount || 0) >= MAX_SUBMITS) throw fail(409, `You already submitted ${MAX_SUBMITS} times. Contact support on WhatsApp to change details.`);
+    if (o.submitted) throw fail(409, 'Your details are already submitted. Track your order on this page — contact support on WhatsApp to change anything.');
 
     const b = req.body || {};
     const name = clean(b.name, 60);
