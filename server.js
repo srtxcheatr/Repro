@@ -12,6 +12,7 @@ import resellerApiRoutes from './routes/reseller-api.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import resellerPortalRoutes from './routes/reseller-portal.js';
 import rewardsRoutes from './routes/rewards.js';
+import shopSrcRoutes, { fileRouter as shopSrcFileRoutes } from './routes/shopsrc.js';
 import telegramTopupRoutes from './routes/telegram-topup.js';
 import telegramPublicRoutes from './routes/telegram-public.js';
 import { registerPublicWebhook } from './src/publicBot.js';
@@ -35,6 +36,7 @@ app.set('trust proxy', 1);
 
 app.use(securityHeaders);
 app.use('/api/user/avatar', express.json({ limit: '2mb' }));
+app.use('/api/shopsrc/logo', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
@@ -153,6 +155,8 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/glory', gloryRoutes);
 app.use('/api/rewards', rewardsRoutes);
+app.use('/api/shopsrc', shopSrcRoutes);
+app.use('/api/shopsrc-file', shopSrcFileRoutes);
 app.use('/api/telegram', telegramTopupRoutes);
 app.use('/api/telegram', telegramPublicRoutes);
 // src by SRT X CHEATS. Copy right SRT X CHEATS

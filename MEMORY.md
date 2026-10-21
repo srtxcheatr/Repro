@@ -24,3 +24,9 @@ Sends had a 5 s timeout, no retry, 429s dropped; health spam shared the same cha
 
 ## Environment notes
 - Offline tests used a fake `firebase-admin` because the npm registry was blocked in the build sandbox; real deploy still needs `npm ci`.
+
+## Shop project product (v10)
+- New product type `shopsrc` (Firestore `shopSrcProducts`, pinned to the top of the store). Buy = `POST /api/shopsrc/buy` (atomic: balance debit + `shopOrders` doc + purchaseHistory), then redirect to `registershopproject.php?order=ID`.
+- Registration form -> `POST /api/shopsrc/order/:id/submit` (max 3 submits, domains reserved in `shopDomains`), logo -> imgbb via `/api/shopsrc/logo/:id`, full details go to the purchase Telegram bot.
+- File is protected: signed 90 s single-use token from `/order/:id/download-link`, limit `SHOPSRC_MAX_DOWNLOADS`, source from `SHOPSRC_FILE_URL` or `SHOPSRC_FILE_PATH`. See `.env.shopsrc.example`.
+- `gamer.free` is in the domain list exactly as the owner typed it — confirm it is not a typo.

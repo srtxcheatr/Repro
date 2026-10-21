@@ -38,3 +38,5 @@ Offline test: 26 checks + health monitor passed against a fake Firestore/Telegra
 - ⏳ Optional: daily/monthly revenue in `/allrevenue`
 
 - v7: FIXED API/portal charging reseller price to PRO accounts (User 80 / Reseller 40 / Pro 20 -> Pro was charged 40). `resellerApiCatalog` now uses `tierPrice(p, role)`; `reseller-api.js` passes the account role to product lookup + products list and aborts with ROLE_CHANGED if the tier changes between auth and debit; `reseller-portal.js` lists role prices.
+- v7: Same phone on several accounts: new findUsersByAny (adminOps). Public bot sends one card per account (max 5, each with Report/Ok). Private bot: getdetail shows all; add/cut balance and ban ask for e-mail/UID when the number is shared (never guesses).
+- v9: Reward counter (starCb.keys) reset to the last order size after every API order (batch.update replaces nested map) -> reseller-api.js now uses set+merge. Dashboard 'Total spent/orders' now read account counters (same as bots) instead of summing purchaseHistory. New scripts/recount-stats.js repairs counters from history + API orders + Glory (dry run by default).
