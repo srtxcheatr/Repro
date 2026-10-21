@@ -169,7 +169,7 @@ router.get('/products', asyncHandler(async (req, res) => {
   const [overrides, catalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
 
   const products = Object.keys(catalog)
-    .filter((sku) => catalog[sku].type !== 'whatsapp')
+    .filter((sku) => !['whatsapp', 'shopsrc'].includes(catalog[sku].type))
     .map((sku) => {
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       const p = catalog[sku];

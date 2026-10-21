@@ -6,7 +6,8 @@ import { db, requireAdmin, adminCors } from '../src/firebase.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { rateLimit } from '../src/security.js';
 import { cachedLoader } from '../src/cache.js';
-import { CATALOG, CATALOG_RESELLER, CATALOG_PRO, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct } from '../src/srt_storage_product.js';
+import { CATALOG, CATALOG_RESELLER, CATALOG_PRO, getMaintenanceOverrides, invalidateMaintenanceCache, getLiveCatalog, invalidateCustomProductCache, findCustomProductFresh, getCustomProductRaw, deleteCustomProduct, invalidateWhatsappProductCache, getWhatsappProductRaw, deleteWhatsappProduct, invalidateShopSrcProductCache, getShopSrcProductRaw, deleteShopSrcProduct } from '../src/srt_storage_product.js';
+import { parseFeatures, DEFAULT_FEATURES } from '../src/shopSrc.js';
 import { telegramNotify, telegramFormat, esc } from '../src/telegram.js';
 import admin from 'firebase-admin';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -349,7 +350,7 @@ router.post('/backfill-stats', asyncHandler(async (req, res) => {
 
 router.get('/products', asyncHandler(async (req, res) => {
   const [overrides, liveCatalog] = await Promise.all([getMaintenanceOverrides(), getLiveCatalog('user')]);
-  const skus = Object.keys(liveCatalog).filter((sku) => liveCatalog[sku].type !== 'whatsapp');
+  const skus = Object.keys(liveCatalog).filter((sku) => !['whatsapp', 'shopsrc'].includes(liveCatalog[sku].type));
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const labelCount = {};
@@ -713,6 +714,66 @@ router.post('/products/whatsapp/:id/delete', asyncHandler(async (req, res) => {
   if (!existing) return res.status(404).json({ success: false, error: 'Unknown product' });
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   await deleteWhatsappProduct(id);
+  res.json({ success: true, id });
+}));
+
+
+// src by SRT X CHEATS. Copy right SRT X CHEATS
+// ---- shop project (store source code) products ----
+router.get('/products/shopsrc', asyncHandler(async (req, res) => {
+  const snap = await db().collection('shopSrcProducts').get();
+  res.json({ success: true, products: snap.docs.map((d) => ({ id: d.id, ...d.data() })) });
+}));
+
+router.post('/products/create-shopsrc', asyncHandler(async (req, res) => {
+  const image = String(req.body?.image || '').trim();
+  const name = String(req.body?.name || '').trim().slice(0, 80);
+  const price = Number(req.body?.price);
+  const priceReseller = req.body?.priceReseller !== undefined && req.body?.priceReseller !== '' ? Number(req.body.priceReseller) : price;
+  const priceProReseller = req.body?.priceProReseller !== undefined && req.body?.priceProReseller !== '' ? Number(req.body.priceProReseller) : priceReseller;
+  const features = parseFeatures(req.body?.features);
+  if (!/^https:\/\//i.test(image)) return res.status(400).json({ success: false, error: 'Image link must start with https:// (postimage / imgbb link)' });
+  if (!name) return res.status(400).json({ success: false, error: 'Product name is required' });
+  for (const [label, v] of [['User', price], ['Reseller', priceReseller], ['Pro reseller', priceProReseller]]) {
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: `${label} price must be a positive number` });
+  }
+  const id = `ss_${Date.now().toString(36)}`;
+  const product = { image, name, price, priceReseller, priceProReseller, features: features.length ? features : DEFAULT_FEATURES, createdAt: Date.now() };
+  await db().collection('shopSrcProducts').doc(id).set(product);
+  invalidateShopSrcProductCache();
+  res.json({ success: true, id, ...product });
+}));
+
+router.post('/products/shopsrc/:id/edit', asyncHandler(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!(await getShopSrcProductRaw(id))) return res.status(404).json({ success: false, error: 'Unknown product' });
+  const fields = {};
+  if (req.body?.name !== undefined) { fields.name = String(req.body.name).trim().slice(0, 80); if (!fields.name) return res.status(400).json({ success: false, error: 'Name required' }); }
+  if (req.body?.image !== undefined) {
+    fields.image = String(req.body.image).trim();
+    if (!/^https:\/\//i.test(fields.image)) return res.status(400).json({ success: false, error: 'Image link must start with https://' });
+  }
+  for (const k of ['price', 'priceReseller', 'priceProReseller']) {
+    if (req.body?.[k] === undefined) continue;
+    const v = Number(req.body[k]);
+    if (!v || v <= 0) return res.status(400).json({ success: false, error: `${k} must be a positive number` });
+    fields[k] = v;
+  }
+  if (req.body?.features !== undefined) {
+    const f = parseFeatures(req.body.features);
+    if (!f.length) return res.status(400).json({ success: false, error: 'Add at least one detail line' });
+    fields.features = f;
+  }
+  if (!Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+  await db().collection('shopSrcProducts').doc(id).set(fields, { merge: true });
+  invalidateShopSrcProductCache();
+  res.json({ success: true, id, updated: fields });
+}));
+
+router.post('/products/shopsrc/:id/delete', asyncHandler(async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!(await getShopSrcProductRaw(id))) return res.status(404).json({ success: false, error: 'Unknown product' });
+  await deleteShopSrcProduct(id);
   res.json({ success: true, id });
 }));
 
