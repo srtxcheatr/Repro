@@ -96,3 +96,30 @@ export function consumeNonce(n) {
   usedNonces.set(n, now);
   return true;
 }
+
+// ---- order tracking stages (index 1..6; 0 = form submitted, waiting for the admin) ----------
+export const STAGES = [
+  { n: 1, key: 'accepted', label: 'Admin accepted' },
+  { n: 2, key: 'shop_started', label: 'Create shop started' },
+  { n: 3, key: 'firebase', label: 'Created Firebase' },
+  { n: 4, key: 'backend', label: 'Created backend' },
+  { n: 5, key: 'frontend', label: 'Created frontend' },
+  { n: 6, key: 'completed', label: 'All project completed' },
+];
+
+// Move an order to stage `n`: every stage up to n gets a timestamp, later ones are cleared.
+export function stageFields(order, n) {
+  const times = { ...(order.stageTimes || {}) };
+  const now = Date.now();
+  for (const st of STAGES) {
+    if (st.n <= n) times[st.n] = times[st.n] || now;
+    else delete times[st.n];
+  }
+  return { stageIndex: n, stageTimes: times };
+}
+
+export function timeline(order) {
+  const idx = Number(order.stageIndex || 0);
+  const times = order.stageTimes || {};
+  return STAGES.map((st) => ({ n: st.n, label: st.label, done: st.n <= idx, current: st.n === idx + 1, at: times[st.n] || null }));
+}
