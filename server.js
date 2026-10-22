@@ -105,37 +105,6 @@ app.get('/health', (req, res) => {
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 });
 
-const TURNSTILE_FRONTEND_ORIGINS = process.env.TURNSTILE_FRONTEND_ORIGINS
-  ? process.env.TURNSTILE_FRONTEND_ORIGINS.split(',').map((x) => x.trim()).filter(Boolean)
-  : ['https://srtxcheats.ct.ws', 'http://srtxcheats.ct.ws'];
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-
-function turnstileCors(req, res, next) {
-  const origin = req.headers.origin;
-  if (origin && !TURNSTILE_FRONTEND_ORIGINS.includes(origin)) {
-    return res.status(403).json({ success: false, error: 'Origin not allowed' });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  }
-  if (origin && TURNSTILE_FRONTEND_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
-  }
-  next();
-}
-app.options('/api/security/verify', turnstileCors, (req, res) => res.sendStatus(204));
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-app.post('/api/security/verify', turnstileCors,
-  rateLimit({ windowMs: 60_000, max: 20, name: 'turnstile-gate' }),
-  asyncHandler(async (req, res) => {
-    const { verifyTurnstile } = await import('./src/turnstile.js');
-    return verifyTurnstile(req, res, () => res.json({ success: true }));
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  })
-);
-
 app.get('/api/catalog', userCors, asyncHandler(async (req, res) => {
   const catalog = await getLiveCatalog('user');
   // src by SRT X CHEATS. Copy right SRT X CHEATS
