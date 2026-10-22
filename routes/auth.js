@@ -5,7 +5,6 @@ import admin from 'firebase-admin';
 import { getFirebaseApp, db, userCors } from '../src/firebase.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { asyncHandler } from '../src/asyncHandler.js';
-import { verifyTurnstile } from '../src/turnstile.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -61,7 +60,7 @@ async function sendOtpEmail(email, otp) {
   }
 }
 
-router.post('/forgot-password/send-otp', verifyTurnstile, asyncHandler(async (req, res) => {
+router.post('/forgot-password/send-otp', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (!validEmail(email)) return res.status(400).json({ success:false, error:'Enter a valid email address.' });
