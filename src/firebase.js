@@ -113,10 +113,10 @@ const ALLOWED_EXACT_ORIGINS = [...new Set([
   'https://bronzx.web.app',
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   'https://bronzx.firebaseapp.com',
-  'https://srtstorev5.onrender.com',
+  'https://srtxcheats.com',
   'https://srtxcheats.ct.ws',
   'http://srtxcheats.ct.ws',
-  'https://cheats.xo.je',
+  'https://www.srtxcheats.com',
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   ...csv(process.env.ALLOWED_ORIGINS),
 ])];
