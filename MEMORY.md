@@ -30,3 +30,7 @@ Sends had a 5 s timeout, no retry, 429s dropped; health spam shared the same cha
 - Registration form -> `POST /api/shopsrc/order/:id/submit` (max 3 submits, domains reserved in `shopDomains`), logo -> imgbb via `/api/shopsrc/logo/:id`, full details go to the purchase Telegram bot.
 - File is protected: signed 90 s single-use token from `/order/:id/download-link`, limit `SHOPSRC_MAX_DOWNLOADS`, source from `SHOPSRC_FILE_URL` or `SHOPSRC_FILE_PATH`. See `.env.shopsrc.example`.
 - `gamer.free` is in the domain list exactly as the owner typed it — confirm it is not a typo.
+
+## Shop order tracking (v11)
+- After the buyer submits, `registershopproject.php` shows an Amazon-style tracker (stages in `STAGES`, src/shopSrc.js). Submit is one-time; download/form are hidden once submitted. History page has a "Track order" link.
+- Admin panel > Shop Orders tab: list (ORDER BY / UID) > SHOW ALL DETAILS > UPDATE/UNDO per stage > SEND DETAILS (store link, admin link, unlock URL, password) which completes the order. Routes: /api/admin/shop-orders, /:id, /:id/stage, /:id/deliver.

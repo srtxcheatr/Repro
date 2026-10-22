@@ -65,7 +65,7 @@ If Firestore errors (including quota exhausted) the last good copy is served ins
 
 ### Optional config overrides
 
-`ALLOWED_ORIGINS`, `ALLOWED_ORIGIN_SUFFIXES`, `TURNSTILE_FRONTEND_ORIGINS` (comma separated) extend the
+`ALLOWED_ORIGINS`, `ALLOWED_ORIGIN_SUFFIXES` (comma separated) extend the
 built-in origin lists. The website reads `BACKEND_URL`, `SITE_URL`, `WHATSAPP_TOPUP_NUMBER`, `FIREBASE_*` etc.
 from `includes/.env` / server env (defaults are unchanged).
 
