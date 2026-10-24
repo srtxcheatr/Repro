@@ -8,7 +8,7 @@ function httpError(status, message) {
   return e;
 }
 
-function normalizeImage(input, maxChars = MAX_BASE64_CHARS) {
+function normalizeImage(input) {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const raw = String(input || '').trim();
   if (!raw) throw httpError(400, 'No image received.');
@@ -17,7 +17,7 @@ function normalizeImage(input, maxChars = MAX_BASE64_CHARS) {
   const b64 = (m ? m[2] : raw).replace(/\s+/g, '');
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (!/^[A-Za-z0-9+/=]+$/.test(b64)) throw httpError(400, 'Image data is not valid base64.');
-  if (b64.length > maxChars) throw httpError(413, 'Image is too large. Pick a smaller size.');
+  if (b64.length > MAX_BASE64_CHARS) throw httpError(413, 'Image is too large. Pick a smaller size.');
 
   const head = Buffer.from(b64.slice(0, 24), 'base64');
   const isPng = head.length >= 4 && head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47;
@@ -29,13 +29,13 @@ function normalizeImage(input, maxChars = MAX_BASE64_CHARS) {
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-export async function uploadImage(imageInput, namePrefix, { maxChars } = {}) {
+export async function uploadImage(imageInput, namePrefix) {
   const key = process.env.IMGBB_API_KEY;
   if (!key) throw httpError(500, 'Image upload is not configured (IMGBB_API_KEY missing on the server).');
   const endpoint = process.env.IMGBB_ENDPOINT || 'https://api.imgbb.com/1/upload';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-  const image = normalizeImage(imageInput, maxChars || MAX_BASE64_CHARS);
+  const image = normalizeImage(imageInput);
 
   const body = new URLSearchParams();
   body.set('key', key);

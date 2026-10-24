@@ -15,7 +15,7 @@ import { tg as privateTg, chatIds as adminChatIds } from './topupQr.js';
 export const publicToken = () => process.env.TELEGRAM_PUBLIC_BOT_TOKEN || '';
 export function publicWebhookSecret() {
   return process.env.TELEGRAM_PUBLIC_WEBHOOK_SECRET
-    || crypto.createHmac('sha256', publicToken() || 'unset').update('public-webhook').digest('hex').slice(0, 48);
+    || crypto.createHash('sha256').update('public-webhook:' + publicToken()).digest('hex').slice(0, 48);
 }
 
 async function api(method, body) {

@@ -30,7 +30,7 @@ export const adminIds = () => String(process.env.TELEGRAM_TOPUP_ADMIN_IDS || '')
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 export function webhookSecret() {
   return process.env.TELEGRAM_TOPUP_WEBHOOK_SECRET
-    || crypto.createHmac('sha256', botToken() || 'unset').update('topup-webhook').digest('hex').slice(0, 48);
+    || crypto.createHash('sha256').update('topup-webhook:' + botToken()).digest('hex').slice(0, 48);
 }
 export function safeEqual(a, b) {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
