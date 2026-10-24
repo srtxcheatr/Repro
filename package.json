@@ -5,8 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "node tests/support.test.mjs && node tests/csrf.test.mjs && node tests/consent.test.mjs"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18"

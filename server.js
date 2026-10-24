@@ -15,16 +15,15 @@ import rewardsRoutes from './routes/rewards.js';
 import shopSrcRoutes, { fileRouter as shopSrcFileRoutes } from './routes/shopsrc.js';
 import telegramTopupRoutes from './routes/telegram-topup.js';
 import telegramPublicRoutes from './routes/telegram-public.js';
-import supportRoutes from './routes/support.js';
 import { registerPublicWebhook } from './src/publicBot.js';
 import { startHealthMonitor } from './src/healthMonitor.js';
 import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/srt_storage_product.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { userCors } from './src/firebase.js';
-import { telegramNotify, esc } from './src/telegram.js';
+import { telegramNotify } from './src/telegram.js';
 import { diagnoseGlory, gloryConfigured } from './src/gulaa_bot.js';
-import { rateLimit, securityHeaders, redact } from './src/security.js';
+import { rateLimit, securityHeaders } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { policyCache } from './src/sharedCaches.js';
@@ -38,7 +37,6 @@ app.set('trust proxy', 1);
 app.use(securityHeaders);
 app.use('/api/user/avatar', express.json({ limit: '2mb' }));
 app.use('/api/shopsrc/logo', express.json({ limit: '2mb' }));
-app.post('/api/support/tickets', express.json({ limit: '5mb' }));   // up to 3 compressed screenshots
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
@@ -81,12 +79,12 @@ app.use((req, res, next) => {
     }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-    const origin = esc(String(req.headers.origin || req.headers.referer || '—').slice(0, 200));
+    const origin = req.headers.origin || req.headers.referer || '—';
     const emoji = isProblem ? '🚨' : '📡';
     telegramNotify(
-      `${emoji} <b>${esc(req.method)} ${esc(req.path.slice(0, 120))}</b>\n` +
+      `${emoji} <b>${req.method} ${req.path}</b>\n` +
       // src by SRT X CHEATS. Copy right SRT X CHEATS
-      `IP: <code>${esc(req.ip)}</code>\n` +
+      `IP: <code>${req.ip}</code>\n` +
       `Origin: ${origin}\n` +
       `Status: <b>${res.statusCode}</b>\n` +
       `${Date.now() - start}ms`,
@@ -126,7 +124,6 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/glory', gloryRoutes);
 app.use('/api/rewards', rewardsRoutes);
-app.use('/api/support', supportRoutes);
 app.use('/api/shopsrc', shopSrcRoutes);
 app.use('/api/shopsrc-file', shopSrcFileRoutes);
 app.use('/api/telegram', telegramTopupRoutes);
@@ -138,8 +135,8 @@ app.use('/api/reseller-portal', resellerPortalRoutes);
 
 app.use((err, req, res, next) => {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
-  console.error('[srtx-backend] Unhandled error:', redact(err).slice(0, 1500));
-  telegramNotify(`🔥 <b>Server error</b> ${esc(req.method)} ${esc(req.path)}\n${esc(redact(err?.message || err).slice(0, 300))}`, 'health');
+  console.error('[srtx-backend] Unhandled error:', err);
+  telegramNotify(`🔥 <b>Server error</b> ${req.method} ${req.path}\n${String(err?.message || err).slice(0, 300)}`, 'health');
   if (res.headersSent) return next(err);
   res.status(500).json({ success: false, error: 'Internal server error. Please try again.' });
 });
@@ -161,10 +158,10 @@ app.listen(PORT, () => {
 // A crash-class problem should reach you, not just the Render log.
 let lastFatalAlert = 0;
 function fatal(kind, err) {
-  console.error(`[srtx-backend] ${kind}:`, redact(err).slice(0, 1500));
+  console.error(`[srtx-backend] ${kind}:`, err);
   if (Date.now() - lastFatalAlert < 60_000) return;
   lastFatalAlert = Date.now();
-  telegramNotify(`🔥 <b>${esc(kind)}</b>\n${esc(redact(err).slice(0, 600))}`, 'health');
+  telegramNotify(`🔥 <b>${kind}</b>\n${String(err?.stack || err?.message || err).slice(0, 600)}`, 'health');
 }
 process.on('unhandledRejection', (e) => fatal('Unhandled rejection', e));
 // after an uncaught exception the process state is unreliable: alert, then let Render restart it
