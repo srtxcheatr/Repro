@@ -8,7 +8,7 @@ function clientKey(req) {
   return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
-export function rateLimit({ windowMs = 60_000, max = 120, name = 'api' } = {}) {
+export function rateLimit({ windowMs = 60_000, max = 120, name = 'api', keyFn = null } = {}) {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   return (req, res, next) => {
     const now = Date.now();
@@ -20,7 +20,9 @@ export function rateLimit({ windowMs = 60_000, max = 120, name = 'api' } = {}) {
       }
     }
 
-    const key = `${name}:${clientKey(req)}`;
+    // keyFn lets a limiter bucket by authenticated user (req.uid) instead of IP; falls back to IP
+    const who = (keyFn && keyFn(req)) || clientKey(req);
+    const key = `${name}:${who}`;
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     let item = buckets.get(key);
     if (!item || now - item.startedAt >= windowMs) {
@@ -64,3 +66,25 @@ export function securityHeaders(req, res, next) {
   next();
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
+
+// Removes secrets (bot tokens, API keys, bearer tokens) from anything that is about to be logged or sent to chat.
+const SECRET_PATTERNS = [
+  [/bot\d{6,}:[A-Za-z0-9_-]{20,}/g, 'bot<redacted>'],
+  [/\b\d{6,}:[A-Za-z0-9_-]{30,}\b/g, '<redacted-token>'],
+  [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer <redacted>'],
+  [/(\b(?:key|token|api_key|secret)=)[^&\s"']+/gi, '$1<redacted>'],
+  [/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, '<redacted-jwt>'],
+];
+export function redact(value) {
+  let s = typeof value === 'string' ? value : (value && (value.stack || value.message)) || String(value ?? '');
+  for (const [re, rep] of SECRET_PATTERNS) s = s.replace(re, rep);
+  for (const k of ['TELEGRAM_TOPUP_AUTO_BOT', 'TELEGRAM_PUBLIC_BOT_TOKEN', 'TELEGRAM_BOT_TOKEN', 'IMGBB_API_KEY', 'ADMIN_SECRET', 'EMPLOYEE_SECRET', 'BREVO_API_KEY']) {
+    const v = process.env[k];
+    if (v && v.length > 8) s = s.split(v).join('<redacted>');
+  }
+  return s;
+}
+// Safe logger: one line, redacted, bounded. Never pass request bodies / tokens here.
+export function safeLog(tag, err) {
+  console.error(`[${tag}]`, redact(err).replace(/\s+/g, ' ').slice(0, 400));
+}
