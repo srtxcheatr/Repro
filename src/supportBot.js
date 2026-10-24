@@ -40,6 +40,7 @@ export function buildTicketText(t, footer = '') {
     `📅 <b>Date</b> - ${esc(formatNepaliDateTime(t.createdAt))}`,
     line,
     `📝 ${esc(t.description)}`,
+    ...((t.attachments || []).length ? [`🖼 <b>Screenshots</b> - ${t.attachments.map((u, i) => `<a href="${esc(u)}">#${i + 1}</a>`).join(' · ')}`] : []),
     line,
     footer,
   ].filter(Boolean).join('\n');
