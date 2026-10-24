@@ -88,3 +88,18 @@ export function redact(value) {
 export function safeLog(tag, err) {
   console.error(`[${tag}]`, redact(err).replace(/\s+/g, ' ').slice(0, 400));
 }
+
+// CSRF defence in depth for state-changing routes. Auth is a Bearer header (not a cookie), so classic CSRF cannot ride
+// on the browser's credentials; this additionally refuses browser requests from foreign origins and non-JSON bodies.
+// Requests with no Origin header (server-to-server, curl) still need a valid Firebase token.
+export function requireSameSiteWrite(isAllowedOrigin) {
+  return (req, res, next) => {
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+    const origin = req.headers.origin;
+    if (origin && !isAllowedOrigin(origin)) return res.status(403).json({ success: false, error: 'Origin not allowed.' });
+    if (req.headers['content-length'] !== '0' && req.headers['content-length'] !== undefined && !req.is('application/json')) {
+      return res.status(415).json({ success: false, error: 'Send JSON.' });
+    }
+    next();
+  };
+}
