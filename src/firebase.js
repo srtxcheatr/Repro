@@ -121,6 +121,12 @@ const ALLOWED_EXACT_ORIGINS = [...new Set([
   ...csv(process.env.ALLOWED_ORIGINS),
 ])];
 
+export function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
+  try { const host = new URL(origin).hostname; return ALLOWED_ORIGIN_SUFFIXES.some((suf) => host.endsWith(suf)); } catch (_) { return false; }
+}
+
 export const userCors = cors({
   origin(origin, cb) {
     // src by SRT X CHEATS. Copy right SRT X CHEATS
