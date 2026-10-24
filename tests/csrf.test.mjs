@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { requireSameSiteWrite } from '../src/security.js';
+const mw = requireSameSiteWrite((o) => o === 'https://www.srtxcheats.com');
+const run = (req) => { let out = { next: false }; const res = { status(c) { out.status = c; return this; }, json() { return this; } };
+  mw({ is: (t) => (req.ct || '').includes('json'), headers: {}, ...req }, res, () => (out.next = true)); return out; };
+assert.equal(run({ method: 'GET', headers: { origin: 'https://evil.com' } }).next, true);
+assert.equal(run({ method: 'POST', headers: { origin: 'https://evil.com', 'content-length': '5' }, ct: 'application/json' }).status, 403);
+assert.equal(run({ method: 'POST', headers: { origin: 'https://www.srtxcheats.com', 'content-length': '5' }, ct: 'application/json' }).next, true);
+assert.equal(run({ method: 'POST', headers: { 'content-length': '5' }, ct: 'text/plain' }).status, 415);
+assert.equal(run({ method: 'POST', headers: { 'content-length': '0' } }).next, true);
+console.log('csrf middleware tests passed');
