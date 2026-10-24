@@ -3,6 +3,36 @@ const buckets = new Map();
 const CLEANUP_EVERY_MS = 60_000;
 let lastCleanup = Date.now();
 
+// Behind Render the socket peer is a private 10.x proxy address, so Express' req.ip often ends up being that internal
+// address (every visitor looks the same: bad for alerts AND for the per-IP rate limits). When the direct peer is a
+// private/loopback address (= our own proxy, never a browser) we take the visitor's address from the proxy headers.
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+export function isPrivateIp(ip) {
+  const a = String(ip || '').replace(/^::ffff:/i, '').trim();
+  const m = IPV4.exec(a);
+  if (m) {
+    const [o1, o2] = [Number(m[1]), Number(m[2])];
+    return o1 === 10 || o1 === 127 || o1 === 0 || (o1 === 172 && o2 >= 16 && o2 <= 31) || (o1 === 192 && o2 === 168) || (o1 === 169 && o2 === 254) || (o1 === 100 && o2 >= 64 && o2 <= 127);
+  }
+  return a === '::1' || /^f[cd][0-9a-f]{2}:/i.test(a) || /^fe80:/i.test(a);
+}
+const looksLikeIp = (v) => typeof v === 'string' && v.length <= 45 && (IPV4.test(v) || /^[0-9a-f:]+$/i.test(v) && v.includes(':'));
+export function realClientIp(req) {
+  const peer = req.socket?.remoteAddress || '';
+  if (!isPrivateIp(peer)) return req.ip || peer || 'unknown';          // direct connection: nothing to trust but the socket
+  for (const h of ['cf-connecting-ip', 'true-client-ip']) {
+    const v = String(req.headers[h] || '').trim();
+    if (looksLikeIp(v) && !isPrivateIp(v)) return v;
+  }
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',').map((x) => x.trim()).filter(Boolean);
+  for (let i = xff.length - 1; i >= 0; i--) if (looksLikeIp(xff[i]) && !isPrivateIp(xff[i])) return xff[i];   // right-most public hop
+  return req.ip || peer || 'unknown';
+}
+export function useRealClientIp(req, res, next) {
+  try { const ip = realClientIp(req); Object.defineProperty(req, 'ip', { value: ip, configurable: true, enumerable: true }); } catch (e) {}
+  next();
+}
+
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 function clientKey(req) {
   return req.ip || req.socket?.remoteAddress || 'unknown';
