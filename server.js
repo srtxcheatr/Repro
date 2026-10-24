@@ -38,6 +38,7 @@ app.set('trust proxy', 1);
 app.use(securityHeaders);
 app.use('/api/user/avatar', express.json({ limit: '2mb' }));
 app.use('/api/shopsrc/logo', express.json({ limit: '2mb' }));
+app.post('/api/support/tickets', express.json({ limit: '5mb' }));   // up to 3 compressed screenshots
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 

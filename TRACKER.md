@@ -46,3 +46,4 @@ Offline test: 26 checks + health monitor passed against a fake Firestore/Telegra
 * Fixed: firestore.rules was not valid rules syntax (now deny-all); webhook secret was predictable when the bot token was unset
   (now rejected + HMAC); password-reset used a hard-coded fallback secret, had no rate limit and a racy attempt counter;
   error logs / Telegram alerts could contain tokens (now redacted); Telegram alerts embedded unescaped request data.
+* Support v2: compact ticket history (date | id | status, click to show/hide admin replies), up to 3 optional screenshots per report (POST /api/support/tickets body limit 5 MB), max 2 cancels per 24 h (`supportCancels`).

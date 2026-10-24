@@ -168,7 +168,9 @@ API: `GET /api/support/overview`, `GET /api/support/tickets/:id`, `POST /api/sup
   `[Send Message] [Send Photo]` buttons. No new env var is needed; photos use the existing `IMGBB_API_KEY` (server side only).
 * The admin must **reply to the bot's prompt** (Telegram force-reply). Every prompt has its own Firestore session, so
   simultaneous replies for different tickets/admins never get mixed up.
-* Firestore: collections `supportTickets`, `supportPending` (one-pending-ticket lock), `supportSessions`. Deploy
+* Users can attach up to **3 optional screenshots** to a report (resized in the browser, uploaded to ImgBB by the server, links shown to the admin in Telegram).
+* Anti-spam: a user can **cancel only 2 tickets per 24 h** (`SUPPORT_CANCEL_MAX`, `SUPPORT_CANCEL_WINDOW_HOURS`, both optional). Stored in `supportCancels/{uid}`.
+* Firestore: collections `supportTickets`, `supportPending` (one-pending-ticket lock), `supportCancels`, `supportSessions`. Deploy
   `firestore.indexes.json` (uid + createdAt) - until then the list falls back to an unordered read.
 * Password reset now needs `PASSWORD_RESET_SECRET` (or `ADMIN_SECRET`); there is no built-in fallback secret any more.
 * Tests: `npm test` and `node tests/bot.test.mjs` (the bot test needs `npm install` first).
