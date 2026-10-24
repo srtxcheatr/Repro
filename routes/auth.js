@@ -5,7 +5,6 @@ import admin from 'firebase-admin';
 import { getFirebaseApp, db, userCors } from '../src/firebase.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { asyncHandler } from '../src/asyncHandler.js';
-import { rateLimit, safeLog } from '../src/security.js';
 
 const router = express.Router();
 router.use(userCors);
@@ -19,20 +18,7 @@ const MAX_ATTEMPTS = 5;
 
 function normalizeEmail(value) { return String(value || '').trim().toLowerCase(); }
 function validEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
-// fail closed: a hard-coded fallback secret would let anyone forge reset hashes
-function secret() {
-  const v = process.env.PASSWORD_RESET_SECRET || process.env.ADMIN_SECRET;
-  if (!v) throw new Error('PASSWORD_RESET_SECRET (or ADMIN_SECRET) is not configured');
-  return v;
-}
-function sameHash(a, b) {
-  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
-  return x.length === y.length && crypto.timingSafeEqual(x, y);
-}
-const GENERIC_SENT = 'If this email belongs to an account, an OTP has been sent. Check your Gmail Inbox and Spam folder.';
-const otpSendLimit = rateLimit({ windowMs: 10 * 60_000, max: 5, name: 'otp-send' });
-const otpVerifyLimit = rateLimit({ windowMs: 10 * 60_000, max: 15, name: 'otp-verify' });
-const otpResetLimit = rateLimit({ windowMs: 10 * 60_000, max: 10, name: 'otp-reset' });
+function secret() { return process.env.PASSWORD_RESET_SECRET || process.env.ADMIN_SECRET || 'change-this-secret'; }
 function hash(value) { return crypto.createHmac('sha256', secret()).update(String(value)).digest('hex'); }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 function randomOtp() { return String(crypto.randomInt(100000, 1000000)); }
@@ -69,12 +55,12 @@ async function sendOtpEmail(email, otp) {
 
   if (!r.ok) {
     const body = await r.text().catch(() => '');
-    throw new Error(`Brevo send failed (${r.status}): ${body.slice(0, 120)}`);
+    throw new Error(`Brevo send failed (${r.status}): ${body.slice(0, 300)}`);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   }
 }
 
-router.post('/forgot-password/send-otp', otpSendLimit, asyncHandler(async (req, res) => {
+router.post('/forgot-password/send-otp', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (!validEmail(email)) return res.status(400).json({ success:false, error:'Enter a valid email address.' });
@@ -98,7 +84,7 @@ router.post('/forgot-password/send-otp', otpSendLimit, asyncHandler(async (req, 
     if (e?.code === 'auth/user-not-found') {
       return res.json({ success:true, message:'If this email belongs to an account, an OTP has been sent. Check Gmail and Spam.' });
     }
-    safeLog('forgot-password:lookup', e);
+    console.error('[forgot-password] lookup failed:', e);
     return res.status(500).json({ success:false, error:'Unable to process the request right now.' });
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   }
@@ -114,15 +100,15 @@ router.post('/forgot-password/send-otp', otpSendLimit, asyncHandler(async (req, 
     });
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   } catch (e) {
-    safeLog('forgot-password:mail', e);
+    console.error('[forgot-password] mail failed:', e);
     return res.status(500).json({ success:false, error:'Could not send the OTP email. Please try again later.' });
   }
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
-  res.json({ success:true, message:GENERIC_SENT });
+  res.json({ success:true, message:'OTP sent. Check your Gmail Inbox and Spam folder.' });
 }));
 
-router.post('/forgot-password/verify-otp', otpVerifyLimit, asyncHandler(async (req, res) => {
+router.post('/forgot-password/verify-otp', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const otp = String(req.body?.otp || '').trim();
@@ -138,17 +124,12 @@ router.post('/forgot-password/verify-otp', otpVerifyLimit, asyncHandler(async (r
     return res.status(400).json({ success:false, error:'OTP expired. Request a new OTP.' });
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   }
-  // count the attempt atomically first, so parallel guesses cannot exceed MAX_ATTEMPTS
-  const used = await db().runTransaction(async (tx) => {
-    const cur = await tx.get(ref);
-    const n = Number((cur.data() || {}).attempts || 0);
-    if (n >= MAX_ATTEMPTS) return n;
-    tx.set(ref, { attempts: n + 1 }, { merge: true });
-    return n;
-  });
-  if (used >= MAX_ATTEMPTS) return res.status(429).json({ success:false, error:'Too many incorrect attempts. Request a new OTP.' });
-  if (!sameHash(hash(`otp:${otp}`), data.otpHash)) {
-    return res.status(400).json({ success:false, error:`Incorrect OTP. ${Math.max(0, MAX_ATTEMPTS - used - 1)} attempts remaining.` });
+  const attempts = Number(data.attempts || 0);
+  if (attempts >= MAX_ATTEMPTS) return res.status(429).json({ success:false, error:'Too many incorrect attempts. Request a new OTP.' });
+  if (hash(`otp:${otp}`) !== data.otpHash) {
+    await ref.set({ attempts:attempts + 1 }, { merge:true });
+    // src by SRT X CHEATS. Copy right SRT X CHEATS
+    return res.status(400).json({ success:false, error:`Incorrect OTP. ${Math.max(0, MAX_ATTEMPTS - attempts - 1)} attempts remaining.` });
   }
 
   const resetToken = randomToken();
@@ -157,7 +138,7 @@ router.post('/forgot-password/verify-otp', otpVerifyLimit, asyncHandler(async (r
   res.json({ success:true, resetToken });
 }));
 
-router.post('/forgot-password/reset', otpResetLimit, asyncHandler(async (req, res) => {
+router.post('/forgot-password/reset', asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const resetToken = String(req.body?.resetToken || '');
@@ -169,7 +150,7 @@ router.post('/forgot-password/reset', otpResetLimit, asyncHandler(async (req, re
   const snap = await ref.get();
   if (!snap.exists) return res.status(400).json({ success:false, error:'Reset session expired. Start again.' });
   const data = snap.data() || {};
-  if (Date.now() > Number(data.verifiedUntilMs || 0) || !sameHash(hash(`reset:${resetToken}`), data.resetTokenHash)) {
+  if (Date.now() > Number(data.verifiedUntilMs || 0) || hash(`reset:${resetToken}`) !== data.resetTokenHash) {
     return res.status(400).json({ success:false, error:'Reset session expired or invalid. Start again.' });
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   }
@@ -182,7 +163,7 @@ router.post('/forgot-password/reset', otpResetLimit, asyncHandler(async (req, re
     await ref.delete();
     res.json({ success:true, message:'Password changed successfully.' });
   } catch (e) {
-    safeLog('forgot-password:reset', e);
+    console.error('[forgot-password] reset failed:', e);
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     res.status(500).json({ success:false, error:'Could not change the password. Please try again.' });
   }

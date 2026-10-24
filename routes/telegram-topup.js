@@ -4,10 +4,8 @@ import { asyncHandler } from '../src/asyncHandler.js';
 import { esc } from '../src/telegram.js';
 import {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
-  webhookSecret, safeEqual, isAllowedPress, resolveRequest, answerCallback, editMessage, botToken,
+  webhookSecret, safeEqual, isAllowedPress, resolveRequest, answerCallback, editMessage,
 } from '../src/topupQr.js';
-import { handleSupportMessage, handleSupportCallback, SUPPORT_CALLBACK_RE } from '../src/supportBot.js';
-import { redact } from '../src/security.js';
 import { strikeStep } from '../src/topupQr.js';
 import { resolveProRequest } from '../src/proReseller.js';
 import { handleMessage, handleBotCallback, BOT_CALLBACK_RE } from '../src/telegramBot.js';
@@ -85,17 +83,12 @@ async function onProCallback(cb, m) {
 router.post('/topup-webhook', asyncHandler(async (req, res) => {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const given = req.headers['x-telegram-bot-api-secret-token'];
-  // no bot configured => the derived secret would be predictable, so refuse everything
-  if (!botToken() || !given || !safeEqual(given, webhookSecret())) return res.sendStatus(401);
+  if (!given || !safeEqual(given, webhookSecret())) return res.sendStatus(401);
   res.sendStatus(200);
 
   try {
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    if (req.body?.message) {
-      // replies to a support prompt (text / photo) are consumed here; everything else is a normal admin command
-      if (await handleSupportMessage(req.body.message)) return;
-      return await handleMessage(req.body.message);
-    }
+    if (req.body?.message) return await handleMessage(req.body.message);
 
     const cb = req.body?.callback_query;
     if (!cb || typeof cb.data !== 'string') return;
@@ -105,12 +98,11 @@ router.post('/topup-webhook', asyncHandler(async (req, res) => {
     let m;
     if ((m = cb.data.match(/^tq:([LC]):([a-f0-9]{12})$/))) return await onQrCallback(cb, m);
     if ((m = cb.data.match(/^pr:([AC]):([a-f0-9]{12})$/))) return await onProCallback(cb, m);
-    if ((m = cb.data.match(SUPPORT_CALLBACK_RE))) return await handleSupportCallback(cb, m);
     if (BOT_CALLBACK_RE.test(cb.data)) return await handleBotCallback(cb);
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     return await answerCallback(cb.id, 'Unknown action');
   } catch (e) {
-    console.warn('[telegram-webhook] handler error:', redact(e?.message || e).slice(0, 300));
+    console.warn('[telegram-webhook] handler error:', e?.message || e);
   }
 }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
