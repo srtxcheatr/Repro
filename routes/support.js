@@ -3,9 +3,9 @@
 // Firebase token + the server's own user record; the browser only ever sends { type, description }.
 import express from 'express';
 import { asyncHandler } from '../src/asyncHandler.js';
-import { requireFirebaseUid, userCors } from '../src/firebase.js';
+import { requireFirebaseUid, userCors, isAllowedOrigin } from '../src/firebase.js';
 import { getUserDoc } from '../src/userCache.js';
-import { rateLimit, safeLog } from '../src/security.js';
+import { rateLimit, safeLog, requireSameSiteWrite } from '../src/security.js';
 import { store, SupportError, validateReport, toPublic, BUG_TYPES, DESC_MIN, DESC_MAX } from '../src/support.js';
 import { announceTicket, announceCancelled } from '../src/supportBot.js';
 
@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(userCors);
 // IP bucket first (cheap, protects token verification), then auth, then per-user buckets.
 router.use(rateLimit({ windowMs: 60_000, max: 60, name: 'support-ip' }));
+router.use(requireSameSiteWrite(isAllowedOrigin));
 router.use(requireFirebaseUid);
 const byUid = (req) => req.uid;
 const readLimit = rateLimit({ windowMs: 60_000, max: 30, name: 'support-read', keyFn: byUid });
