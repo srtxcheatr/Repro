@@ -12,6 +12,9 @@ export const DESC_MIN = 10;
 export const DESC_MAX = 50;
 export const REPLY_MAX = 1000;
 export const MAX_REPLIES = 20;
+export const MAX_IMAGES = 3;                                  // optional screenshots per report
+export const CANCEL_MAX = Number(process.env.SUPPORT_CANCEL_MAX) || 2;                       // cancels allowed per user ...
+export const CANCEL_WINDOW_MS = (Number(process.env.SUPPORT_CANCEL_WINDOW_HOURS) || 24) * 3_600_000;   // ... per rolling window
 export const TICKET_RE = /^SRT_X_[A-Z0-9]{10}$/;
 const ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 
@@ -43,7 +46,14 @@ export function validateReport(body) {
   const n = len(description);
   if (n < DESC_MIN || n > DESC_MAX) throw new SupportError(400, `Description must be ${DESC_MIN}–${DESC_MAX} characters (now ${n}).`);
   if (!/[\p{L}\p{N}]/u.test(description)) throw new SupportError(400, 'Please describe the problem in words.');
-  return { type, description };
+  // optional screenshots (data URLs / base64). Format, size and real image type are checked again in imgbb.js.
+  let images = [];
+  if (body?.images != null) {
+    if (!Array.isArray(body.images)) throw new SupportError(400, 'Invalid images.');
+    if (body.images.length > MAX_IMAGES) throw new SupportError(400, `You can attach up to ${MAX_IMAGES} images.`);
+    images = body.images.map((x) => { if (typeof x !== 'string' || !x) throw new SupportError(400, 'Invalid image.'); return x; });
+  }
+  return { type, description, images };
 }
 
 export function validateReply({ text, photoUrl }) {
@@ -60,6 +70,7 @@ export function toPublic(t) {
     ticketId: t.ticketId,
     type: t.type,
     description: t.description,
+    attachments: (t.attachments || []).filter((u) => typeof u === 'string' && /^https:\/\//i.test(u)).slice(0, MAX_IMAGES),
     status: t.status === 'solved' ? 'Solved' : 'Pending',
     createdAt: t.createdAt,
     solvedAt: t.solvedAt || null,
@@ -71,6 +82,23 @@ export function makeStore(getDb) {
   const tickets = () => getDb().collection('supportTickets');
   const locks = () => getDb().collection('supportPending');
   const sessions = () => getDb().collection('supportSessions');
+  const cancels = () => getDb().collection('supportCancels');     // supportCancels/{uid} = { times: [iso, ...] }
+
+  const recentCancels = (data, now = Date.now()) =>
+    ((data && data.times) || []).filter((x) => now - Date.parse(x) < CANCEL_WINDOW_MS).sort();
+  function cancelInfo(data, now = Date.now()) {
+    const r = recentCancels(data, now);
+    return { max: CANCEL_MAX, left: Math.max(0, CANCEL_MAX - r.length), resetAt: r.length >= CANCEL_MAX ? new Date(Date.parse(r[0]) + CANCEL_WINDOW_MS).toISOString() : null };
+  }
+  async function getCancelInfo(uid) { return cancelInfo((await cancels().doc(uid).get()).data()); }
+
+  // id of the user's pending ticket (or null): used to refuse BEFORE uploading any image
+  async function getPendingId(uid) {
+    const lock = await locks().doc(uid).get();
+    if (!lock.exists) return null;
+    const cur = await tickets().doc(String(lock.data().ticketId || '_')).get();
+    return cur.exists && cur.data().uid === uid && cur.data().status === 'pending' ? cur.data().ticketId : null;
+  }
 
   // Creates a ticket unless the user already has a pending one. The lock doc + transaction make this
   // safe against double-clicks, two tabs and parallel requests: Firestore retries/aborts the loser.
@@ -91,7 +119,7 @@ export function makeStore(getDb) {
           }
           if ((await tx.get(ref)).exists) throw new SupportError(500, '__id_collision');
           const doc = {
-            ticketId, uid, type: report.type, description: report.description,
+            ticketId, uid, type: report.type, description: report.description, attachments: report.attachments || [],
             name: ctx.name || '', phone: ctx.phone || '', email: ctx.email || '', ip: ctx.ip || '',
             status: 'pending', createdAt: now, solvedAt: null, cancelledAt: null, replies: [], tg: [],
           };
@@ -119,13 +147,19 @@ export function makeStore(getDb) {
     if (!TICKET_RE.test(ticketId)) throw new SupportError(404, 'Ticket not found.');
     const ref = tickets().doc(ticketId);
     const lockRef = locks().doc(uid);
+    const cRef = cancels().doc(uid);
     return getDb().runTransaction(async (tx) => {
-      const [snap, lock] = await Promise.all([tx.get(ref), tx.get(lockRef)]);
+      const [snap, lock, cs] = await Promise.all([tx.get(ref), tx.get(lockRef), tx.get(cRef)]);
       if (!snap.exists || snap.data().uid !== uid) throw new SupportError(404, 'Ticket not found.');
       const t = snap.data();
       if (t.status !== 'pending') throw new SupportError(409, t.status === 'solved' ? 'This ticket is already solved.' : 'This ticket is already cancelled.');
-      const now = new Date().toISOString();
+      // anti-spam: only CANCEL_MAX cancels per rolling window
+      const nowMs = Date.now();
+      const info = cancelInfo(cs.exists ? cs.data() : null, nowMs);
+      if (info.left <= 0) throw new SupportError(429, `You can cancel only ${CANCEL_MAX} tickets per ${Math.round(CANCEL_WINDOW_MS / 3_600_000)} hours. Please wait for the admin's reply.`, { cancels: info });
+      const now = new Date(nowMs).toISOString();
       tx.update(ref, { status: 'cancelled', cancelledAt: now });
+      tx.set(cRef, { times: [...recentCancels(cs.exists ? cs.data() : null, nowMs), now] });
       if (lock.exists && lock.data().ticketId === ticketId) tx.delete(lockRef);
       return { ...t, status: 'cancelled', cancelledAt: now };
     });
@@ -198,5 +232,5 @@ export function makeStore(getDb) {
   const releaseSession = (chatId, messageId) => sessions().doc(sessKey(chatId, messageId)).set({ busyUntil: 0 }, { merge: true }).catch(() => {});
   const deleteSession = (chatId, messageId) => sessions().doc(sessKey(chatId, messageId)).delete().catch(() => {});
 
-  return { createTicket, getOwned, cancelTicket, listTickets, addReply, getTicket, setTg, createSession, readSession, leaseSession, releaseSession, deleteSession };
+  return { createTicket, getOwned, cancelTicket, getCancelInfo, getPendingId, listTickets, addReply, getTicket, setTg, createSession, readSession, leaseSession, releaseSession, deleteSession };
 }
