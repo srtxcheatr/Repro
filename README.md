@@ -157,3 +157,18 @@ A user can be given as **UID, e-mail or phone number**.
 * `/product_info PHANTOM` - any part of a product name; lists every matching product with all durations and the User / Reseller / Pro Reseller price
 * `/annulment` - pick one of the user's last purchases, confirm, and it is refunded (balance back, history/counters reversed, record kept in `annulledPurchases`). The key itself stays with the user.
 * Reseller reports from the public bot are stored in the Firestore collection `resellerReports`.
+
+
+## Support tickets (`/support.php` on the website)
+
+API: `GET /api/support/overview`, `GET /api/support/tickets/:id`, `POST /api/support/tickets`, `POST /api/support/tickets/:id/cancel`
+(all need the Firebase login token). Code: `routes/support.js`, `src/supportStore.js` (data), `src/supportBot.js` (Telegram).
+
+* Tickets are announced by the **private admin bot** (`TELEGRAM_TOPUP_AUTO_BOT`) in the `TELEGRAM_TOPUP_AUTO_CHAT_ID` chats, with
+  `[Send Message] [Send Photo]` buttons. No new env var is needed; photos use the existing `IMGBB_API_KEY` (server side only).
+* The admin must **reply to the bot's prompt** (Telegram force-reply). Every prompt has its own Firestore session, so
+  simultaneous replies for different tickets/admins never get mixed up.
+* Firestore: collections `supportTickets`, `supportPending` (one-pending-ticket lock), `supportSessions`. Deploy
+  `firestore.indexes.json` (uid + createdAt) - until then the list falls back to an unordered read.
+* Password reset now needs `PASSWORD_RESET_SECRET` (or `ADMIN_SECRET`); there is no built-in fallback secret any more.
+* Tests: `npm test` and `node tests/bot.test.mjs` (the bot test needs `npm install` first).
