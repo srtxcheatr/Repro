@@ -24,7 +24,7 @@ import { getLiveCatalog } from './src/srt_storage_product.js';
 import { userCors } from './src/firebase.js';
 import { telegramNotify, esc } from './src/telegram.js';
 import { diagnoseGlory, gloryConfigured } from './src/gulaa_bot.js';
-import { rateLimit, securityHeaders, redact } from './src/security.js';
+import { rateLimit, securityHeaders, redact, useRealClientIp } from './src/security.js';
 import { asyncHandler } from './src/asyncHandler.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { policyCache } from './src/sharedCaches.js';
@@ -35,9 +35,11 @@ app.disable('x-powered-by');
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 app.set('trust proxy', 1);
 
+app.use(useRealClientIp);
 app.use(securityHeaders);
 app.use('/api/user/avatar', express.json({ limit: '2mb' }));
 app.use('/api/shopsrc/logo', express.json({ limit: '2mb' }));
+app.post('/api/support/tickets', express.json({ limit: '5mb' }));   // up to 3 compressed screenshots
 app.use(express.json({ limit: '16kb' }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
@@ -67,7 +69,8 @@ app.use((req, res, next) => {
     if (!isProblem && !NOTIFY_ALL_REQUESTS) return;
 
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    const alertKey = `${req.ip}|${req.method}|${req.path}|${res.statusCode}`;
+    const urlPath = String(req.originalUrl || req.url || '/').split('?')[0].slice(0, 120);   // req.path is cut by mounted routers ("/api/reseller/v1" -> "/"); query removed so api keys never reach Telegram
+    const alertKey = `${req.ip}|${req.method}|${urlPath}|${res.statusCode}`;
     const now = Date.now();
     if (isProblem) {
       const last = securityAlertSeen.get(alertKey) || 0;
@@ -80,13 +83,15 @@ app.use((req, res, next) => {
     }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-    const origin = esc(String(req.headers.origin || req.headers.referer || '—').slice(0, 200));
+    const origin = esc(String(req.headers.origin || req.headers.referer || '').slice(0, 200) || '— (no browser: server / bot / script)');
+    const ua = esc(String(req.headers['user-agent'] || '—').slice(0, 80));
     const emoji = isProblem ? '🚨' : '📡';
     telegramNotify(
-      `${emoji} <b>${esc(req.method)} ${esc(req.path.slice(0, 120))}</b>\n` +
+      `${emoji} <b>${esc(req.method)} ${esc(urlPath)}</b>\n` +
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       `IP: <code>${esc(req.ip)}</code>\n` +
       `Origin: ${origin}\n` +
+      `UA: ${ua}\n` +
       `Status: <b>${res.statusCode}</b>\n` +
       `${Date.now() - start}ms`,
       'health'
