@@ -6,7 +6,8 @@ import { asyncHandler } from '../src/asyncHandler.js';
 import { requireFirebaseUid, userCors, isAllowedOrigin } from '../src/firebase.js';
 import { getUserDoc } from '../src/userCache.js';
 import { rateLimit, safeLog, requireSameSiteWrite } from '../src/security.js';
-import { store, SupportError, validateReport, toPublic, BUG_TYPES, DESC_MIN, DESC_MAX } from '../src/support.js';
+import { store, SupportError, validateReport, toPublic, BUG_TYPES, DESC_MIN, DESC_MAX, MAX_IMAGES } from '../src/support.js';
+import { uploadImage } from '../src/imgbb.js';
 import { announceTicket, announceCancelled } from '../src/supportBot.js';
 
 const router = express.Router();
@@ -27,6 +28,9 @@ async function context(req) {
 }
 
 function fail(res, e, tag) {
+  if (!(e instanceof SupportError) && e?.status >= 400 && e?.status < 600 && /image|photo|base64|PNG/i.test(String(e.message))) {
+    return res.status(e.status).json({ success: false, error: e.message });      // safe, user-facing messages from imgbb.js
+  }
   if (e instanceof SupportError) return res.status(e.status).json({ success: false, error: e.message, ...e.extra });
   safeLog(tag, e);
   return res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
@@ -35,12 +39,12 @@ function fail(res, e, tag) {
 // everything the page needs in one call
 router.get('/overview', readLimit, asyncHandler(async (req, res) => {
   try {
-    const [ctx, list] = await Promise.all([context(req), store.listTickets(req.uid)]);
+    const [ctx, list, cancels] = await Promise.all([context(req), store.listTickets(req.uid), store.getCancelInfo(req.uid)]);
     const tickets = list.map(toPublic);
     res.json({
       success: true,
       me: { uid: ctx.uid, name: ctx.name, phone: ctx.phone, email: ctx.email, ip: ctx.ip },
-      limits: { min: DESC_MIN, max: DESC_MAX }, types: BUG_TYPES,
+      limits: { min: DESC_MIN, max: DESC_MAX, images: MAX_IMAGES }, types: BUG_TYPES, cancels,
       pendingTicketId: tickets.find((t) => t.status === 'Pending')?.ticketId || null,
       tickets,
     });
@@ -58,9 +62,13 @@ router.get('/tickets/:id', readLimit, asyncHandler(async (req, res) => {
 
 router.post('/tickets', createLimit, asyncHandler(async (req, res) => {
   try {
-    const report = validateReport(req.body);
+    const { images, ...report } = validateReport(req.body);
+    const pending = await store.getPendingId(req.uid);              // refuse before spending an image upload
+    if (pending) throw new SupportError(409, 'You already have a pending ticket. Cancel it first to send a new report.', { pendingTicketId: pending });
     const ctx = await context(req);
-    const ticket = await store.createTicket(req.uid, ctx, report);
+    // images are uploaded to ImgBB by the server (key never reaches the browser), outside any DB transaction
+    const attachments = await Promise.all(images.map((img, i) => uploadImage(img, `ticket_${String(req.uid).slice(0, 8)}_${i + 1}`)));
+    const ticket = await store.createTicket(req.uid, ctx, { ...report, attachments });
     announceTicket(ticket).catch((e) => safeLog('support:announce', e));   // ticket is saved either way
     res.status(201).json({ success: true, ticket: toPublic(ticket) });
   } catch (e) { fail(res, e, 'support:create'); }
@@ -70,7 +78,7 @@ router.post('/tickets/:id/cancel', cancelLimit, asyncHandler(async (req, res) =>
   try {
     const t = await store.cancelTicket(req.uid, String(req.params.id));
     announceCancelled(t).catch((e) => safeLog('support:cancel-announce', e));
-    res.json({ success: true });
+    res.json({ success: true, cancels: await store.getCancelInfo(req.uid) });
   } catch (e) { fail(res, e, 'support:cancel'); }
 }));
 
