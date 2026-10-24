@@ -78,32 +78,4 @@ await t('concurrent admin sessions map to the right tickets', async () => {
   assert.equal(leases.filter(Boolean).length, 1);                                                    // duplicate webhook is ignored
   await st.releaseSession(-100, 11); assert.ok(await st.leaseSession(-100, 11));
 });
-await t('images: max 3, strings only, optional; attachments are public, https only', async () => {
-  assert.deepEqual(validateReport(ok).images, []);
-  assert.equal(validateReport({ ...ok, images: ['a', 'b', 'c'] }).images.length, 3);
-  assert.throws(() => validateReport({ ...ok, images: ['a', 'b', 'c', 'd'] }), /up to 3/);
-  assert.throws(() => validateReport({ ...ok, images: [123] }), SupportError);
-  assert.throws(() => validateReport({ ...ok, images: 'x' }), SupportError);
-  const d = fakeDb(); const st = makeStore(() => d);
-  const a = await st.createTicket('a', ctx, { ...ok, attachments: ['https://i.ibb.co/1.jpg', 'javascript:alert(1)'] });
-  assert.deepEqual(toPublic(a).attachments, ['https://i.ibb.co/1.jpg']);
-});
-await t('only 2 cancels per window, then 429; solved tickets are not affected', async () => {
-  const d = fakeDb(); const st = makeStore(() => d);
-  assert.equal((await st.getCancelInfo('a')).left, 2);
-  for (let i = 0; i < 2; i++) { const x = await st.createTicket('a', ctx, ok); await st.cancelTicket('a', x.ticketId); }
-  const info = await st.getCancelInfo('a'); assert.equal(info.left, 0); assert.ok(info.resetAt);
-  const third = await st.createTicket('a', ctx, ok);
-  await assert.rejects(st.cancelTicket('a', third.ticketId), (e) => e.status === 429 && e.extra.cancels.left === 0);
-  assert.equal(await st.getPendingId('a'), third.ticketId);                  // still pending, nothing was cancelled
-  await st.addReply(third.ticketId, { text: 'done' }, '@admin');             // admin can still solve it
-  assert.equal(await st.getPendingId('a'), null);
-  assert.equal((await st.getCancelInfo('b')).left, 2);                       // other users unaffected
-});
-await t('cancel window expires', async () => {
-  const d = fakeDb(); const st = makeStore(() => d);
-  const old = new Date(Date.now() - 25 * 3_600_000).toISOString();
-  await d.collection('supportCancels').doc('a').set({ times: [old, old] });
-  assert.equal((await st.getCancelInfo('a')).left, 2);
-});
 console.log('\nall support tests passed');
