@@ -413,7 +413,7 @@ router.get('/balance-history', asyncHandler(async (req, res) => {
 }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-router.post('/report', asyncHandler(async(req,res)=>{
+router.post('/report', rateLimit({ windowMs: 10 * 60_000, max: 5, name: 'bug-report' }), asyncHandler(async(req,res)=>{
   const category=String(req.body?.category||'').trim(); const problem=String(req.body?.problem||'').trim();
   if(!['Balance','Unknown product','Others'].includes(category)) return res.status(400).json({success:false,error:'Choose a valid bug category'});
   if(!problem) return res.status(400).json({success:false,error:'Please describe the problem'});
