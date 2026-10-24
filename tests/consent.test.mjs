@@ -9,7 +9,7 @@ function browser(cookie = '', store = {}) {
   const Storage = function () {}; Storage.prototype = LS.prototype;
   const doc = { readyState: 'complete', _c: cookie, get cookie() { return this._c; }, set cookie(v) { this._c = v.split(';')[0]; },
     body: { appendChild: () => appended++ }, querySelector: () => null,
-    createElement: () => ({ setAttribute() {}, appendChild() {}, remove() {}, set innerHTML(v) {}, set textContent(v) {} }),
+    createElement: () => ({ setAttribute() {}, appendChild() {}, remove() {}, classList: { add() {} }, set innerHTML(v) {}, set textContent(v) {} }),
     getElementById: (id) => (els[id] = els[id] || { addEventListener(_, f) { this.f = f; } }), addEventListener() {} };
   const win = { localStorage, document: doc, location: { protocol: 'https:' }, dispatchEvent() {}, CustomEvent: class {} };
   vm.runInNewContext(src, { ...win, window: win, document: doc, Storage, Object, RegExp, String, CustomEvent: win.CustomEvent, location: win.location });
@@ -28,4 +28,12 @@ assert.equal(b.localStorage.getItem('srtx_theme'), null); assert.equal(b.localSt
 b.localStorage.setItem('srtx_x', '1'); assert.equal(b.localStorage.getItem('srtx_x'), null);
 const r = browser('srtx_consent=accepted'); assert.equal(r.win.srtxConsent.allowed(), true); assert.equal(r.shown(), false);   // remembered, no banner
 const d = browser('srtx_consent=denied'); assert.equal(d.win.srtxConsent.allowed(), false); assert.equal(d.shown(), false);
+// cookie dropped by the browser (in-app browsers / strict privacy): the localStorage backup keeps the choice, no banner on refresh
+const lost = browser('', { srtx_consent: 'accepted' }); assert.equal(lost.win.srtxConsent.get(), 'accepted'); assert.equal(lost.shown(), false);
+assert.match(lost.doc.cookie, /srtx_consent=accepted/);                                    // cookie restored from the backup
+const lostD = browser('', { srtx_consent: 'denied' }); assert.equal(lostD.win.srtxConsent.allowed(), false); assert.equal(lostD.shown(), false);
+const bad = browser('', { srtx_consent: 'hacked' }); assert.equal(bad.win.srtxConsent.get(), null); assert.ok(bad.shown());   // junk value is ignored
+// the choice is also written to localStorage and survives the deny purge
+const w = browser(); w.win.srtxConsent.accept(); assert.equal(w.localStorage.getItem('srtx_consent'), 'accepted');
+w.win.srtxConsent.deny(); assert.equal(w.localStorage.getItem('srtx_consent'), 'denied');
 console.log('consent tests passed');
