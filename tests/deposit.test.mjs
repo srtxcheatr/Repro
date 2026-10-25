@@ -1,0 +1,53 @@
+// Drives the real depositBot.js + createQrTopup with a fake Telegram and an in-memory Firestore
+import assert from 'node:assert/strict';
+process.env.TELEGRAM_DEPOSIT_BOT_TOKEN = '111:AAFakeDepositTokenFakeDepositToken12345';
+process.env.TELEGRAM_DEPOSIT_BOT_USERNAME = 'SRTXDepositBot';
+process.env.TELEGRAM_TOPUP_AUTO_BOT = '123456789:AAFakeTokenFakeTokenFakeTokenFakeToken1';
+process.env.TELEGRAM_TOPUP_AUTO_CHAT_ID = '-100';
+process.env.FIREBASE_SERVICE_ACCOUNT_JSON = '{}';
+import admin from 'firebase-admin';
+import { fakeDb } from './fakeDb.mjs';
+const d = fakeDb();
+admin.initializeApp = () => ({}); admin.credential = { cert: () => ({}) }; admin.firestore = () => d;
+
+const sent = [];
+globalThis.fetch = async (url, opt) => {
+  const method = String(url).split('/').pop(); const b = opt?.body ? JSON.parse(opt.body) : {};
+  const bot = String(url).includes('/bot111:') ? 'deposit' : 'admin';
+  sent.push({ bot, method, ...b });
+  return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 1, chat: { id: Number(b.chat_id) || 0 }, username: 'SRTXDepositBot' } }) };
+};
+const dep = await import('../src/depositBot.js');
+await d.collection('users').doc('UID123456789012345678901234').set({ email: 'a@b.com', profileName: 'Ram', profilePhone: '9800000000', balance: 10 });
+
+const url = await dep.createDepositLink('UID123456789012345678901234');
+assert.match(url, /^https:\/\/t\.me\/SRTXDepositBot\?start=dep_[A-Za-z0-9_-]{12}$/);
+const token = url.split('dep_')[1];
+const say = (text) => dep.handleDepositUpdate({ message: { chat: { id: 55, type: 'private' }, from: { id: 55 }, text } });
+const last = (bot = 'deposit') => sent.filter((m) => m.bot === bot).at(-1);
+
+await say('/start');                                        // no token -> instructions only
+assert.match(last().text, /Deposit via Telegram/);
+await say(`/start dep_${token}`);
+const card = sent.find((m) => m.method === 'sendMessage' && /Uid - UID123/.test(m.text || ''));
+assert.ok(card, 'details card'); assert.match(card.text, /Email - a@b.com[\s\S]*Name - Ram[\s\S]*Number - 9800000000[\s\S]*I want to get deposit balance/);
+const photo = sent.find((m) => m.method === 'sendPhoto'); assert.match(photo.caption, /Welcome to SRT X CHEATS[\s\S]*Enter amount of deposit/);
+assert.match(photo.photo, /srtx-pay-qr\.jpg$/);
+await say(`/start dep_${token}`);                           // link is one-time
+assert.match(last().text, /expired/);
+
+await say('abc'); assert.match(last().text, /valid amount/);
+await say('50');  assert.match(last().text, /valid amount/);
+await say('500'); assert.match(last().text, /Send transaction code[\s\S]*1U7HMDY[\s\S]*Esewa[\s\S]*NRP 500[\s\S]*no refunds/);
+await say('x');   assert.match(last().text, /Invalid transaction code/);
+await say('1u7hmdy');
+assert.match(last().text, /Request received/);
+const adminMsg = last('admin'); assert.match(adminMsg.text, /USER NAME<\/b> - Ram[\s\S]*REQUEST BALANCE[\s\S]*NRP 500[\s\S]*1U7HMDY[\s\S]*Telegram deposit bot/);
+assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.text), ['Load ✅', 'Cancel ❌']);
+const u = (await d.collection('users').doc('UID123456789012345678901234').get()).data();
+assert.equal(u.topupRequests[0].status, 'PENDING'); assert.equal(u.topupRequests[0].source, 'telegram');
+const idx = (await d.collection('topupQr').doc(u.topupRequests[0].reqId).get()).data(); assert.ok(idx.tgChatId === '55');
+// duplicate tx code is rejected on a new deposit
+const t2 = (await dep.createDepositLink('UID123456789012345678901234')).split('dep_')[1];
+await say(`/start dep_${t2}`); await say('500'); await say('1U7HMDY'); assert.match(last().text, /already submitted/);
+console.log('deposit bot flow OK');
