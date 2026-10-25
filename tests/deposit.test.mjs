@@ -10,10 +10,25 @@ import { fakeDb } from './fakeDb.mjs';
 const d = fakeDb();
 admin.initializeApp = () => ({}); admin.credential = { cert: () => ({}) }; admin.firestore = () => d;
 
+process.env.SITE_URL = 'https://www.srtxcheats.com';
 const sent = [];
 globalThis.fetch = async (url, opt) => {
-  const method = String(url).split('/').pop(); const b = opt?.body ? JSON.parse(opt.body) : {};
+  if (!String(url).includes('api.telegram.org')) {               // the backend fetching the QR image from the website
+    if (String(url).endsWith('/assets/img/srtx-pay-qr.jpg')) {
+      return { ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => Buffer.from('fake-qr-bytes') };
+    }
+    return { ok: false, status: 404, headers: { get: () => null }, arrayBuffer: async () => Buffer.alloc(0) };
+  }
+  const method = String(url).split('/').pop();
   const bot = String(url).includes('/bot111:') ? 'deposit' : 'admin';
+  let b;
+  if (opt?.body instanceof FormData) {                            // multipart upload (sendPhoto)
+    b = {}; let fileField = null;
+    for (const [k, v] of opt.body.entries()) { if (v instanceof Blob) fileField = k; else b[k] = v; }
+    b.photo = fileField ? 'uploaded:srtx-pay-qr.jpg' : undefined;
+  } else {
+    b = opt?.body ? JSON.parse(opt.body) : {};
+  }
   sent.push({ bot, method, ...b });
   return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 1, chat: { id: Number(b.chat_id) || 0 }, username: 'SRTXDepositBot' } }) };
 };
@@ -28,12 +43,22 @@ const last = (bot = 'deposit') => sent.filter((m) => m.bot === bot).at(-1);
 
 await say('/start');                                        // no token -> instructions only
 assert.match(last().text, /Deposit via Telegram/);
+
+// if the website can't be reached, the bot still starts the flow with a plain message (no crash, no stuck chat)
+// (must run before any successful fetch, since a good QR image is then cached for later deposits)
+process.env.DEPOSIT_QR_URL = 'https://example.invalid/missing.jpg';
 await say(`/start dep_${token}`);
+assert.match(last().text, /Could not load the QR image right now[\s\S]*Enter amount of deposit/);
+delete process.env.DEPOSIT_QR_URL;
+await say('/cancel');
+
+const t1 = (await dep.createDepositLink('UID123456789012345678901234')).split('dep_')[1];
+await say(`/start dep_${t1}`);
 const card = sent.find((m) => m.method === 'sendMessage' && /Uid - UID123/.test(m.text || ''));
 assert.ok(card, 'details card'); assert.match(card.text, /Email - a@b.com[\s\S]*Name - Ram[\s\S]*Number - 9800000000[\s\S]*I want to get deposit balance/);
 const photo = sent.find((m) => m.method === 'sendPhoto'); assert.match(photo.caption, /Welcome to SRT X CHEATS[\s\S]*Enter amount of deposit/);
 assert.match(photo.photo, /srtx-pay-qr\.jpg$/);
-await say(`/start dep_${token}`);                           // link is one-time
+await say(`/start dep_${t1}`);                              // link is one-time
 assert.match(last().text, /expired/);
 
 await say('abc'); assert.match(last().text, /valid amount/);
@@ -47,6 +72,7 @@ assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.text), ['
 const u = (await d.collection('users').doc('UID123456789012345678901234').get()).data();
 assert.equal(u.topupRequests[0].status, 'PENDING'); assert.equal(u.topupRequests[0].source, 'telegram');
 const idx = (await d.collection('topupQr').doc(u.topupRequests[0].reqId).get()).data(); assert.ok(idx.tgChatId === '55');
+
 // duplicate tx code is rejected on a new deposit
 const t2 = (await dep.createDepositLink('UID123456789012345678901234')).split('dep_')[1];
 await say(`/start dep_${t2}`); await say('500'); await say('1U7HMDY'); assert.match(last().text, /already submitted/);
