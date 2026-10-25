@@ -13,6 +13,7 @@ import { resolveProRequest } from '../src/proReseller.js';
 import { handleMessage, handleBotCallback, BOT_CALLBACK_RE } from '../src/telegramBot.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { PRO_MIN_TOPUP } from '../src/proTier.js';
+import { notifyDepositUser } from '../src/depositBot.js';
 
 const router = express.Router();
 const whoIs = (cb) => (cb.from?.username ? `@${cb.from.username}` : String(cb.from?.first_name || cb.from?.id || 'admin'));
@@ -51,6 +52,13 @@ async function onQrCallback(cb, m) {
   const original = cb.message?.text || '';
   for (const msg of (r.messages.length ? r.messages : [{ chat_id: cb.message.chat.id, message_id: cb.message.message_id }])) {
     await editMessage(msg.chat_id, msg.message_id, `${esc(original)}\n\n${footer}`);
+  }
+  // deposits started from the Telegram deposit bot: tell the user the result in that chat
+  const tgChat = r.base?.tgChatId;
+  if (tgChat) {
+    await notifyDepositUser(tgChat, decision === 'load'
+      ? `✅ <b>Balance loaded</b>\nNRP ${r.amount} was added.\nNew balance: <b>NRP ${r.after}</b>`
+      : '❌ <b>Deposit cancelled</b>\nWe could not verify your payment. Please contact support if you already paid.');
   }
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS

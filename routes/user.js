@@ -23,9 +23,8 @@ import { isResellerTier, proPublicState, PRO_MIN_TOPUP } from '../src/proTier.js
 import { sendProRequestToBot } from '../src/proReseller.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { newReqId as newProReqId } from '../src/topupQr.js';
-import {
-  QR_MIN_AMOUNT, QR_MAX_AMOUNT, QR_MAX_PENDING, QR_PENDING_WINDOW_MS, QR_METHOD, newReqId, sendRequestToBot,
-} from '../src/topupQr.js';
+import { createQrTopup } from '../src/topupQr.js';
+import { depositBotConfigured, createDepositLink } from '../src/depositBot.js';
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 const router = express.Router();
@@ -335,62 +334,17 @@ router.post('/topup', asyncHandler(async (req,res)=>{
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 router.post('/topup-qr', rateLimit({ windowMs: 10 * 60_000, max: 8, name: 'topup-qr' }), asyncHandler(async (req, res) => {
-  const amount = Number(req.body?.amount);
-  const txCode = String(req.body?.txCode || '').trim().toUpperCase();
-  if (!Number.isInteger(amount) || amount < QR_MIN_AMOUNT) return res.status(400).json({ success: false, error: `Minimum top-up is Rs ${QR_MIN_AMOUNT}` });
-  if (amount > QR_MAX_AMOUNT) return res.status(400).json({ success: false, error: 'Amount is too large' });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  if (!/^[A-Z0-9_-]{6,40}$/.test(txCode)) return res.status(400).json({ success: false, error: 'Enter a valid transaction ID (6-40 letters/numbers)' });
+  const r = await createQrTopup({ uid: req.uid, email: req.email, amount: req.body?.amount, txCode: req.body?.txCode, ip: req.ip || '', source: 'website' });
+  if (!r.ok) return res.status(r.status).json({ success: false, error: r.error });
+  res.json({ success: true, reqId: r.reqId, status: r.status });
+}));
 
-  const reqId = newReqId();
-  const userRef = db().collection('users').doc(req.uid);
-  const txRef = db().collection('topupTx').doc(txCode);
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const idxRef = db().collection('topupQr').doc(reqId);
-  const date = new Date().toISOString();
-  const ip = req.ip || '';
-
-  let profile;
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  try {
-    profile = await db().runTransaction(async (tx) => {
-      const [u, used] = await Promise.all([tx.get(userRef), tx.get(txRef)]);
-      if (used.exists) throw new Error('This transaction ID was already submitted');
-      const d = u.exists ? u.data() : {};
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      const list = Array.isArray(d.topupRequests) ? d.topupRequests : [];
-      const recentCut = Date.now() - QR_PENDING_WINDOW_MS;
-      const recentPending = list.filter((t) => t.status === 'PENDING' && t.method === QR_METHOD && new Date(t.date).getTime() > recentCut);
-      if (recentPending.length >= QR_MAX_PENDING) {
-        const oldest = Math.min(...recentPending.map((t) => new Date(t.date).getTime()));
-        // src by SRT X CHEATS. Copy right SRT X CHEATS
-        const mins = Math.max(1, Math.ceil((oldest + QR_PENDING_WINDOW_MS - Date.now()) / 60000));
-        throw new Error(`You already have ${recentPending.length} top-ups waiting to be checked. You can send a new one in about ${mins} min.`);
-      }
-      const entry = { date, amount, paymentAccount: 'QR (SRT X CHEATS)', method: QR_METHOD, txCode, status: 'PENDING', uid: req.uid, email: req.email, reqId, ip };
-      tx.set(userRef, { topupRequests: [...list, entry] }, { merge: true });
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      tx.set(txRef, { uid: req.uid, reqId, at: date });
-      tx.set(idxRef, { uid: req.uid, txCode, amount, status: 'PENDING', createdAt: date, messages: [] });
-      return d;
-    });
-  } catch (e) {
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    return res.status(409).json({ success: false, error: e.message });
-  }
-  invalidateUserDoc(req.uid, { history: false });
-
-  try {
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    const messages = await sendRequestToBot(reqId, {
-      name: profile.profileName || '', uid: req.uid, email: profile.email || req.email, phone: profile.profilePhone || '',
-      balance: Number(profile.balance || 0), amount, txCode, date, ip,
-    });
-    if (messages.length) await idxRef.set({ messages }, { merge: true });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  } catch (e) { console.warn('[topup-qr] announce failed:', e?.name || 'error'); }
-
-  res.json({ success: true, reqId, status: 'PENDING' });
+// "Deposit via Telegram": one-time deep link that ties the Telegram chat to THIS logged-in account
+router.post('/telegram-deposit-link', rateLimit({ windowMs: 10 * 60_000, max: 10, name: 'tg-deposit-link' }), asyncHandler(async (req, res) => {
+  if (!depositBotConfigured()) return res.status(503).json({ success: false, error: 'Telegram deposit is not available yet. Please use QR deposit.' });
+  const url = await createDepositLink(req.uid);
+  if (!url) return res.status(503).json({ success: false, error: 'Telegram deposit bot is offline. Please try again later.' });
+  res.json({ success: true, url });
 }));
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
