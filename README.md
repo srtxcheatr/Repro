@@ -135,6 +135,7 @@ One bot per job. Every new variable falls back to the old bot, so nothing stops 
 | **Public bot** (new) | `TELEGRAM_PUBLIC_BOT_TOKEN` | – | anyone sends a number / e-mail / UID, gets the user-details card with [Report] [Ok] |
 | **Purchase logs bot** (new) | `TELEGRAM_PURCHASE_BOT_TOKEN` | `TELEGRAM_PURCHASE_CHAT_ID` | every key purchase: attempt / success / rejected |
 | **Website health + issue bot** (new) | `TELEGRAM_HEALTH_BOT_TOKEN` | `TELEGRAM_HEALTH_CHAT_ID` | backend started, 401/403/429/5xx alerts, server errors, site/Firestore down + back up |
+| **Deposit bot** (new, all users) | `TELEGRAM_DEPOSIT_BOT_TOKEN` | – | "Deposit via Telegram": QR + amount + eSewa code, request goes to the private admin bot (see BOTS.md) |
 | Bug report bot (already there) | `TELEGRAM_BUG_BOT_TOKEN` | (default chat ids) | bug reports sent from the website |
 
 Other new variables: `PUBLIC_BACKEND_URL` (https URL of this backend, needed so Telegram can reach both webhooks),

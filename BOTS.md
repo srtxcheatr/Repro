@@ -16,9 +16,17 @@ All values go in Render → Environment (template: `.env.telegram.example`). Eve
 | 8 | **Reseller / API bot** | `TELEGRAM_RESELLER_BOT_TOKEN` | default chat ids | no |
 | 9 | **General alert bot** (fallback) | `TELEGRAM_USER_BOT_TOKEN` | default chat ids | no |
 | 10 | Report bot (optional) | `TELEGRAM_REPORT_BOT_TOKEN` | `TELEGRAM_REPORT_CHAT_ID` | no |
+| 11 | **Deposit bot (all users)** | `TELEGRAM_DEPOSIT_BOT_TOKEN` | – (requests go to the private admin bot #1) | yes `/api/telegram/deposit-webhook` |
 
 Default chat ids: `TELEGRAM_CHAT_ID_1`, `TELEGRAM_CHAT_ID_2`, `TELEGRAM_CHAT_ID`. Last fallback for everything: `TELEGRAM_BOT_TOKEN`.
 Also needed: `PUBLIC_BACKEND_URL` (https backend URL) for the two webhook bots.
+
+## Deposit bot (#11) - "Deposit via Telegram"
+1. Create a bot in @BotFather, put its token in `TELEGRAM_DEPOSIT_BOT_TOKEN` (Render -> Environment). Also keep `PUBLIC_BACKEND_URL` and set `SITE_URL` (the PHP site, where `/assets/img/srtx-pay-qr.jpg` lives). Optional: `TELEGRAM_DEPOSIT_BOT_USERNAME`, `DEPOSIT_QR_URL`.
+2. User taps **Deposit via Telegram** on the website -> one-time link `t.me/<bot>?start=dep_<token>` (valid 15 min, tied to the logged-in account).
+3. Bot shows Uid / Email / Name / Number + "I want to get deposit balance", then the store QR ("Welcome to SRT X CHEATS") and asks the amount.
+4. User sends the amount, then the eSewa transaction code (e.g. `1U7HMDY`).
+5. The private admin bot (#1) gets the normal top-up request with **Load ✅ / Cancel ❌**; the user is told the result in the same chat. Same duplicate-code, 3-pending and fake-payment rules as the website QR deposit.
 
 ## What each bot does
 

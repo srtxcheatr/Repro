@@ -15,8 +15,10 @@ import rewardsRoutes from './routes/rewards.js';
 import shopSrcRoutes, { fileRouter as shopSrcFileRoutes } from './routes/shopsrc.js';
 import telegramTopupRoutes from './routes/telegram-topup.js';
 import telegramPublicRoutes from './routes/telegram-public.js';
+import telegramDepositRoutes from './routes/telegram-deposit.js';
 import supportRoutes from './routes/support.js';
 import { registerPublicWebhook } from './src/publicBot.js';
+import { registerDepositWebhook } from './src/depositBot.js';
 import { startHealthMonitor } from './src/healthMonitor.js';
 import { registerTopupWebhook } from './src/topupQr.js';
 import { getLiveCatalog } from './src/srt_storage_product.js';
@@ -135,6 +137,7 @@ app.use('/api/shopsrc', shopSrcRoutes);
 app.use('/api/shopsrc-file', shopSrcFileRoutes);
 app.use('/api/telegram', telegramTopupRoutes);
 app.use('/api/telegram', telegramPublicRoutes);
+app.use('/api/telegram', telegramDepositRoutes);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
 app.use('/api/reseller/v1', resellerApiRoutes);
@@ -155,6 +158,7 @@ app.listen(PORT, () => {
   loadVersions();
   registerTopupWebhook().catch(() => {});
   registerPublicWebhook().catch(() => {});
+  registerDepositWebhook().catch(() => {});
   startHealthMonitor();
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (gloryConfigured() && process.env.GLORY_DIAG_ON_START !== '0') {
