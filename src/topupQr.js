@@ -133,8 +133,8 @@ export async function sendRequestToBot(reqId, p) {
   }
   const keyboard = { inline_keyboard: [[
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    { text: 'Load ✅', callback_data: `tq:L:${reqId}` },
-    { text: 'Cancel ❌', callback_data: `tq:C:${reqId}` },
+    { text: 'Load', style: 'success', callback_data: `tq:L:${reqId}` },
+    { text: 'Cancel', style: 'danger', callback_data: `tq:C:${reqId}` },
   ]] };
   const sent = [];
   await Promise.all(ids.map(async (chat_id) => {
@@ -158,15 +158,16 @@ export function isAllowedPress(cb) {
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 // eSewa transaction code: exactly 7 characters, CAPITAL letters + digits only, always starts with the number 1 (e.g. 1U7HMDY).
-// Returns { ok:true, txCode } or { ok:false, error } with a message that tells the user exactly what is wrong.
+// The rules are checked here on the server ONLY and are never described to the user: telling people the format
+// just teaches fakers how to build a code that passes. A code that fails is rejected at once - no admin message,
+// no database write - with one generic message that does not say which rule was broken.
+const TX_CODE_RE = /^1[A-Z0-9]{6}$/;
+export const TX_CODE_REJECTED = 'Payment rejected: this transaction code is not valid. Send the exact code from your eSewa payment receipt.';
+// Returns { ok:true, txCode } or { ok:false, error, reason }. `reason` is for server logs only - never show it to the user.
 export function validateTxCode(raw) {
   const t = String(raw ?? '').trim();
-  if (!t) return { ok: false, error: 'Enter your eSewa transaction code (example: 1U7HMDY).' };
-  if (/[a-z]/.test(t)) return { ok: false, error: 'Transaction code must be in CAPITAL letters only (example: 1U7HMDY).' };
-  if (/[^A-Z0-9]/.test(t)) return { ok: false, error: 'Transaction code can only contain capital letters (A-Z) and numbers (0-9) - no spaces or symbols.' };
-  if (t.length < 7) return { ok: false, error: `Transaction code is too short - it must be exactly 7 characters (you entered ${t.length}). Example: 1U7HMDY` };
-  if (t.length > 7) return { ok: false, error: `Transaction code is too long - it must be exactly 7 characters (you entered ${t.length}). Example: 1U7HMDY` };
-  if (t[0] !== '1') return { ok: false, error: 'Transaction code always starts with the number 1 (example: 1U7HMDY). Please check your eSewa receipt.' };
+  if (!t) return { ok: false, error: 'Enter your eSewa transaction code.', reason: 'empty' };
+  if (!TX_CODE_RE.test(t)) return { ok: false, error: TX_CODE_REJECTED, reason: 'format' };
   return { ok: true, txCode: t };
 }
 

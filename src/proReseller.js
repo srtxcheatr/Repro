@@ -37,8 +37,8 @@ export async function sendProRequestToBot(reqId, p) {
     return [];
   }
   const keyboard = { inline_keyboard: [[
-    { text: 'Approved ✅', callback_data: `pr:A:${reqId}` },
-    { text: 'CANCEL ❌', callback_data: `pr:C:${reqId}` },
+    { text: 'Approved', style: 'success', callback_data: `pr:A:${reqId}` },
+    { text: 'Cancel', style: 'danger', callback_data: `pr:C:${reqId}` },
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   ]] };
   const sent = [];

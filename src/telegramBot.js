@@ -213,8 +213,8 @@ async function identify(chat, key, idf) {
       `${head(u)}\n${cur ? `⚠️ Already banned (${esc(cur.label)}) — choosing a time below replaces it.\n` : ''}\nChoose the ban length:`,
       { inline_keyboard: [
         [{ text: '1 Hour', callback_data: `bn:1h:${tok}` }, { text: '12 Hours', callback_data: `bn:12h:${tok}` }, { text: '1 Day', callback_data: `bn:1d:${tok}` }],
-        [{ text: '3 Days', callback_data: `bn:3d:${tok}` }, { text: '7 Days', callback_data: `bn:7d:${tok}` }, { text: '⛔ Permanent', callback_data: `bn:pm:${tok}` }],
-        [{ text: 'Cancel ❌', callback_data: `bn:N:${tok}` }],
+        [{ text: '3 Days', callback_data: `bn:3d:${tok}` }, { text: '7 Days', callback_data: `bn:7d:${tok}` }, { text: 'Permanent', style: 'danger', callback_data: `bn:pm:${tok}` }],
+        [{ text: 'Cancel', style: 'danger', callback_data: `bn:N:${tok}` }],
       ] }));
   }
 
@@ -223,7 +223,7 @@ async function identify(chat, key, idf) {
     if (!cur) return void (await say(chat, `${head(u)}\n✅ This user is not banned.`));
     pending.set(tok, { kind: 'unban', uid: u.uid, exp: Date.now() + TTL });
     return void (await say(chat, `${head(u)}\n🚫 Banned: <b>${esc(cur.label)}</b>\n\nRemove the ban?`,
-      { inline_keyboard: [[{ text: 'Unban ✅', callback_data: `un:Y:${tok}` }, { text: 'Cancel ❌', callback_data: `un:N:${tok}` }]] }));
+      { inline_keyboard: [[{ text: 'Unban', style: 'success', callback_data: `un:Y:${tok}` }, { text: 'Cancel', style: 'danger', callback_data: `un:N:${tok}` }]] }));
   }
 
   if (st.cmd === 'annulment') {
@@ -234,7 +234,7 @@ async function identify(chat, key, idf) {
       text: `${String(p.at || '').slice(0, 10)} · ${p.name || p.sku || '?'} ${p.duration || ''} · NRP ${p.price}`.slice(0, 60),
       callback_data: `an:${p.index}:${tok}`,
     }]);
-    rows.push([{ text: 'Cancel ❌', callback_data: `an:N:${tok}` }]);
+    rows.push([{ text: 'Cancel', style: 'danger', callback_data: `an:N:${tok}` }]);
     return void (await say(chat, `${head(u)}\n💰 Balance: <b>${esc(nrp(u.data.balance))}</b>\n\nWhich purchase should be annulled (refunded)?`, { inline_keyboard: rows }));
   }
 
@@ -261,7 +261,7 @@ async function amountStep(chat, key, st, text) {
   pending.set(tok, { kind: cut ? 'cut' : 'add', uid: st.uid, amount, by: key, exp: Date.now() + TTL });
   const pre = cut ? 'cb' : 'ab';
   await say(chat, `${cut ? 'Cut' : 'Add'} <b>${esc(nrp(amount))}</b> ${cut ? 'from' : 'to'} <code>${esc(st.uid)}</code>?`, {
-    inline_keyboard: [[{ text: 'Confirm ✅', callback_data: `${pre}:Y:${tok}` }, { text: 'Cancel ❌', callback_data: `${pre}:N:${tok}` }]],
+    inline_keyboard: [[{ text: 'Confirm', style: 'success', callback_data: `${pre}:Y:${tok}` }, { text: 'Cancel', style: 'danger', callback_data: `${pre}:N:${tok}` }]],
   });
 }
 
@@ -333,7 +333,7 @@ export async function handleBotCallback(cb) {
         return tg('editMessageText', {
           chat_id: chat, message_id: mid, parse_mode: 'HTML', disable_web_page_preview: true,
           text: `${base}\n\n⚠️ Annul the purchase from <b>${esc(String(picked.at).slice(0, 10))}</b> and refund it to the user's balance?\nThe key itself stays with the user.`,
-          reply_markup: { inline_keyboard: [[{ text: 'Annul + refund ✅', callback_data: `an:Y:${tok2}` }, { text: 'Cancel ❌', callback_data: `an:N:${tok2}` }]] },
+          reply_markup: { inline_keyboard: [[{ text: 'Annul + refund', style: 'success', callback_data: `an:Y:${tok2}` }, { text: 'Cancel', style: 'danger', callback_data: `an:N:${tok2}` }]] },
         });
       }
       const r = await annulPurchase(p.uid, p.index, p.at, { by });

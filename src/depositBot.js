@@ -166,7 +166,7 @@ function detailsCard(uid, d) {
 
 const ASK_AMOUNT = `Enter amount of deposit\n(min ${nrp(QR_MIN_AMOUNT)})`;
 const askTx = (amount) =>
-  `Send transaction code\n\nExample - <code>1U7HMDY</code>\n\nOnly on - <b>Esewa</b>\n${LONG}\n` +
+  `Send transaction code\n\nOnly on - <b>Esewa</b>\n${LONG}\n` +
   `Pay current amount: <b>${esc(nrp(amount))}</b>\nWrong amount = no refunds 😕`;
 
 // ---- updates ---------------------------------------------------------------------
@@ -231,7 +231,7 @@ async function onAmount(chat, tgId, s, text) {
 async function onTx(chat, tgId, s, text) {
   const txCheck = validateTxCode(text.replace(/\s+/g, ''));
   if (!txCheck.ok) {
-    return void (await say(chat, `❌ ${esc(txCheck.error)}\n\nExample - <code>1U7HMDY</code>\nOnly on - <b>Esewa</b>`));
+    return void (await say(chat, `❌ ${esc(txCheck.error)}\n\nOnly on - <b>Esewa</b>`));
   }
   const txCode = txCheck.txCode;
   if (!allow(`d:${tgId}`, 8, 10 * 60_000)) return void (await say(chat, '⏳ Too many attempts. Please wait a few minutes.'));
