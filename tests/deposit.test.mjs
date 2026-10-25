@@ -64,8 +64,12 @@ assert.match(last().text, /expired/);
 await say('abc'); assert.match(last().text, /valid amount/);
 await say('50');  assert.match(last().text, /valid amount/);
 await say('500'); assert.match(last().text, /Send transaction code[\s\S]*1U7HMDY[\s\S]*Esewa[\s\S]*NRP 500[\s\S]*no refunds/);
-await say('x');   assert.match(last().text, /Invalid transaction code/);
-await say('1u7hmdy');
+await say('x');   assert.match(last().text, /too short/);
+await say('1u7hmdy'); assert.match(last().text, /CAPITAL/);   // lowercase is rejected with guidance
+await say('0U7HMDY'); assert.match(last().text, /starts with the number 1/);
+await say('1U7HMD');  assert.match(last().text, /too short/);
+await say('1U7HMDYY'); assert.match(last().text, /too long/);
+await say('1U7HMDY');
 assert.match(last().text, /Request received/);
 const adminMsg = last('admin'); assert.match(adminMsg.text, /USER NAME<\/b> - Ram[\s\S]*REQUEST BALANCE[\s\S]*NRP 500[\s\S]*1U7HMDY[\s\S]*Telegram deposit bot/);
 assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.text), ['Load ✅', 'Cancel ❌']);
