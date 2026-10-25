@@ -139,7 +139,7 @@ export async function sendRequestToBot(reqId, p) {
   const sent = [];
   await Promise.all(ids.map(async (chat_id) => {
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    const r = await tg('sendMessage', { chat_id, text: buildRequestText(p), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: keyboard });
+    const r = await tg('sendMessage', { chat_id, text: buildRequestText(p, p.footer || ''), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: keyboard });
     if (r?.ok) sent.push({ chat_id: r.result.chat.id, message_id: r.result.message_id });
   }));
   return sent;
@@ -226,4 +226,56 @@ export async function resolveRequest(reqId, decision, by = 'telegram') {
   });
   if (out.ok) invalidateUserDoc(uid, { history: false });
   return { ...out, uid, messages: idx.data().messages || [], base: idx.data() };
+}
+
+// ---- shared by the website (/api/user/topup-qr) and the Telegram deposit bot --------------------
+// Creates a PENDING QR top-up for `uid`, then announces it to the admin bot with Load / Cancel buttons.
+// Returns { ok:true, reqId } or { ok:false, status, error }.
+export async function createQrTopup({ uid, email = '', amount, txCode, ip = '', source = 'website', extraIndex = {} }) {
+  amount = Number(amount);
+  txCode = String(txCode || '').trim().toUpperCase();
+  if (!Number.isInteger(amount) || amount < QR_MIN_AMOUNT) return { ok: false, status: 400, error: `Minimum top-up is Rs ${QR_MIN_AMOUNT}` };
+  if (amount > QR_MAX_AMOUNT) return { ok: false, status: 400, error: 'Amount is too large' };
+  if (!/^[A-Z0-9_-]{6,40}$/.test(txCode)) return { ok: false, status: 400, error: 'Enter a valid transaction ID (6-40 letters/numbers)' };
+
+  const reqId = newReqId();
+  const userRef = db().collection('users').doc(uid);
+  const txRef = db().collection('topupTx').doc(txCode);
+  const idxRef = db().collection('topupQr').doc(reqId);
+  const date = new Date().toISOString();
+
+  let profile;
+  try {
+    profile = await db().runTransaction(async (tx) => {
+      const [u, used] = await Promise.all([tx.get(userRef), tx.get(txRef)]);
+      if (used.exists) throw new Error('This transaction ID was already submitted');
+      const d = u.exists ? u.data() : {};
+      const list = Array.isArray(d.topupRequests) ? d.topupRequests : [];
+      const recentCut = Date.now() - QR_PENDING_WINDOW_MS;
+      const recentPending = list.filter((t) => t.status === 'PENDING' && t.method === QR_METHOD && new Date(t.date).getTime() > recentCut);
+      if (recentPending.length >= QR_MAX_PENDING) {
+        const oldest = Math.min(...recentPending.map((t) => new Date(t.date).getTime()));
+        const mins = Math.max(1, Math.ceil((oldest + QR_PENDING_WINDOW_MS - Date.now()) / 60000));
+        throw new Error(`You already have ${recentPending.length} top-ups waiting to be checked. You can send a new one in about ${mins} min.`);
+      }
+      const entry = { date, amount, paymentAccount: 'QR (SRT X CHEATS)', method: QR_METHOD, txCode, status: 'PENDING', uid, email: email || d.email || '', reqId, ip, ...(source !== 'website' ? { source } : {}) };
+      tx.set(userRef, { topupRequests: [...list, entry] }, { merge: true });
+      tx.set(txRef, { uid, reqId, at: date });
+      tx.set(idxRef, { uid, txCode, amount, status: 'PENDING', createdAt: date, messages: [], ...(source !== 'website' ? { source } : {}), ...extraIndex });
+      return d;
+    });
+  } catch (e) {
+    return { ok: false, status: 409, error: e.message };
+  }
+  invalidateUserDoc(uid, { history: false });
+
+  try {
+    const messages = await sendRequestToBot(reqId, {
+      name: profile.profileName || '', uid, email: profile.email || email, phone: profile.profilePhone || '',
+      balance: Number(profile.balance || 0), amount, txCode, date, ip,
+      footer: source === 'telegram' ? '<b>VIA</b> - Telegram deposit bot' : '',
+    });
+    if (messages.length) await idxRef.set({ messages }, { merge: true });
+  } catch (e) { console.warn('[topup-qr] announce failed:', e?.name || 'error'); }
+  return { ok: true, reqId, status: 'PENDING' };
 }
