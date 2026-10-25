@@ -10,7 +10,7 @@
 import crypto from 'node:crypto';
 import { db } from './firebase.js';
 import { esc } from './telegram.js';
-import { createQrTopup, validateTxCode, QR_MIN_AMOUNT, QR_MAX_AMOUNT } from './topupQr.js';
+import { createQrTopup, QR_MIN_AMOUNT, QR_MAX_AMOUNT } from './topupQr.js';
 
 export const depositToken = () => process.env.TELEGRAM_DEPOSIT_BOT_TOKEN || '';
 export const depositBotConfigured = () => !!depositToken();
@@ -229,18 +229,21 @@ async function onAmount(chat, tgId, s, text) {
 }
 
 async function onTx(chat, tgId, s, text) {
-  const txCheck = validateTxCode(text.replace(/\s+/g, ''));
-  if (!txCheck.ok) {
-    return void (await say(chat, `❌ ${esc(txCheck.error)}\n\nOnly on - <b>Esewa</b>`));
-  }
-  const txCode = txCheck.txCode;
+  const raw = text.replace(/\s+/g, '');
+  if (!raw) return void (await say(chat, '❌ Send your eSewa transaction code.\n\nOnly on - <b>Esewa</b>'));
   if (!allow(`d:${tgId}`, 8, 10 * 60_000)) return void (await say(chat, '⏳ Too many attempts. Please wait a few minutes.'));
+  // the format is checked inside createQrTopup; a fake-format code looks exactly like a normal submit here
   const r = await createQrTopup({
-    uid: s.uid, amount: s.amount, txCode, source: 'telegram', extraIndex: { tgChatId: String(chat), tgUserId: tgId },
+    uid: s.uid, amount: s.amount, txCode: raw, source: 'telegram', extraIndex: { tgChatId: String(chat), tgUserId: tgId },
   });
   if (!r.ok) return void (await say(chat, `❌ ${esc(r.error)}`));
   await sessions().doc(tgId).delete().catch(() => {});
   await say(chat,
-    `✅ <b>Request received</b>\nAmount: <b>${esc(nrp(s.amount))}</b>\nTx code: <code>${esc(txCode)}</code>\n${LONG}\n` +
+    `✅ <b>Request received</b>\nAmount: <b>${esc(nrp(s.amount))}</b>\nTx code: <code>${esc(raw.slice(0, 30))}</code>\n${LONG}\n` +
     'We are checking your payment. Your balance will be loaded soon and I will message you here.');
+  if (r.autoRejected) {      // fake code: same as an admin pressing Cancel - strike notice 5 s later
+    setTimeout(() => {
+      say(chat, `❌ <b>Deposit cancelled</b>\n⚠️ ${esc(r.autoRejected.step.text)}`).catch(() => {});
+    }, 5000);
+  }
 }

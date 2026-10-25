@@ -1,5 +1,11 @@
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-export const PRO_MIN_TOPUP = Number(process.env.PRO_RESELLER_MIN_TOPUP) > 0 ? Number(process.env.PRO_RESELLER_MIN_TOPUP) : 1500;
+// Unlock rules (checked on every deposit, per SINGLE deposit — small top-ups of 100/200 are never added together):
+//   RESELLER      = one deposit of NRP 2000 or more
+//   PRO RESELLER  = 10+ keys bought AND one NEW deposit of NRP 3500 or more
+const envNum = (v, d) => (Number(v) > 0 ? Number(v) : d);
+export const RESELLER_MIN_DEPOSIT = envNum(process.env.RESELLER_MIN_DEPOSIT, 2000);
+export const PRO_MIN_DEPOSIT = envNum(process.env.PRO_RESELLER_MIN_DEPOSIT, 3500);
+export const PRO_MIN_KEYS = envNum(process.env.PRO_RESELLER_MIN_KEYS, 10);
 
 export const ROLES = ['user', 'reseller', 'pro_reseller'];
 export const ROLE_LABEL = { user: 'USER', reseller: 'RESELLER', pro_reseller: 'PRO RESELLER' };
@@ -18,24 +24,32 @@ export function normalizeRole(input) {
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
 export function depositUpdate(data, amount, balanceAfter, nowIso = new Date().toISOString()) {
-  const pr = data && data.proReseller;
+  const none = { fields: {}, log: [], activated: false, resellerActivated: false };
   const amt = Number(amount);
-  if (!pr || pr.status !== 'approved' || !(amt > 0)) return { fields: {}, log: [], activated: false };
+  if (!(amt > 0)) return none;
+  const role = (data && data.role) || 'user';
+  if (role === 'pro_reseller') return none;
+  const keys = Number((data && data.totalKeysBought) || 0);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-  const required = Number(pr.requiredDeposit) > 0 ? Number(pr.requiredDeposit) : PRO_MIN_TOPUP;
-  const deposited = Number(pr.depositSinceApproval || 0) + amt;
-
-  if (deposited >= required) {
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
+  // PRO RESELLER: 10+ keys AND this one deposit is NRP 3500+ (a user or a reseller can jump straight to it)
+  if (amt >= PRO_MIN_DEPOSIT && keys >= PRO_MIN_KEYS) {
+    const pr = (data && data.proReseller) || {};
     return {
-      activated: true,
-      fields: { role: 'pro_reseller', proReseller: { ...pr, status: 'active', depositSinceApproval: deposited, activatedAt: nowIso } },
-      log: [{ delta: 0, note: `Pro Reseller ACTIVATED — new top-ups NRP ${deposited} (needed ${required})`, resultingBalance: balanceAfter, at: nowIso }],
+      activated: true, resellerActivated: false,
+      fields: { role: 'pro_reseller', proReseller: { ...pr, status: 'active', activatedAt: nowIso, depositSinceApproval: amt, requiredDeposit: PRO_MIN_DEPOSIT, manual: false } },
+      log: [{ delta: 0, note: `Pro Reseller UNLOCKED — single deposit NRP ${amt} (needed ${PRO_MIN_DEPOSIT}) + ${keys} keys (needed ${PRO_MIN_KEYS})`, resultingBalance: balanceAfter, at: nowIso }],
     };
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
   }
-  return { activated: false, fields: { proReseller: { ...pr, depositSinceApproval: deposited } }, log: [] };
+  // RESELLER: one deposit of NRP 2000+ (plain users only)
+  if (role === 'user' && amt >= RESELLER_MIN_DEPOSIT) {
+    return {
+      activated: false, resellerActivated: true,
+      fields: { role: 'reseller' },
+      log: [{ delta: 0, note: `Reseller UNLOCKED — single deposit NRP ${amt} (needed ${RESELLER_MIN_DEPOSIT})`, resultingBalance: balanceAfter, at: nowIso }],
+    };
+  }
+  return none;
 }
 
 export function roleChangeUpdate(data, role, by, nowIso = new Date().toISOString()) {
@@ -55,13 +69,14 @@ export function roleChangeUpdate(data, role, by, nowIso = new Date().toISOString
 
 export function proPublicState(data) {
   const pr = (data && data.proReseller) || {};
-  const status = pr.status || 'none';
+  const role = (data && data.role) || 'user';
   return {
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    status,
-    required: Number(pr.requiredDeposit) > 0 ? Number(pr.requiredDeposit) : PRO_MIN_TOPUP,
+    status: role === 'pro_reseller' ? 'active' : 'none',
+    required: PRO_MIN_DEPOSIT,
     deposited: Number(pr.depositSinceApproval || 0),
-    stamp: String(pr.activatedAt || pr.reviewedAt || pr.requestedAt || ''),
+    keys: Number((data && data.totalKeysBought) || 0),
+    minKeys: PRO_MIN_KEYS,
+    resellerRequired: RESELLER_MIN_DEPOSIT,
+    stamp: String(pr.activatedAt || ''),
   };
-// src by SRT X CHEATS. Copy right SRT X CHEATS
 }

@@ -8,7 +8,7 @@ import {
   userBalanceReport, activeUsersReport, revenueReport, setUserRole, userDetailText, MAX_BOT_LOAD,
 } from './adminOps.js';
 import { activeBan, BAN_DURATIONS } from './ban.js';
-import { proPublicState, normalizeRole, ROLE_LABEL } from './proTier.js';
+import { RESELLER_MIN_DEPOSIT, PRO_MIN_DEPOSIT, PRO_MIN_KEYS, normalizeRole, ROLE_LABEL } from './proTier.js';
 import { announceProActivated } from './proReseller.js';
 import { searchProducts, cleanQuery, formatGroups } from './productInfo.js';
 import { esc, telegramNotify, testNotify, notifyFailures, NOTIFY_PURPOSES, describeTarget } from './telegram.js';
@@ -197,9 +197,8 @@ async function identify(chat, key, idf) {
 
   if (st.cmd === 'addbalance' || st.cmd === 'cutbalance') {
     sessions.set(key, { ...st, step: 'amount', uid: u.uid, exp: Date.now() + TTL });
-    const pro = proPublicState(u.data);
-    const hint = st.cmd === 'addbalance' && pro.status === 'approved'
-      ? `\n💎 Pro Reseller pending activation — new top-up ${nrp(pro.deposited)} / ${nrp(pro.required)}` : '';
+    const hint = st.cmd === 'addbalance'
+      ? `\nℹ️ A single deposit of NRP ${RESELLER_MIN_DEPOSIT}+ unlocks RESELLER; NRP ${PRO_MIN_DEPOSIT}+ (with ${PRO_MIN_KEYS}+ keys bought) unlocks PRO RESELLER.` : '';
     return void (await say(chat,
       `${head(u)}\n💰 Balance: <b>${esc(nrp(u.data.balance))}</b>${hint}\n\nSend amount to ${st.cmd === 'addbalance' ? 'add' : 'cut'} (NRP) 💵`));
   }
@@ -305,7 +304,7 @@ export async function handleBotCallback(cb) {
       const r = await creditUser(p.uid, p.amount, { note: `Telegram /addbalance by ${who(cb.from)}`, actor: 'TELEGRAM', by });
       await answerCallback(cb.id, `Loaded ${nrp(p.amount)}`);
       await editMessage(chat, mid, `${base}\n\n✅ <b>LOADED</b> by ${esc(who(cb.from))}\n${esc(nrp(r.before))} ➝ <b>${esc(nrp(r.after))}</b>` +
-        (r.proActivated ? '\n💎 <b>PRO RESELLER ACTIVATED</b> (new top-up reached the requirement)' : ''));
+        (r.proActivated ? '\n💎 <b>PRO RESELLER ACTIVATED</b> (single deposit + keys requirement reached)' : ''));
       if (r.proActivated) announceProActivated({ uid: p.uid, email: r.email, name: r.name, deposited: r.deposited });
       return;
     }

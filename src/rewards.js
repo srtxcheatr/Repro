@@ -1,5 +1,4 @@
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-import admin from 'firebase-admin';
 import { db } from './firebase.js';
 import { RuleError } from './profileRules.js';
 import { activeBan } from './ban.js';
@@ -7,10 +6,7 @@ import { activeBan } from './ban.js';
 
 const COL = 'userRewards';
 
-export const STAR_CB_EVERY = Number(process.env.STAR_CB_EVERY) > 0 ? Number(process.env.STAR_CB_EVERY) : 10;
-export const STAR_CB_AMOUNT = Number(process.env.STAR_CB_AMOUNT) > 0 ? Number(process.env.STAR_CB_AMOUNT) : 300;
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-export const STAR_CASHBACK_FROM = Date.parse(process.env.STAR_CASHBACK_FROM || '2026-10-20T00:00:00+05:45');
 
 export const MISSIONS = [
   { id: 'm30',  keys: 30,  title: 'Sell 30 Keys',  badge: 'silver_crown' },
@@ -25,11 +21,7 @@ export const MISSIONS = [
   { id: 'm1000', keys: 1000, title: 'Sell 1000 Keys — AURORA', banner: 'aurora_flow', profile: 'aurora_aura' },
   { id: 'm1500', keys: 1500, title: 'Sell 1500 Keys — NEON', banner: 'neon_flow', profile: 'neon_aura' },
 
-  { id: 'c10',  keys: 10,  title: 'Buy 10 New Keys',  cashback: 100, cb: true },
-  { id: 'c20',  keys: 20,  title: 'Buy 20 New Keys',  cashback: 100, cb: true },
   // src by SRT X CHEATS. Copy right SRT X CHEATS
-  { id: 'c100', keys: 100, title: 'Buy 100 New Keys', cashback: 300, cb: true },
-  { id: 'c250', keys: 250, title: 'Buy 250 New Keys', cashback: 1000, cb: true },
 ];
 
 export const BADGES = ['silver_crown', 'gold_crown', 'diamond', 'T', 'R', 'S'];
@@ -40,7 +32,6 @@ export const PROFILES = ['gold_aura', 'dark_aura', 'comet_aura', 'star_aura', 'i
 const missionById = (id) => MISSIONS.find((m) => m.id === id) || null;
 const rewardsRef = (uid) => db().collection(COL).doc(uid);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-const round2 = (n) => Math.round(n * 100) / 100;
 
 export function unlockedFrom(claimed) {
   const out = { badges: [], banners: [], profiles: [] };
@@ -77,33 +68,19 @@ export function botCosmetics(b) {
 }
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-export async function getRewardState(uid, totalKeysBought, userData = {}) {
+export async function getRewardState(uid, totalKeysBought) {
   const snap = await rewardsRef(uid).get();
   const r = snap.exists ? snap.data() : {};
-  const u = userData || {};
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const claimed = r.claimed || {};
   const total = Number(totalKeysBought || 0);
   return {
     totalKeysBought: total,
-    missions: MISSIONS.map((m) => {
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      const open = !m.cb || Date.now() >= STAR_CASHBACK_FROM;
-      const have = m.cb ? (open ? Number(u.starCb?.keys || 0) : 0) : total;
-      return {
-        id: m.id, keys: m.keys, title: m.title, cb: !!m.cb, have, locked: !open, opensAt: m.cb ? STAR_CASHBACK_FROM : 0,
-        cashback: m.cashback || 0, badge: m.badge || '', banner: m.banner || '', profile: m.profile || '',
-        // src by SRT X CHEATS. Copy right SRT X CHEATS
-        claimed: !!claimed[m.id], claimedAt: claimed[m.id] || null, ready: open && have >= m.keys,
-      };
-    }),
-    star: {
-      member: !!claimed.m500, from: STAR_CASHBACK_FROM, active: Date.now() >= STAR_CASHBACK_FROM,
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      every: STAR_CB_EVERY, amount: STAR_CB_AMOUNT,
-      newKeys: Number(u.starCb?.keys || 0), claimedCount: Number(r.starClaimed || 0), earned: Number(r.starEarned || 0),
-      available: Date.now() >= STAR_CASHBACK_FROM && claimed.m500 ? Math.max(0, Math.floor(Number(u.starCb?.keys || 0) / STAR_CB_EVERY) - Number(r.starClaimed || 0)) : 0,
-    },
+    missions: MISSIONS.map((m) => ({
+      id: m.id, keys: m.keys, title: m.title, have: total,
+      badge: m.badge || '', banner: m.banner || '', profile: m.profile || '',
+      claimed: !!claimed[m.id], claimedAt: claimed[m.id] || null, ready: total >= m.keys,
+    })),
     unlocked: unlockedFrom(claimed),
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     equipped: cleanEquipped(r.equipped, claimed),
@@ -128,11 +105,7 @@ export async function claimMission(uid, missionId) {
     if (activeBan(u)) throw new RuleError('Your account is banned.', 403);
     const claimed = { ...(r.claimed || {}) };
     if (claimed[m.id]) throw new RuleError('You already claimed this reward.', 409);
-    if (m.cb && Date.now() < STAR_CASHBACK_FROM) {
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      throw new RuleError('Cashback opens on 20 October 2026, 12:00 AM.', 403, { code: 'NOT_OPEN_YET', startsAt: STAR_CASHBACK_FROM });
-    }
-    const total = m.cb ? Number(u.starCb?.keys || 0) : Number(u.totalKeysBought || 0);
+    const total = Number(u.totalKeysBought || 0);
     if (total < m.keys) throw new RuleError(`Not unlocked yet — you have ${total} of ${m.keys} keys.`, 400);
 
     // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -143,18 +116,10 @@ export async function claimMission(uid, missionId) {
     if (m.profile) equipped.profile = m.profile;
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-    let newBalance = Number(u.balance || 0);
-    if (m.cashback) {
-      newBalance = round2(newBalance + m.cashback);
-      const log = Array.isArray(u.adminLog) ? [...u.adminLog] : [];
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      log.push({ delta: m.cashback, note: `Reward Center cashback — ${m.title}`, resultingBalance: newBalance, at: new Date().toISOString() });
-      tx.set(userRef, { balance: newBalance, adminLog: log }, { merge: true });
-    }
     tx.set(rRef, { claimed, equipped, updatedAt: Date.now() }, { merge: true });
 
     // src by SRT X CHEATS. Copy right SRT X CHEATS
-    return { mission: m, newBalance, cashback: m.cashback || 0, equipped, unlocked: unlockedFrom(claimed), user: u };
+    return { mission: m, equipped, unlocked: unlockedFrom(claimed), user: u };
   });
 }
 
@@ -199,42 +164,3 @@ export async function cosmeticsFor(uids) {
   return out;
 }
 export const NO_COSMETICS = Object.freeze({ badge: '', banner: '', profile: '' });
-
-export function newKeyFields(keys, now = Date.now()) {
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  if (now < STAR_CASHBACK_FROM || !(keys > 0)) return {};
-  return { starCb: { keys: admin.firestore.FieldValue.increment(keys) } };
-}
-
-export async function claimStarCashback(uid) {
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  if (Date.now() < STAR_CASHBACK_FROM) {
-    const d = new Date(STAR_CASHBACK_FROM).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kathmandu' });
-    throw new RuleError(`STAR cashback opens on ${d}, 12:00 AM.`, 403, { code: 'NOT_OPEN_YET', startsAt: STAR_CASHBACK_FROM });
-  }
-  const userRef = db().collection('users').doc(uid);
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const rRef = rewardsRef(uid);
-  return db().runTransaction(async (tx) => {
-    const [uSnap, rSnap] = await Promise.all([tx.get(userRef), tx.get(rRef)]);
-    const u = uSnap.exists ? uSnap.data() : {};
-    const r = rSnap.exists ? rSnap.data() : {};
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    if (activeBan(u)) throw new RuleError('Your account is banned.', 403);
-    if (!(r.claimed && r.claimed.m500)) throw new RuleError('Claim the STAR mission (500 keys) first.', 403);
-    const newKeys = Number(u.starCb?.keys || 0);
-    const done = Number(r.starClaimed || 0);
-    const batches = Math.floor(newKeys / STAR_CB_EVERY) - done;
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    if (batches < 1) throw new RuleError(`Buy ${STAR_CB_EVERY - (newKeys % STAR_CB_EVERY)} more new key(s) to unlock the next cashback.`, 400);
-    const cash = round2(batches * STAR_CB_AMOUNT);
-    const newBalance = round2(Number(u.balance || 0) + cash);
-    const log = Array.isArray(u.adminLog) ? [...u.adminLog] : [];
-    log.push({ delta: cash, note: `STAR cashback — ${batches} x ${STAR_CB_EVERY} new keys`, resultingBalance: newBalance, at: new Date().toISOString() });
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    tx.set(userRef, { balance: newBalance, adminLog: log }, { merge: true });
-    tx.set(rRef, { starClaimed: done + batches, starEarned: round2(Number(r.starEarned || 0) + cash), updatedAt: Date.now() }, { merge: true });
-    return { cash, batches, newBalance, user: u };
-  });
-}
-// src by SRT X CHEATS. Copy right SRT X CHEATS

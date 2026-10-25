@@ -98,7 +98,7 @@ export function userDetailText(uid, d) {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   ];
   if (pro.status !== 'none') {
-    lines.push(`Pro request - <b>${esc(pro.status.toUpperCase())}</b>` + (pro.status === 'approved' ? ` · new top-up ${esc(nrp(pro.deposited))} / ${esc(nrp(pro.required))}` : ''));
+    lines.push(`Pro Reseller - <b>${esc(pro.status.toUpperCase())}</b>` + (pro.deposited ? ` · unlocked by single deposit ${esc(nrp(pro.deposited))}` : ''));
   }
   if (d.fakePayment?.count) lines.push(`⚠️ Fake-payment strikes - ${Number(d.fakePayment.count)}/3`);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -243,7 +243,6 @@ export async function annulPurchase(uid, index, expectedAt, { by = 'telegram' } 
       annulledPurchases: [...(d.annulledPurchases || []), { ...entry, annulledAt: now, annulledBy: by }],
       adminLog: [...(d.adminLog || []), { delta: price, note: `Annulment — ${entry.name || entry.sku || 'purchase'} ${entry.duration || ''} refunded (by ${by})`.replace(/\s+/g, ' '), resultingBalance: after, at: now }],
     };
-    if (Number(d.starCb?.keys || 0) > 0) upd.starCb = { keys: admin.firestore.FieldValue.increment(-1) };
     tx.set(userRef, upd, { merge: true });
     return { before, after, price, entry, email: d.email || '', name: d.profileName || '' };
   });
