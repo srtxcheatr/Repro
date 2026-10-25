@@ -23,7 +23,7 @@ import { isResellerTier, proPublicState, PRO_MIN_TOPUP } from '../src/proTier.js
 import { sendProRequestToBot } from '../src/proReseller.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { newReqId as newProReqId } from '../src/topupQr.js';
-import { createQrTopup } from '../src/topupQr.js';
+import { createQrTopup, validateTxCode } from '../src/topupQr.js';
 import { depositBotConfigured, createDepositLink } from '../src/depositBot.js';
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -293,13 +293,14 @@ router.post('/history-clear', asyncHandler(async (req, res) => {
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 router.post('/topup', asyncHandler(async (req,res)=>{
   const amount=parseInt(req.body?.amount,10);
-  const txCode=String(req.body?.txCode||'').trim().toUpperCase();
+  const txCheck=validateTxCode(req.body?.txCode);
+  const txCode=txCheck.txCode||'';
   const paymentAccount=String(req.body?.paymentAccount||'').trim();
   if(!amount||amount<50) return res.status(400).json({success:false,error:'Enter a valid amount (minimum Rs 50)'});
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if(amount>1000000) return res.status(400).json({success:false,error:'Amount is too large'});
   if(paymentAccount!=='SRT X CHEATS (OWNER)') return res.status(400).json({success:false,error:'Invalid payment account'});
-  if(!txCode) return res.status(400).json({success:false,error:'Transaction code is required'});
+  if(!txCheck.ok) return res.status(400).json({success:false,error:txCheck.error});
   if(txCode.length>120) return res.status(400).json({success:false,error:'Transaction code is too long'});
   const userRef=db().collection('users').doc(req.uid);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
