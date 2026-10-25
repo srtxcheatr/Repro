@@ -25,16 +25,16 @@ Also needed: `PUBLIC_BACKEND_URL` (https backend URL) for the two webhook bots.
 1. Create a bot in @BotFather, put its token in `TELEGRAM_DEPOSIT_BOT_TOKEN` (Render -> Environment). Also keep `PUBLIC_BACKEND_URL` and set `SITE_URL` (the PHP site, where `/assets/img/srtx-pay-qr.jpg` lives). Optional: `TELEGRAM_DEPOSIT_BOT_USERNAME`, `DEPOSIT_QR_URL`.
 2. User taps **Deposit via Telegram** on the website -> one-time link `t.me/<bot>?start=dep_<token>` (valid 15 min, tied to the logged-in account).
 3. Bot shows Uid / Email / Name / Number + "I want to get deposit balance", then the store QR ("Welcome to SRT X CHEATS") and asks the amount.
-4. User sends the amount, then the eSewa transaction code (e.g. `1U7HMDY`).
-5. The private admin bot (#1) gets the normal top-up request with **Load ✅ / Cancel ❌**; the user is told the result in the same chat. Same duplicate-code, 3-pending and fake-payment rules as the website QR deposit.
+4. User sends the amount, then the eSewa transaction code. The bot never tells the user the code format; a fake-format code looks like a normal submit, then gets a strike 5 s later (see MEMORY.md).
+5. The private admin bot (#1) gets the normal top-up request with **Load / Cancel** (green / red Telegram button styles); the user is told the result in the same chat. Same duplicate-code, 3-pending and fake-payment rules as the website QR deposit.
 
 ## What each bot does
 
 ### 1. Private admin bot
-- Top-up requests from the website with **Load ✅ / Cancel ❌** buttons (fake-payment strikes on cancel)
-- Pro Reseller requests with Approve / Cancel
+- Top-up requests from the website with **Load / Cancel** (green / red Telegram button styles) buttons (fake-payment strikes on cancel)
+- (Pro Reseller approval requests were removed — Pro now unlocks automatically from deposits)
 - Commands (user = UID, e-mail or phone):
-  `/addbalance` `/cutbalance` `/alluserbalance` `/allusers_list` `/allrevenue` `/product_info` `/ban` `/unban` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`
+  `/addbalance` `/cutbalance` `/alluserbalance` `/allusers_list` `/allrevenue` `/product_info` `/ban` `/unban` `/removeallrestriction` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`
 - Receives reseller reports from the public bot
 
 ### 2. Public bot
@@ -50,7 +50,7 @@ Anyone sends a phone number, e-mail or UID → "SRT X CHEATS USER DETAILS" card 
 🐛 Bug reports sent by users from the website.
 
 ### 6. Balance / top-up request bot
-Balance load requests from the website, rejected balance loads, STAR cashback.
+Balance load requests from the website, rejected balance loads.
 
 ### 7. Load alert bot
 Every balance load / cut / annulment refund made by admin panel, private bot or Telegram.

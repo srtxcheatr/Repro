@@ -12,9 +12,9 @@ Node.js backend for the SRT X CHEATS key store. The PHP website talks to it for 
 | Public (anyone on Telegram) | Check a reseller's account details and report them |
 
 ## Features (v6)
-**Store (existing):** catalog with per-role prices, instant key checkout, balance top-up via QR + admin approval, Pro Reseller tier, reseller API, rewards/cashback, leaderboard, announcements, Glory bot product.
+**Store (existing):** catalog with per-role prices, instant key checkout, balance top-up via QR + admin approval, auto-unlock Reseller (one 2000 deposit) and Pro Reseller (10+ keys + one 3500 deposit), reseller API, rewards (cosmetic missions, no cashback), leaderboard, announcements, Glory bot product.
 
-**Private admin bot:** `/addbalance` `/cutbalance` `/alluserbalance` `/allusers_list` `/allrevenue` `/product_info` `/ban` `/unban` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`. Users can be given by UID, e-mail or phone number.
+**Private admin bot:** `/addbalance` `/cutbalance` `/alluserbalance` `/allusers_list` `/allrevenue` `/product_info` `/ban` `/unban` `/removeallrestriction` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`. Users can be given by UID, e-mail or phone number.
 
 **Public bot:** send number / e-mail / UID → "SRT X CHEATS USER DETAILS" card with **[Report] [Ok]**. Report text is stored (`resellerReports`) and sent to the admins.
 

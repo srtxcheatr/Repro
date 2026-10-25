@@ -57,7 +57,7 @@ If Firestore errors (including quota exhausted) the last good copy is served ins
 * **Change detection** — browsers poll `GET /api/user/sync` (zero Firestore reads). Stamps live in the
   Firestore doc `config/versions`, so a server sleep/restart does NOT make every browser refetch everything.
   Balance, history, catalog, announcement, feedback, policy each have their own stamp.
-* **Balance-only changes** (admin load/deduct, employee load, redeem, cashback) — up-to-date browsers patch the
+* **Balance-only changes** (admin load/deduct, employee load, redeem) — up-to-date browsers patch the
   balance in their local cache with no request at all. Writers opt in with
   `invalidateUserDoc(uid, { history: false, balance: newBalance })` (see `src/userCache.js`).
 * **Announcements** — fetched once, cached in the browser until the admin publishes or switches one off.
@@ -149,7 +149,7 @@ Run **/notifytest** in the private bot to see which bot reaches you and the exac
 
 ### Private bot commands
 
-`/addbalance` `/cutbalance` `/alluserbalance` `/allrevenue` `/allusers_list` `/product_info` `/ban` `/unban` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`
+`/addbalance` `/cutbalance` `/alluserbalance` `/allrevenue` `/allusers_list` `/product_info` `/ban` `/unban` `/removeallrestriction` `/annulment` `/getdetail` `/mode` `/notifytest` `/cancel`
 
 A user can be given as **UID, e-mail or phone number**.
 
@@ -173,3 +173,10 @@ API: `GET /api/support/overview`, `GET /api/support/tickets/:id`, `POST /api/sup
   `firestore.indexes.json` (uid + createdAt) - until then the list falls back to an unordered read.
 * Password reset now needs `PASSWORD_RESET_SECRET` (or `ADMIN_SECRET`); there is no built-in fallback secret any more.
 * Tests: `npm test` and `node tests/bot.test.mjs` (the bot test needs `npm install` first).
+
+## Reseller / Pro Reseller unlock (deposit based)
+
+* **RESELLER** — unlocks automatically on ONE deposit of NRP **2000+** (`RESELLER_MIN_DEPOSIT`).
+* **PRO RESELLER** — needs **10+ keys bought** (`PRO_RESELLER_MIN_KEYS`) AND ONE new deposit of NRP **3500+** (`PRO_RESELLER_MIN_DEPOSIT`).
+* Deposits are never added together (100 + 200 + ... does not count) — each single deposit is checked on its own, whether it comes from QR, Telegram, admin, employee or the bot (`depositUpdate` in `src/proTier.js`).
+* Removed: Cashback missions, STAR cashback (`/api/rewards/claim-star`), the old "8 keys + NRP 1500 balance" apply button (`/api/user/apply-reseller`), and the Pro Reseller details form / Telegram approval flow.

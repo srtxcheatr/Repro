@@ -2,7 +2,16 @@
 
 Legend: ✅ done · 🧪 done, needs live test · ⏳ open · ❓ needs owner answer
 
-## v6 (this update)
+## v12 - payment checks
+| # | Item | Status |
+|---|---|---|
+| 1 | Silent tx-code check: fake code shows "pending", auto-rejected + strike after 5 s (no admin) | 🧪 |
+| 2 | Tx-code format hidden from the store + Telegram bot | 🧪 |
+| 3 | Admin-bot Load / Cancel buttons use green / red button styles | 🧪 needs live look on Telegram |
+| 4 | Strike banner hides 1 h after first shown | 🧪 |
+| 5 | `/removeallrestriction` (ban + reseller suspension + fake-payment strikes, with confirm button) | 🧪 |
+
+## v6
 | # | Item | Status |
 |---|---|---|
 | 1 | `/cutbalance` | 🧪 |

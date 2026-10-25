@@ -17,7 +17,7 @@ src/
   telegram.js             telegramNotify(text, purpose) — retries, fallback, diagnostics
   telegramBot.js          private bot commands + button callbacks
   publicBot.js            public bot (lookup, report)
-  adminOps.js             findUserByAny, credit/debit, ban/unban, annulment, reports
+  adminOps.js             findUserByAny, credit/debit, ban/unban, removeAllRestrictions, annulment, reports
   productInfo.js          /product_info search
   healthMonitor.js        URL / Firestore up-down alerts
   topupQr.js              private bot transport (tg()), QR top-up approve/cancel
