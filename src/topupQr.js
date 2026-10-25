@@ -159,8 +159,8 @@ export function isAllowedPress(cb) {
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 // eSewa transaction code: exactly 7 characters, CAPITAL letters + digits only, always starts with the number 1 (e.g. 1U7HMDY).
 // The rules are checked here on the server ONLY and are never described to the user: telling people the format
-// just teaches fakers how to build a code that passes. A code that fails is rejected at once - no admin message,
-// no database write - with one generic message that does not say which rule was broken.
+// just teaches fakers how to build a code that passes. A code that fails is handled by autoRejectFake() below:
+// the user is told nothing, it is silently rejected + struck. (Only an EMPTY box gets a visible message.)
 const TX_CODE_RE = /^1[A-Z0-9]{6}$/;
 export const TX_CODE_REJECTED = 'Payment rejected: this transaction code is not valid. Send the exact code from your eSewa payment receipt.';
 // Returns { ok:true, txCode } or { ok:false, error, reason }. `reason` is for server logs only - never show it to the user.
@@ -178,6 +178,22 @@ export const FAKE_LADDER = [
 ];
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 export const strikeStep = (count) => FAKE_LADDER[Math.min(count, FAKE_LADDER.length) - 1];
+
+// One fake-payment strike: bumps the counter, writes the warning text, bans on strike 2 / 3, logs it.
+// Used when an admin presses Cancel AND when a fake-format code is auto-rejected, so both behave the same.
+function strikeFields(d, txCode, now) {
+  const count = Number(d.fakePayment?.count || 0) + 1;
+  const step = strikeStep(count);
+  const upd = { fakePayment: { count, lastAt: now, lastTx: txCode, text: step.text } };
+  const log = [...(d.adminLog || []), { delta: 0, note: `Fake payment strike ${Math.min(count, 3)}/3 (txCode: ${txCode})`, resultingBalance: Number(d.balance || 0), at: now }];
+  if (step.action !== 'warning') {
+    upd.ban = makeBan(step.action, 'topup-auto');
+    upd.banned = true;
+    log.push({ delta: 0, note: `Auto-ban — ${upd.ban.label} (fake payment)`, resultingBalance: Number(d.balance || 0), at: now });
+  }
+  upd.adminLog = log;
+  return { upd, count, step };
+}
 
 export async function resolveRequest(reqId, decision, by = 'telegram') {
   const idxRef = db().collection('topupQr').doc(reqId);
@@ -216,19 +232,10 @@ export async function resolveRequest(reqId, decision, by = 'telegram') {
       upd.adminLog = [...(d.adminLog || []), { delta: Number(r.amount), note: `QR top-up approved (txCode: ${r.txCode})`, resultingBalance: after, at: now }, ...pro.log];
       result = { ok: true, decision, before, after, amount: Number(r.amount), txCode: r.txCode, proActivated: pro.activated };
     } else {
-      const count = Number(d.fakePayment?.count || 0) + 1;
-      const step = strikeStep(count);
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
+      const sk = strikeFields(d, r.txCode, now);
+      const { count, step } = sk;
       next[i] = { ...r, status: 'REJECTED', reviewedAt: now, reviewedBy: by, fake: true };
-      upd.fakePayment = { count, lastAt: now, lastTx: r.txCode, text: step.text };
-      const log = [...(d.adminLog || []), { delta: 0, note: `Fake payment strike ${Math.min(count, 3)}/3 (txCode: ${r.txCode})`, resultingBalance: Number(d.balance || 0), at: now }];
-      if (step.action !== 'warning') {
-        upd.ban = makeBan(step.action, 'topup-auto');
-        // src by SRT X CHEATS. Copy right SRT X CHEATS
-        upd.banned = true;
-        log.push({ delta: 0, note: `Auto-ban — ${upd.ban.label} (fake payment)`, resultingBalance: Number(d.balance || 0), at: now });
-      }
-      upd.adminLog = log;
+      Object.assign(upd, sk.upd);
       result = { ok: true, decision, count, step, amount: Number(r.amount), txCode: r.txCode };
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     }
@@ -242,6 +249,30 @@ export async function resolveRequest(reqId, decision, by = 'telegram') {
   return { ...out, uid, messages: idx.data().messages || [], base: idx.data() };
 }
 
+// A code that fails the format check (see validateTxCode) is NOT refused out loud. The user gets the exact same
+// "pending - verifying order" answer as a real payment, so they cannot learn the rule by trial. Behind the scenes
+// the request is marked REJECTED + fake and a strike is given, exactly like an admin pressing Cancel - but no admin
+// is bothered and nothing is announced. The website then shows the strike warning ~5 s later (see owner.php).
+async function autoRejectFake({ uid, email, amount, txCode, ip, source }) {
+  const shown = String(txCode ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 30) || '—';
+  const reqId = newReqId();
+  const userRef = db().collection('users').doc(uid);
+  const now = new Date().toISOString();
+  const out = await db().runTransaction(async (tx) => {
+    const u = await tx.get(userRef);
+    const d = u.exists ? u.data() : {};
+    const list = Array.isArray(d.topupRequests) ? d.topupRequests : [];
+    const sk = strikeFields(d, shown, now);
+    const entry = { date: now, amount, paymentAccount: 'QR (SRT X CHEATS)', method: QR_METHOD, txCode: shown, status: 'REJECTED', uid, email: email || d.email || '', reqId, ip, reviewedAt: now, reviewedBy: 'auto-format-check', fake: true, ...(source !== 'website' ? { source } : {}) };
+    tx.set(userRef, { ...sk.upd, topupRequests: [...list, entry] }, { merge: true });
+    return sk;
+  });
+  invalidateUserDoc(uid, { history: false });
+  console.warn(`[topup-qr] auto-rejected fake tx code (uid ${uid}, strike ${Math.min(out.count, 3)}/3)`);
+  // looks identical to a normal submit; `autoRejected` is for the Telegram bot only and is never sent to the website
+  return { ok: true, reqId, status: 'PENDING', autoRejected: { count: out.count, step: out.step } };
+}
+
 // ---- shared by the website (/api/user/topup-qr) and the Telegram deposit bot --------------------
 // Creates a PENDING QR top-up for `uid`, then announces it to the admin bot with Load / Cancel buttons.
 // Returns { ok:true, reqId } or { ok:false, status, error }.
@@ -250,7 +281,8 @@ export async function createQrTopup({ uid, email = '', amount, txCode, ip = '', 
   if (!Number.isInteger(amount) || amount < QR_MIN_AMOUNT) return { ok: false, status: 400, error: `Minimum top-up is Rs ${QR_MIN_AMOUNT}` };
   if (amount > QR_MAX_AMOUNT) return { ok: false, status: 400, error: 'Amount is too large' };
   const txCheck = validateTxCode(txCode);
-  if (!txCheck.ok) return { ok: false, status: 400, error: txCheck.error };
+  if (!txCheck.ok && txCheck.reason === 'empty') return { ok: false, status: 400, error: txCheck.error };
+  if (!txCheck.ok) return autoRejectFake({ uid, email, amount, txCode, ip, source });
   txCode = txCheck.txCode;
 
   const reqId = newReqId();
