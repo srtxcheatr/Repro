@@ -63,16 +63,22 @@ assert.match(last().text, /expired/);
 
 await say('abc'); assert.match(last().text, /valid amount/);
 await say('50');  assert.match(last().text, /valid amount/);
-await say('500'); assert.match(last().text, /Send transaction code[\s\S]*1U7HMDY[\s\S]*Esewa[\s\S]*NRP 500[\s\S]*no refunds/);
-await say('x');   assert.match(last().text, /too short/);
-await say('1u7hmdy'); assert.match(last().text, /CAPITAL/);   // lowercase is rejected with guidance
-await say('0U7HMDY'); assert.match(last().text, /starts with the number 1/);
-await say('1U7HMD');  assert.match(last().text, /too short/);
-await say('1U7HMDYY'); assert.match(last().text, /too long/);
+await say('500'); assert.match(last().text, /Send transaction code[\s\S]*Esewa[\s\S]*NRP 500[\s\S]*no refunds/);
+assert.doesNotMatch(last().text, /1U7HMDY|example|7 char|capital/i);   // the format is never shown to the user
+// every bad code is rejected at once with the SAME generic message (no rule is revealed) and nothing reaches the admin bot
+const adminBefore = sent.filter((m) => m.bot === 'admin').length;
+for (const bad of ['x', '1u7hmdy', '0U7HMDY', '1U7HMD', '1U7HMDYY', '1U7-HMD', 'ABCDEFG']) {
+  await say(bad);
+  assert.match(last().text, /Payment rejected: this transaction code is not valid/, `"${bad}" must be rejected`);
+  assert.doesNotMatch(last().text, /too short|too long|CAPITAL|starts with|7 char|example/i, 'rejection must not leak the rules');
+}
+assert.equal(sent.filter((m) => m.bot === 'admin').length, adminBefore, 'fake codes must never be sent to the admin');
+assert.equal(((await d.collection('users').doc('UID123456789012345678901234').get()).data().topupRequests || []).length, 0, 'fake codes must not be stored');
 await say('1U7HMDY');
 assert.match(last().text, /Request received/);
 const adminMsg = last('admin'); assert.match(adminMsg.text, /USER NAME<\/b> - Ram[\s\S]*REQUEST BALANCE[\s\S]*NRP 500[\s\S]*1U7HMDY[\s\S]*Telegram deposit bot/);
-assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.text), ['Load ✅', 'Cancel ❌']);
+assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.text), ['Load', 'Cancel']);
+assert.deepEqual(adminMsg.reply_markup.inline_keyboard[0].map((b) => b.style), ['success', 'danger']);
 const u = (await d.collection('users').doc('UID123456789012345678901234').get()).data();
 assert.equal(u.topupRequests[0].status, 'PENDING'); assert.equal(u.topupRequests[0].source, 'telegram');
 const idx = (await d.collection('topupQr').doc(u.topupRequests[0].reqId).get()).data(); assert.ok(idx.tgChatId === '55');
