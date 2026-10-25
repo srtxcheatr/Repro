@@ -65,15 +65,7 @@ await say('abc'); assert.match(last().text, /valid amount/);
 await say('50');  assert.match(last().text, /valid amount/);
 await say('500'); assert.match(last().text, /Send transaction code[\s\S]*Esewa[\s\S]*NRP 500[\s\S]*no refunds/);
 assert.doesNotMatch(last().text, /1U7HMDY|example|7 char|capital/i);   // the format is never shown to the user
-// every bad code is rejected at once with the SAME generic message (no rule is revealed) and nothing reaches the admin bot
-const adminBefore = sent.filter((m) => m.bot === 'admin').length;
-for (const bad of ['x', '1u7hmdy', '0U7HMDY', '1U7HMD', '1U7HMDYY', '1U7-HMD', 'ABCDEFG']) {
-  await say(bad);
-  assert.match(last().text, /Payment rejected: this transaction code is not valid/, `"${bad}" must be rejected`);
-  assert.doesNotMatch(last().text, /too short|too long|CAPITAL|starts with|7 char|example/i, 'rejection must not leak the rules');
-}
-assert.equal(sent.filter((m) => m.bot === 'admin').length, adminBefore, 'fake codes must never be sent to the admin');
-assert.equal(((await d.collection('users').doc('UID123456789012345678901234').get()).data().topupRequests || []).length, 0, 'fake codes must not be stored');
+// an EMPTY box is the only thing refused out loud; fake-format codes are handled silently further down
 await say('1U7HMDY');
 assert.match(last().text, /Request received/);
 const adminMsg = last('admin'); assert.match(adminMsg.text, /USER NAME<\/b> - Ram[\s\S]*REQUEST BALANCE[\s\S]*NRP 500[\s\S]*1U7HMDY[\s\S]*Telegram deposit bot/);
@@ -86,4 +78,29 @@ const idx = (await d.collection('topupQr').doc(u.topupRequests[0].reqId).get()).
 // duplicate tx code is rejected on a new deposit
 const t2 = (await dep.createDepositLink('UID123456789012345678901234')).split('dep_')[1];
 await say(`/start dep_${t2}`); await say('500'); await say('1U7HMDY'); assert.match(last().text, /already submitted/);
+
+// ---- fake-format code: looks like a normal submit, then (5 s later) a strike notice - admin is never bothered ----
+await d.collection('users').doc('FAKEUSER00000000000000000001').set({ email: 'f@b.com', profileName: 'Fake', profilePhone: '9811111111', balance: 0 });
+const adminBefore = sent.filter((m) => m.bot === 'admin').length;
+const t3 = (await dep.createDepositLink('FAKEUSER00000000000000000001')).split('dep_')[1];
+await say(`/start dep_${t3}`); await say('500');
+await say('1u7hmdy');                                                 // lowercase = fake format
+assert.match(last().text, /Request received/);                          // same answer as a real payment
+assert.doesNotMatch(last().text, /reject|invalid|too short|CAPITAL|starts with/i);
+assert.equal(sent.filter((m) => m.bot === 'admin').length, adminBefore, 'admin must not be messaged for a fake code');
+const fu = (await d.collection('users').doc('FAKEUSER00000000000000000001').get()).data();
+assert.equal(fu.topupRequests[0].status, 'REJECTED'); assert.equal(fu.topupRequests[0].fake, true);
+assert.equal(fu.fakePayment.count, 1); assert.match(fu.fakePayment.text, /Warning 1\/3/); assert.ok(!fu.ban, 'strike 1 is a warning only');
+await new Promise((r) => setTimeout(r, 5400));
+assert.match(last().text, /Deposit cancelled[\s\S]*Warning 1\/3/);       // strike notice arrives ~5 s later
+// strike 2 = 1-day ban, strike 3 = permanent (same ladder as an admin Cancel)
+const { createQrTopup } = await import('../src/topupQr.js');
+let rr = await createQrTopup({ uid: 'FAKEUSER00000000000000000001', amount: 500, txCode: 'ABCDEFG', source: 'website' });
+assert.equal(rr.ok, true); assert.equal(rr.status, 'PENDING');
+let fu2 = (await d.collection('users').doc('FAKEUSER00000000000000000001').get()).data();
+assert.equal(fu2.fakePayment.count, 2); assert.ok(fu2.banned && fu2.ban, 'strike 2 bans for 1 day');
+rr = await createQrTopup({ uid: 'FAKEUSER00000000000000000001', amount: 500, txCode: '1abc', source: 'website' });
+fu2 = (await d.collection('users').doc('FAKEUSER00000000000000000001').get()).data();
+assert.equal(fu2.fakePayment.count, 3); assert.equal(Object.keys(rr).includes('autoRejected'), true);
+assert.equal((await createQrTopup({ uid: 'FAKEUSER00000000000000000001', amount: 500, txCode: '', source: 'website' })).ok, false);   // empty box: visible error
 console.log('deposit bot flow OK');
