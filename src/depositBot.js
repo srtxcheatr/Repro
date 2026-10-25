@@ -10,7 +10,7 @@
 import crypto from 'node:crypto';
 import { db } from './firebase.js';
 import { esc } from './telegram.js';
-import { createQrTopup, QR_MIN_AMOUNT, QR_MAX_AMOUNT } from './topupQr.js';
+import { createQrTopup, validateTxCode, QR_MIN_AMOUNT, QR_MAX_AMOUNT } from './topupQr.js';
 
 export const depositToken = () => process.env.TELEGRAM_DEPOSIT_BOT_TOKEN || '';
 export const depositBotConfigured = () => !!depositToken();
@@ -229,10 +229,11 @@ async function onAmount(chat, tgId, s, text) {
 }
 
 async function onTx(chat, tgId, s, text) {
-  const txCode = text.replace(/\s+/g, '').toUpperCase();
-  if (!/^[A-Z0-9_-]{6,40}$/.test(txCode)) {
-    return void (await say(chat, '❌ Invalid transaction code. Send only the code.\n\nExample - <code>1U7HMDY</code>\nOnly on - <b>Esewa</b>'));
+  const txCheck = validateTxCode(text.replace(/\s+/g, ''));
+  if (!txCheck.ok) {
+    return void (await say(chat, `❌ ${esc(txCheck.error)}\n\nExample - <code>1U7HMDY</code>\nOnly on - <b>Esewa</b>`));
   }
+  const txCode = txCheck.txCode;
   if (!allow(`d:${tgId}`, 8, 10 * 60_000)) return void (await say(chat, '⏳ Too many attempts. Please wait a few minutes.'));
   const r = await createQrTopup({
     uid: s.uid, amount: s.amount, txCode, source: 'telegram', extraIndex: { tgChatId: String(chat), tgUserId: tgId },

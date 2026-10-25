@@ -157,6 +157,19 @@ export function isAllowedPress(cb) {
 }
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
+// eSewa transaction code: exactly 7 characters, CAPITAL letters + digits only, always starts with the number 1 (e.g. 1U7HMDY).
+// Returns { ok:true, txCode } or { ok:false, error } with a message that tells the user exactly what is wrong.
+export function validateTxCode(raw) {
+  const t = String(raw ?? '').trim();
+  if (!t) return { ok: false, error: 'Enter your eSewa transaction code (example: 1U7HMDY).' };
+  if (/[a-z]/.test(t)) return { ok: false, error: 'Transaction code must be in CAPITAL letters only (example: 1U7HMDY).' };
+  if (/[^A-Z0-9]/.test(t)) return { ok: false, error: 'Transaction code can only contain capital letters (A-Z) and numbers (0-9) - no spaces or symbols.' };
+  if (t.length < 7) return { ok: false, error: `Transaction code is too short - it must be exactly 7 characters (you entered ${t.length}). Example: 1U7HMDY` };
+  if (t.length > 7) return { ok: false, error: `Transaction code is too long - it must be exactly 7 characters (you entered ${t.length}). Example: 1U7HMDY` };
+  if (t[0] !== '1') return { ok: false, error: 'Transaction code always starts with the number 1 (example: 1U7HMDY). Please check your eSewa receipt.' };
+  return { ok: true, txCode: t };
+}
+
 export const FAKE_LADDER = [
   { count: 1, action: 'warning', text: 'Warning 1/3 — fake payment detected. Next fake payment = 1 day ban.' },
   { count: 2, action: '1d',      text: 'Warning 2/3 — fake payment detected again. You were banned for 1 day. Next fake payment = permanent ban.' },
@@ -233,10 +246,11 @@ export async function resolveRequest(reqId, decision, by = 'telegram') {
 // Returns { ok:true, reqId } or { ok:false, status, error }.
 export async function createQrTopup({ uid, email = '', amount, txCode, ip = '', source = 'website', extraIndex = {} }) {
   amount = Number(amount);
-  txCode = String(txCode || '').trim().toUpperCase();
   if (!Number.isInteger(amount) || amount < QR_MIN_AMOUNT) return { ok: false, status: 400, error: `Minimum top-up is Rs ${QR_MIN_AMOUNT}` };
   if (amount > QR_MAX_AMOUNT) return { ok: false, status: 400, error: 'Amount is too large' };
-  if (!/^[A-Z0-9_-]{6,40}$/.test(txCode)) return { ok: false, status: 400, error: 'Enter a valid transaction ID (6-40 letters/numbers)' };
+  const txCheck = validateTxCode(txCode);
+  if (!txCheck.ok) return { ok: false, status: 400, error: txCheck.error };
+  txCode = txCheck.txCode;
 
   const reqId = newReqId();
   const userRef = db().collection('users').doc(uid);
