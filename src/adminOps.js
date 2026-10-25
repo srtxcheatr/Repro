@@ -185,6 +185,34 @@ export async function unbanUser(uid, by = 'telegram') {
   return { email: d.email || '', name: d.profileName || '' };
 }
 
+// Everything that restricts an account, as a list of short labels (empty = nothing to remove).
+export function restrictionsOf(d) {
+  const out = [];
+  const ban = activeBan(d);
+  if (ban) out.push(`Ban - ${ban.label}`);
+  else if (d.ban || d.banned) out.push('Old / expired ban flag');
+  if (d.requestStatus === 'Banned') out.push('Reseller API suspended');
+  if (Number(d.fakePayment?.count || 0) > 0) out.push(`Fake-payment strikes ${Math.min(Number(d.fakePayment.count), 3)}/3 (warning page)`);
+  return out;
+}
+
+// /removeallrestriction: lifts the ban, the reseller-API suspension and the fake-payment strikes (so the warning
+// disappears and the next strike starts again at 1/3). Balance, history and top-up records are NOT touched.
+export async function removeAllRestrictions(uid, by = 'telegram') {
+  const userRef = db().collection('users').doc(uid);
+  const snap = await userRef.get();
+  if (!snap.exists) throw new Error('User not found');
+  const d = snap.data();
+  const removed = restrictionsOf(d);
+  const FV = admin.firestore.FieldValue;
+  const upd = { ban: FV.delete(), banned: FV.delete(), fakePayment: FV.delete() };
+  if (d.requestStatus === 'Banned') upd.requestStatus = 'Active';
+  upd.adminLog = [...(d.adminLog || []), { delta: 0, note: `All restrictions removed (by ${by}): ${removed.join('; ') || 'none'}`, resultingBalance: Number(d.balance || 0), at: new Date().toISOString() }];
+  await userRef.set(upd, { merge: true });
+  invalidateUserDoc(uid, { history: false });
+  return { email: d.email || '', name: d.profileName || '', removed };
+}
+
 // Newest first, each with its index in purchaseHistory (used by annulPurchase).
 export function recentPurchases(d, limit = 8) {
   const list = Array.isArray(d.purchaseHistory) ? d.purchaseHistory : [];

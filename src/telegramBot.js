@@ -4,7 +4,7 @@
 //   /ban /unban /annulment /getdetail /mode /notifytest /cancel
 import { tg, chatIds, adminIds, newReqId, answerCallback, editMessage } from './topupQr.js';
 import {
-  findUserByAny, creditUser, debitUser, banUser, unbanUser, annulPurchase, recentPurchases,
+  findUserByAny, creditUser, debitUser, banUser, unbanUser, removeAllRestrictions, restrictionsOf, annulPurchase, recentPurchases,
   userBalanceReport, activeUsersReport, revenueReport, setUserRole, userDetailText, MAX_BOT_LOAD,
 } from './adminOps.js';
 import { activeBan, BAN_DURATIONS } from './ban.js';
@@ -64,6 +64,7 @@ const HELP =
   '/product_info — prices of a product (any part of the name works)\n' +
   '/ban — ban a user (1h … permanent)\n' +
   '/unban — remove a ban\n' +
+  '/removeallrestriction — remove ALL restrictions (ban + fake-payment warning/strikes)\n' +
   '/annulment — cancel a purchase and refund it\n' +
   '/getdetail — get a user\'s details\n' +
   '/mode — change mode (user / reseller / pro reseller)\n' +
@@ -73,7 +74,7 @@ const HELP =
 
 // command name (underscores removed, lower case) -> canonical name
 const ALIASES = { alluserlist: 'alluserslist', allusers: 'alluserslist', userlist: 'alluserslist', allbalance: 'alluserbalance', revenue: 'allrevenue', products: 'productinfo', product: 'productinfo' };
-const USER_CMDS = ['addbalance', 'cutbalance', 'getdetail', 'mode', 'ban', 'unban', 'annulment'];
+const USER_CMDS = ['addbalance', 'cutbalance', 'getdetail', 'mode', 'ban', 'unban', 'removeallrestriction', 'annulment'];
 
 export async function handleMessage(msg) {
   if (!isAllowedMessage(msg)) return;
@@ -226,6 +227,14 @@ async function identify(chat, key, idf) {
       { inline_keyboard: [[{ text: 'Unban', style: 'success', callback_data: `un:Y:${tok}` }, { text: 'Cancel', style: 'danger', callback_data: `un:N:${tok}` }]] }));
   }
 
+  if (st.cmd === 'removeallrestriction') {
+    const found = restrictionsOf(u.data);
+    if (!found.length) return void (await say(chat, `${head(u)}\n✅ This account has no restrictions.`));
+    pending.set(tok, { kind: 'rr', uid: u.uid, exp: Date.now() + TTL });
+    return void (await say(chat, `${head(u)}\n🔓 Restrictions on this account:\n${found.map((x) => `• ${esc(x)}`).join('\n')}\n\nRemove ALL of them?`,
+      { inline_keyboard: [[{ text: 'Remove all', style: 'success', callback_data: `rr:Y:${tok}` }, { text: 'Cancel', style: 'danger', callback_data: `rr:N:${tok}` }]] }));
+  }
+
   if (st.cmd === 'annulment') {
     const list = recentPurchases(u.data, 8);
     if (!list.length) return void (await say(chat, `${head(u)}\nNo purchases on this account.`));
@@ -266,8 +275,8 @@ async function amountStep(chat, key, st, text) {
 }
 
 // ---- button presses ----------------------------------------------------------
-const KIND_OF = { ab: 'add', cb: 'cut', md: 'mode', bn: 'ban', un: 'unban', an: 'annul' };
-export const BOT_CALLBACK_RE = /^(ab|cb|md|bn|un|an):([A-Za-z0-9]{1,4}):([a-f0-9]{12})$/;
+const KIND_OF = { ab: 'add', cb: 'cut', md: 'mode', bn: 'ban', un: 'unban', rr: 'rr', an: 'annul' };
+export const BOT_CALLBACK_RE = /^(ab|cb|md|bn|un|rr|an):([A-Za-z0-9]{1,4}):([a-f0-9]{12})$/;
 
 export async function handleBotCallback(cb) {
   sweep();
@@ -321,6 +330,13 @@ export async function handleBotCallback(cb) {
       telegramNotify(`✅ <b>User unbanned</b>\nUID: <code>${esc(p.uid)}</code>\n${esc(r.email)}\nBy ${esc(who(cb.from))} (Telegram)`);
       await answerCallback(cb.id, 'Unbanned');
       return editMessage(chat, mid, `${base}\n\n✅ <b>UNBANNED</b> by ${esc(who(cb.from))}`);
+    }
+
+    if (prefix === 'rr') {
+      const r = await removeAllRestrictions(p.uid, by);
+      telegramNotify(`🔓 <b>All restrictions removed</b>\nUID: <code>${esc(p.uid)}</code>\n${esc(r.email)}\nRemoved: ${esc(r.removed.join('; ') || 'none')}\nBy ${esc(who(cb.from))} (Telegram)`);
+      await answerCallback(cb.id, 'All restrictions removed');
+      return editMessage(chat, mid, `${base}\n\n🔓 <b>ALL RESTRICTIONS REMOVED</b> by ${esc(who(cb.from))}`);
     }
 
     if (prefix === 'an') {

@@ -87,6 +87,7 @@ export async function registerTopupWebhook() {
     { command: 'product_info', description: 'Prices for a product (any part of the name)' },
     { command: 'ban', description: 'Ban a user' },
     { command: 'unban', description: 'Unban a user' },
+    { command: 'removeallrestriction', description: 'Remove ALL restrictions (ban + fake-payment warning)' },
     { command: 'annulment', description: 'Cancel a purchase and refund it' },
     { command: 'notifytest', description: 'Test that every alert bot reaches you' },
     { command: 'getdetail', description: 'Get a user\'s details' },
