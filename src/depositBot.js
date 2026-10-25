@@ -37,6 +37,48 @@ async function api(method, body) {
   } finally { clearTimeout(t); }
 }
 
+// Uploads a file straight to Telegram (multipart), instead of handing Telegram a URL to fetch itself.
+// sendPhoto-by-URL makes TELEGRAM's servers fetch the website, which fails behind a WAF/CDN that
+// blocks unfamiliar bots, on a slow cold start, etc. - "Could not load the QR here" came from that.
+async function apiUpload(method, fields, fileField, buf, filename, contentType) {
+  const token = depositToken();
+  if (!token) return null;
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined && v !== null) form.append(k, String(v));
+  form.append(fileField, new Blob([buf], { type: contentType }), filename);
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', body: form, signal: ctl.signal });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.ok === false) console.warn(`[deposit-bot] ${method} (upload) failed: ${j.description || r.status}`);
+    return j;
+  } catch (e) {
+    console.warn(`[deposit-bot] ${method} (upload) error: ${e?.name || 'unknown'}`);
+    return null;
+  } finally { clearTimeout(t); }
+}
+
+// The QR rarely changes, so the downloaded bytes are cached for a while instead of refetched per user.
+let qrCache = null; // { buf, contentType, at }
+const QR_CACHE_MS = 10 * 60_000;
+async function fetchQr() {
+  if (qrCache && Date.now() - qrCache.at < QR_CACHE_MS) return qrCache;
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const r = await fetch(qrUrl(), { signal: ctl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length) throw new Error('empty response');
+    qrCache = { buf, contentType: r.headers.get('content-type') || 'image/jpeg', at: Date.now() };
+    return qrCache;
+  } catch (e) {
+    console.warn(`[deposit-bot] could not fetch QR image: ${e?.message || e}`);
+    return qrCache || null; // serve a stale copy rather than nothing, if we have one
+  } finally { clearTimeout(t); }
+}
+
 const say = (chat_id, text, extra = {}) =>
   api('sendMessage', { chat_id, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra });
 
@@ -171,8 +213,9 @@ async function onStartLink(chat, tgId, token) {
   await say(chat, detailsCard(l.uid, d));
   // store QR + welcome + amount question
   const caption = `Welcome to SRT X CHEATS\n${LONG}\n${ASK_AMOUNT}`;
-  const photo = await api('sendPhoto', { chat_id: chat, photo: qrUrl(), caption });
-  if (!photo?.ok) await say(chat, `Welcome to SRT X CHEATS\n(Could not load the QR here — open the website QR page.)\n${LONG}\n${ASK_AMOUNT}`);
+  const qr = await fetchQr();
+  const photo = qr ? await apiUpload('sendPhoto', { chat_id: chat, caption }, 'photo', qr.buf, 'srtx-pay-qr.jpg', qr.contentType) : null;
+  if (!photo?.ok) await say(chat, `Welcome to SRT X CHEATS\n(Could not load the QR image right now — open the website → Add Balance → Pay with QR.)\n${LONG}\n${ASK_AMOUNT}`);
 }
 
 async function onAmount(chat, tgId, s, text) {
