@@ -1,6 +1,5 @@
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import express from 'express';
-import { newKeyFields } from '../src/rewards.js';
 import crypto from 'crypto';
 import admin from 'firebase-admin';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -280,7 +279,6 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
         // src by SRT X CHEATS. Copy right SRT X CHEATS
         totalKeysBought: admin.firestore.FieldValue.increment(1),
         totalSpent: admin.firestore.FieldValue.increment(realPrice),
-        ...newKeyFields(1),
       }, { merge: true });
       return { key, newBalance, currentBalance, entry: historyEntry };
     // src by SRT X CHEATS. Copy right SRT X CHEATS

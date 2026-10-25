@@ -25,7 +25,7 @@ import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
 import { ROLES, depositUpdate, roleChangeUpdate, proPublicState } from '../src/proTier.js';
-import { resolveProRequest, announceProActivated } from '../src/proReseller.js';
+import { announceProActivated } from '../src/proReseller.js';
 
 const router = express.Router();
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -90,29 +90,6 @@ router.get('/lookup', asyncHandler(async (req, res) => {
 }));
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
-router.get('/pro-requests', asyncHandler(async (req, res) => {
-  const snap = await db().collection('users').where('proReseller.status', '==', 'pending').limit(100).get();
-  const requests = snap.docs.map((d) => {
-    const x = d.data(); const pr = x.proReseller || {};
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    return { uid: d.id, reqId: pr.reqId || '', email: x.email || '', storeName: x.profileName || '', requestedAt: pr.requestedAt || '', details: pr.details || {} };
-  }).sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
-  res.json({ success: true, requests });
-}));
-
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-router.post('/pro-review', asyncHandler(async (req, res) => {
-  const reqId = String(req.body?.reqId || '').trim();
-  const action = String(req.body?.action || '');
-  if (!/^[a-f0-9]{12}$/.test(reqId)) return res.status(400).json({ success: false, error: 'Invalid request id' });
-  if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: 'action must be "approve" or "reject"' });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const r = await resolveProRequest(reqId, action, 'admin-panel');
-  if (!r.ok) return res.status(409).json({ success: false, error: r.reason });
-  res.json({ success: true, status: action === 'approve' ? 'approved' : 'rejected' });
-}));
-
-// src by SRT X CHEATS. Copy right SRT X CHEATS
 router.post('/set-role', asyncHandler(async (req, res) => {
   const uid = String(req.body?.uid || '').trim();
   const role = String(req.body?.role || '').trim();

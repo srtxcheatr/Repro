@@ -19,10 +19,8 @@ import { getUserDoc, invalidateUserDoc } from '../src/userCache.js';
 import { isBotUid, botDocId, getBot } from '../src/leaderboardBots.js';
 import { botCosmetics, cosmeticsFor, NO_COSMETICS } from '../src/rewards.js';
 import { rateLimit } from '../src/security.js';
-import { isResellerTier, proPublicState, PRO_MIN_TOPUP } from '../src/proTier.js';
-import { sendProRequestToBot } from '../src/proReseller.js';
+import { isResellerTier, proPublicState, RESELLER_MIN_DEPOSIT, PRO_MIN_DEPOSIT, PRO_MIN_KEYS } from '../src/proTier.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-import { newReqId as newProReqId } from '../src/topupQr.js';
 import { createQrTopup, validateTxCode } from '../src/topupQr.js';
 import { depositBotConfigured, createDepositLink } from '../src/depositBot.js';
 
@@ -161,8 +159,9 @@ router.get('/balance', asyncHandler(async (req, res) => {
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     policyAcknowledged: !!data.policyAcknowledged,
     welcomeRedirectDone: !!data.welcomeRedirectDone,
-    minKeys: RESELLER_MIN_KEYS,
-    minBalance: RESELLER_MIN_BALANCE,
+    resellerDeposit: RESELLER_MIN_DEPOSIT,
+    proDeposit: PRO_MIN_DEPOSIT,
+    proMinKeys: PRO_MIN_KEYS,
   });
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 }));
@@ -551,152 +550,30 @@ router.get('/feedback', asyncHandler(async (req, res) => {
   res.json({ success: true, feedback: await getFeedbackList({ row, limit: 300 }) });
 }));
 
-const RESELLER_MIN_KEYS = 8;
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-const RESELLER_MIN_BALANCE = 1500;
-
-router.post('/apply-reseller', asyncHandler(async (req, res) => {
-  const userRef = db().collection('users').doc(req.uid);
-
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const result = await db().runTransaction(async (tx) => {
-    const snap = await tx.get(userRef);
-    const data = snap.exists ? snap.data() : {};
-
-    if (isResellerTier(data.role || 'user')) {
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      return { ok: false, error: 'You are already a reseller' };
-    }
-
-    const totalKeysBought = Number(data.totalKeysBought || 0);
-    const balance = Number(data.balance || 0);
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-
-    if (totalKeysBought < RESELLER_MIN_KEYS || balance < RESELLER_MIN_BALANCE) {
-      return {
-        ok: false,
-        error: `Not eligible yet — need ${RESELLER_MIN_KEYS}+ keys bought (you have ${totalKeysBought}) and NRP ${RESELLER_MIN_BALANCE}+ balance (you have NRP ${balance}).`,
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      };
-    }
-
-    const log = data.adminLog || [];
-    log.push({
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      delta: 0,
-      note: `Self-upgraded to reseller (${totalKeysBought} keys, NRP ${balance} balance)`,
-      resultingBalance: balance,
-      at: new Date().toISOString(),
-    });
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-
-    tx.set(userRef, { role: 'reseller', adminLog: log }, { merge: true });
-    return { ok: true, totalKeysBought, balance };
-  });
-
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  if (!result.ok) return res.status(400).json({ success: false, error: result.error });
-  invalidateUserDoc(req.uid, { history: false });
-
-  telegramNotify(
-    `👑 <b>RESELLER SELF-UPGRADE</b>\n` +
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    `UID: <code>${esc(req.uid)}</code>\n` +
-    `Email: ${esc(req.email)}\n` +
-    `Keys bought: ${result.totalKeysBought}\n` +
-    `Balance: NRP ${result.balance}`
-  );
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-
-  res.json({ success: true, role: 'reseller' });
-}));
-
+// RESELLER / PRO RESELLER now unlock automatically from a SINGLE deposit (see depositUpdate in src/proTier.js):
+//   RESELLER      = one deposit of NRP 2000+
+//   PRO RESELLER  = 10+ keys bought AND one new deposit of NRP 3500+
+// Small top-ups (100, 200 ...) are never added together. The old "apply" button, the 8-keys/1500-balance rule
+// and the Pro Reseller details/approval request are gone.
 router.get('/reseller-progress', asyncHandler(async (req, res) => {
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
   const snap = await getUserDoc(req.uid);
   const data = snap.exists ? snap.data : {};
-  const totalKeysBought = Number(data.totalKeysBought || 0);
-  const balance = Number(data.balance || 0);
   res.json({
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
     success: true,
     role: data.role || 'user',
-    totalKeysBought,
-    balance,
-    minKeys: RESELLER_MIN_KEYS,
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    minBalance: RESELLER_MIN_BALANCE,
-    eligible: (data.role || 'user') === 'user' && totalKeysBought >= RESELLER_MIN_KEYS && balance >= RESELLER_MIN_BALANCE,
+    totalKeysBought: Number(data.totalKeysBought || 0),
+    balance: Number(data.balance || 0),
+    resellerDeposit: RESELLER_MIN_DEPOSIT,
+    proDeposit: PRO_MIN_DEPOSIT,
+    proMinKeys: PRO_MIN_KEYS,
   });
 }));
 
-// src by SRT X CHEATS. Copy right SRT X CHEATS
-const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
-
-router.post('/pro-reseller/apply', rateLimit({ windowMs: 10 * 60_000, max: 6, name: 'pro-apply' }), asyncHandler(async (req, res) => {
-  const name = clean(req.body?.name, 60);
-  const whatsapp = clean(req.body?.whatsapp, 20).replace(/[^\d+]/g, '');
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const phone = clean(req.body?.phone, 20).replace(/[^\d+]/g, '');
-  const tiktok = clean(req.body?.tiktok, 40).replace(/^@+/, '');
-  if (!name || !whatsapp || !phone || !tiktok) return res.status(400).json({ success: false, error: 'Please fill all 4 fields' });
-  if (name.length < 2) return res.status(400).json({ success: false, error: 'Enter your full name' });
-  if (whatsapp.replace(/\D/g, '').length < 7 || phone.replace(/\D/g, '').length < 7) {
-    // src by SRT X CHEATS. Copy right SRT X CHEATS
-    return res.status(400).json({ success: false, error: 'Enter valid WhatsApp business and phone numbers' });
-  }
-  if (!/^[A-Za-z0-9._]{2,40}$/.test(tiktok)) return res.status(400).json({ success: false, error: 'Enter your TikTok id (letters, numbers, . and _ only)' });
-
-  const reqId = newProReqId();
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  const userRef = db().collection('users').doc(req.uid);
-  const idxRef = db().collection('proRequests').doc(reqId);
-  const now = new Date().toISOString();
-
-  let user;
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  try {
-    user = await db().runTransaction(async (tx) => {
-      const snap = await tx.get(userRef);
-      const d = snap.exists ? snap.data() : {};
-      const pr = d.proReseller || {};
-      // src by SRT X CHEATS. Copy right SRT X CHEATS
-      if ((d.role || 'user') === 'pro_reseller' || pr.status === 'active') throw new Error('You are already a PRO RESELLER');
-      if ((d.role || 'user') !== 'reseller') throw new Error('Unlock RESELLER mode first, then you can send your details for PRO RESELLER approval');
-      if (pr.status === 'pending') throw new Error('Your details are already being verified by admin');
-      if (pr.status === 'approved') throw new Error('You are already approved — just top up to activate PRO RESELLER');
-      tx.set(userRef, {
-        // src by SRT X CHEATS. Copy right SRT X CHEATS
-        proReseller: { status: 'pending', reqId, requestedAt: now, details: { name, whatsapp, phone, tiktok }, requiredDeposit: PRO_MIN_TOPUP, depositSinceApproval: 0 },
-      }, { merge: true });
-      tx.set(idxRef, { uid: req.uid, status: 'PENDING', createdAt: now, messages: [] });
-      return d;
-    });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  } catch (e) {
-    return res.status(e.message.startsWith('Unlock RESELLER') ? 403 : 409).json({ success: false, error: e.message });
-  }
-  invalidateUserDoc(req.uid, { history: false });
-
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  try {
-    const messages = await sendProRequestToBot(reqId, {
-      storeName: user.profileName || '', email: user.email || req.email, uid: req.uid, name, whatsapp, phone, tiktok,
-    });
-    if (messages.length) await idxRef.set({ messages }, { merge: true });
-  // src by SRT X CHEATS. Copy right SRT X CHEATS
-  } catch (e) { console.warn('[pro-reseller] announce failed:', e?.name || 'error'); }
-
-  res.json({ success: true, status: 'pending' });
-}));
-
-// src by SRT X CHEATS. Copy right SRT X CHEATS
 router.get('/pro-reseller', asyncHandler(async (req, res) => {
   const snap = await getUserDoc(req.uid);
   const d = snap.exists ? snap.data : {};
   res.json({ success: true, role: d.role || 'user', ...proPublicState(d) });
 }));
-// src by SRT X CHEATS. Copy right SRT X CHEATS
 
 const lastAvatarUpload = new Map();
 router.post('/avatar', asyncHandler(async (req, res) => {

@@ -1,5 +1,4 @@
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-import { newKeyFields } from '../src/rewards.js';
 import { isResellerTier } from '../src/proTier.js';
 import express from 'express';
 import crypto from 'crypto';
@@ -230,13 +229,11 @@ async function processBuy(auth, body) {
 
     try {
       const batch = db().batch();
-      // set+merge (NOT update): update() would REPLACE the whole starCb map and reset the reward counter each order.
       batch.set(userRef, {
         // src by SRT X CHEATS. Copy right SRT X CHEATS
         balance: admin.firestore.FieldValue.increment(refund),
         totalKeysBought: admin.firestore.FieldValue.increment(delivered),
         totalSpent: admin.firestore.FieldValue.increment(charged),
-        ...(delivered > 0 ? newKeyFields(delivered) : {}),
       }, { merge: true });
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       batch.update(orderRef, finished);
