@@ -114,7 +114,7 @@ const ALLOWED_EXACT_ORIGINS = [...new Set([
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   'https://bronzx.firebaseapp.com',
   'https://srtxcheats.com',
-  'https://srtxcheats.ct.ws',
+  'https://nkstore.srtxcheats.com',
   'http://srtxcheats.ct.ws',
   'https://www.srtxcheats.com',
   // src by SRT X CHEATS. Copy right SRT X CHEATS
