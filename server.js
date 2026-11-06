@@ -9,6 +9,7 @@ import gloryRoutes from './routes/gulaa_bot.js';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
 import resellerApiRoutes from './routes/reseller-api.js';
+import piApiRoutes from './routes/pi-api.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import resellerPortalRoutes from './routes/reseller-portal.js';
 import rewardsRoutes from './routes/rewards.js';
@@ -141,6 +142,7 @@ app.use('/api/telegram', telegramDepositRoutes);
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 
 app.use('/api/reseller/v1', resellerApiRoutes);
+app.use('/api/pi/v1', piApiRoutes);
 app.use('/api/reseller-portal', resellerPortalRoutes);
 
 app.use((err, req, res, next) => {
