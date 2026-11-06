@@ -139,3 +139,31 @@ export function touchLastUsed(clientRef, uid) {
   lastTouch.set(uid, now);
   clientRef.update({ lastUsedAt: now }).catch(() => {});
 }
+
+// ───────────────────────── PI KEY (product-import key) ─────────────────────────
+// A single read-only key for "quick add product" on a client's own store.
+// Works for every role (user / reseller / pro_reseller). Stored in `piClients/{uid}`.
+export function generatePiCredentials() {
+  const piKey = 'srt_x_pi_' + crypto.randomBytes(24).toString('hex');
+  return { piKey, piKeyHash: sha256(piKey), prefix: `${piKey.slice(0, 14)}…${piKey.slice(-4)}` };
+}
+
+export async function authenticatePiKey(piKey) {
+  if (!piKey) return fail(401, 'AUTH_REQUIRED', 'Send pi_key in the request body (or x-pi-key header).');
+  if (piKey.length > 200) return fail(401, 'INVALID_CREDENTIALS', 'Invalid pi_key.');
+
+  const snap = await db().collection('piClients').where('piKeyHash', '==', sha256(piKey)).limit(1).get();
+  if (snap.empty) return fail(401, 'INVALID_CREDENTIALS', 'Invalid pi_key.');
+
+  const clientDoc = snap.docs[0];
+  const client = clientDoc.data();
+  if (client.disabled) return fail(403, 'API_DISABLED', 'pi_key access for this account has been disabled. Please contact support.');
+
+  const uid = clientDoc.id;
+  const userSnap = await db().collection('users').doc(uid).get();
+  const user = userSnap.exists ? userSnap.data() : null;
+  if (!user) return fail(403, 'ACCOUNT_NOT_FOUND', 'Account not found.');
+  if (user.requestStatus === 'Banned') return fail(403, 'ACCOUNT_SUSPENDED', 'This account is suspended. Please contact support.');
+
+  return { ok: true, uid, client, clientRef: clientDoc.ref, user };
+}

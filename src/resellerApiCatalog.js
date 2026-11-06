@@ -53,3 +53,37 @@ export async function findApiProduct(pid, duration, role = 'reseller') {
   const p = m.product;
   return { product: { ...p, price: resellerPrice(p, role), label: apiLabel(p) } };
 }
+
+// ───────────────────────── PI KEY catalog ─────────────────────────
+// Percent added on top of the caller's own tier price (user / reseller / pro_reseller).
+// Default 30. Change with env PI_MARKUP_PERCENT (e.g. 25).
+const PI_MARKUP = Number(process.env.PI_MARKUP_PERCENT) >= 0 && process.env.PI_MARKUP_PERCENT !== undefined && process.env.PI_MARKUP_PERCENT !== ''
+  ? Number(process.env.PI_MARKUP_PERCENT) : 30;
+export const PI_MARKUP_PERCENT = PI_MARKUP;
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// Grouped by product: { name, image, pid, durations:[{ duration, price, status }] }
+export async function listPiProducts(role = 'user') {
+  const [custom, overrides] = await Promise.all([
+    getCustomProductsCached(),
+    getMaintenanceOverrides().catch(() => ({})),
+  ]);
+  const groups = new Map();
+  for (const [sku, d] of Object.entries(custom)) {
+    const base = Number(tierPrice(d, role));
+    if (!Number.isFinite(base) || base <= 0) continue;
+    const o = overrides[sku] || {};
+    const name = d.row || d.name || '';
+    const pid = String(d.pid ?? '');
+    const k = `${name}\u0000${pid}`;
+    if (!groups.has(k)) groups.set(k, { name, image: d.image || '', pid, durations: [] });
+    groups.get(k).durations.push({
+      duration: apiLabel(d),
+      price: round2(base * (1 + PI_MARKUP / 100)),
+      status: toStatus(!!o.maintenance, !!o.outOfStock),
+    });
+  }
+  const out = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+  out.forEach((g) => g.durations.sort((a, b) => a.price - b.price));
+  return out;
+}
