@@ -88,3 +88,17 @@ export async function takeKeyInTx(tx, sku) {
     },
   };
 }
+
+// API orders: take up to `n` keys for one duration in a single atomic step.
+// Returns the keys actually taken (fewer than n, or none, when stock runs short).
+export async function takeKeys(sku, n) {
+  const want = Math.max(1, Math.min(MAX_KEYS_PER_ADD, Math.floor(Number(n) || 1)));
+  return db().runTransaction(async (tx) => {
+    const snap = await tx.get(db().collection(STOCK_COLL).where('sku', '==', sku).limit(want));
+    if (snap.empty) return [];
+    const keys = [];
+    snap.docs.forEach((d) => { keys.push(d.data().key); tx.delete(d.ref); });
+    tx.update(db().collection('customProducts').doc(sku), { stock: admin.firestore.FieldValue.increment(-keys.length) });
+    return keys;
+  });
+}

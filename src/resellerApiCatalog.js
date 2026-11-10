@@ -11,6 +11,10 @@ export const resellerPrice = (p, role = 'reseller') => Number(tierPrice(p, role 
 
 const toStatus = (maintenance, outOfStock) => (maintenance ? 'maintenance' : outOfStock ? 'out_of_stock' : 'available');
 
+// Manual-stock durations report how many keys are left (null for supplier products = no fixed number).
+const stockOf = (d) => (d.stockMode === true ? Math.max(0, Math.floor(Number(d.stock) || 0)) : null);
+const soldOut = (d) => d.stockMode === true && stockOf(d) === 0;
+
 export async function listApiProducts(role = 'reseller') {
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const [custom, overrides] = await Promise.all([
@@ -20,7 +24,6 @@ export async function listApiProducts(role = 'reseller') {
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   return Object.entries(custom)
-    .filter(([, d]) => !d.stockMode)
     .map(([sku, d]) => {
       const o = overrides[sku] || {};
       return {
@@ -33,7 +36,8 @@ export async function listApiProducts(role = 'reseller') {
         price: resellerPrice(d, role),
         // src by SRT X CHEATS. Copy right SRT X CHEATS
         requiresAndroidId: !!d.requiresAndroidId,
-        status: toStatus(!!o.maintenance, !!o.outOfStock),
+        status: toStatus(!!o.maintenance, !!o.outOfStock || soldOut(d)),
+        stock: stockOf(d),
       };
     })
     .sort((a, b) => a.row.localeCompare(b.row) || a.price - b.price);
@@ -47,7 +51,7 @@ export async function loadPidProducts(pid) {
 }
 
 export async function findApiProduct(pid, duration, role = 'reseller') {
-  const products = (await loadPidProducts(pid)).filter((x) => !x.stockMode);
+  const products = await loadPidProducts(pid);
   const m = matchProduct(products, pid, duration);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (m.error) return m;
@@ -71,7 +75,6 @@ export async function listPiProducts(role = 'user') {
   ]);
   const groups = new Map();
   for (const [sku, d] of Object.entries(custom)) {
-    if (d.stockMode) continue;
     const base = Number(tierPrice(d, role));
     if (!Number.isFinite(base) || base <= 0) continue;
     const o = overrides[sku] || {};
@@ -82,7 +85,8 @@ export async function listPiProducts(role = 'user') {
     groups.get(k).durations.push({
       duration: apiLabel(d),
       price: round2(base * (1 + PI_MARKUP / 100)),
-      status: toStatus(!!o.maintenance, !!o.outOfStock),
+      status: toStatus(!!o.maintenance, !!o.outOfStock || soldOut(d)),
+      stock: stockOf(d),
     });
   }
   const out = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
