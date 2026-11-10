@@ -56,7 +56,7 @@ router.get('/overview', requireReseller, asyncHandler(async (req, res) => {
       : { exists: false },
     products: products.map((p) => ({
       name: p.row, pid: p.pid, duration: p.label, price: p.price,
-      status: p.status, requiresAndroidId: p.requiresAndroidId,
+      status: p.status, requiresAndroidId: p.requiresAndroidId, stock: p.stock,
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     })),
     orders: ordersSnap.docs.map((d) => {

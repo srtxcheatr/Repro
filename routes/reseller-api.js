@@ -9,7 +9,8 @@ import { db } from '../src/firebase.js';
 import { rateLimit } from '../src/security.js';
 import { invalidateUserDoc } from '../src/userCache.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
-import { getMaintenanceForSku } from '../src/srt_storage_product.js';
+import { getMaintenanceForSku, adjustCustomStock } from '../src/srt_storage_product.js';
+import { takeKeys } from '../src/stockKeys.js';
 import { fetchRealKey } from '../src/upstream.js';
 import { keyToString } from '../src/apiMatch.js';
 import { authenticateClient, getApiSettings, touchLastUsed, sha256 } from '../src/apiClients.js';
@@ -121,6 +122,14 @@ async function processBuy(auth, body) {
   }
   if (product.requiresAndroidId && !androidId) {
     return fail(400, 'ANDROID_ID_REQUIRED', 'android_id is required for this product.');
+  }
+  if (product.stockMode) {
+    const have = Math.max(0, Math.floor(Number(product.stock) || 0));
+    if (have < quantity) {
+      return fail(409, 'OUT_OF_STOCK', have
+        ? `Only ${have} key${have === 1 ? '' : 's'} left in stock for this duration. Lower the quantity.`
+        : 'This duration is currently out of stock.', { stock: have });
+    }
   }
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -259,6 +268,15 @@ async function processBuy(auth, body) {
 }
 
 async function buyKeysFromUpstream({ product, quantity, androidId, orderRef }) {
+  // Manual-stock product: the keys come from the owner's own stock, one atomic step, no supplier call.
+  if (product.stockMode) {
+    const got = await takeKeys(product.sku, quantity);
+    if (got.length) {
+      adjustCustomStock(product.sku, -got.length);
+      await orderRef.update({ keys: admin.firestore.FieldValue.arrayUnion(...got) }).catch(() => {});
+    }
+    return { keys: got, failures: got.length < quantity ? ['out of stock'] : [] };
+  }
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   const keys = [];
   const failures = [];
@@ -342,6 +360,7 @@ router.post('/', asyncHandler(async (req, res) => {
     const products = (await listApiProducts(auth.user.role || 'reseller')).map((p) => ({
       product_name: p.row, product_id: p.pid, duration: p.label, price: p.price,
       status: p.status, requires_android_id: p.requiresAndroidId,
+      stock: p.stock,   // number of keys left for manual-stock products, null for supplier products
     }));
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     return res.json({ success: true, currency: 'NRP', products });
