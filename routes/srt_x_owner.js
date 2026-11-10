@@ -26,6 +26,8 @@ import { normalizeUrlField, RuleError } from '../src/profileRules.js';
 import { listBots, createBot, updateBot, deleteBot } from '../src/leaderboardBots.js';
 import { ROLES, depositUpdate, roleChangeUpdate, proPublicState } from '../src/proTier.js';
 import { announceProActivated } from '../src/proReseller.js';
+import { uploadImage } from '../src/imgbb.js';
+import { MAX_KEYS_PER_ADD, cleanKeys, addKeys, listKeys, removeKey, deleteAllKeys } from '../src/stockKeys.js';
 
 const router = express.Router();
 // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -361,6 +363,7 @@ router.get('/products', asyncHandler(async (req, res) => {
       maintenance, maintenanceMessage, outOfStock, outOfStockMessage,
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       custom: !CATALOG[sku],
+      stockMode: p.stockMode === true, stock: p.stockMode === true ? Math.max(0, Number(p.stock) || 0) : undefined,
     };
   });
 
@@ -598,6 +601,7 @@ router.post('/products/:sku/delete', asyncHandler(async (req, res) => {
   const custom = await getCustomProductRaw(sku);
   if (!custom) return res.status(404).json({ success: false, error: 'Unknown sku' });
 
+  if (custom.stockMode) await deleteAllKeys(sku);
   await deleteCustomProduct(sku);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   await db().collection('productStatus').doc(sku).delete().catch(() => {});
@@ -606,6 +610,92 @@ router.post('/products/:sku/delete', asyncHandler(async (req, res) => {
 }));
 
 // src by SRT X CHEATS. Copy right SRT X CHEATS
+// ---- manual-stock products: owner pastes the keys by hand, one pool per duration ----------------
+// Image goes to imgbb through the server so the imgbb API key never reaches the browser.
+router.post('/products/upload-image', asyncHandler(async (req, res) => {
+  try {
+    const url = await uploadImage(req.body?.image, 'product');
+    res.json({ success: true, url });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, error: e.message || 'Upload failed' });
+  }
+}));
+
+router.post('/products/create-stock', asyncHandler(async (req, res) => {
+  const image = String(req.body?.image || '').trim();
+  const row = String(req.body?.row || '').trim().slice(0, 80);
+  const tags = normalizeTags(req.body?.tags);
+  const durations = Array.isArray(req.body?.durations) ? req.body.durations : [];
+  if (!/^https:\/\//i.test(image)) return res.status(400).json({ success: false, error: 'Image must be an https:// link (upload one, or paste an imgbb link)' });
+  if (!row) return res.status(400).json({ success: false, error: 'Product name is required' });
+  if (!durations.length) return res.status(400).json({ success: false, error: 'Add at least one duration + price' });
+  if (durations.length > 20) return res.status(400).json({ success: false, error: 'Too many durations in one go — split it up' });
+
+  const pid = `stock_${Date.now().toString(36)}`;
+  const seen = new Set();
+  const batch = db().batch();
+  const created = [];
+  for (let i = 0; i < durations.length; i++) {
+    const d = durations[i];
+    const duration = String(d?.duration || '').trim().slice(0, 60);
+    const price = Number(d?.price);
+    const priceReseller = d?.priceReseller !== undefined && d?.priceReseller !== '' ? Number(d.priceReseller) : price;
+    const priceProReseller = d?.priceProReseller !== undefined && d?.priceProReseller !== '' ? Number(d.priceProReseller) : priceReseller;
+    if (!duration) return res.status(400).json({ success: false, error: `Duration #${i + 1}: label is required` });
+    if (seen.has(normDuration(duration))) return res.status(400).json({ success: false, error: `Duration #${i + 1}: "${duration}" is listed twice` });
+    seen.add(normDuration(duration));
+    for (const [label, v] of [['user', price], ['reseller', priceReseller], ['pro reseller', priceProReseller]]) {
+      if (!v || v <= 0) return res.status(400).json({ success: false, error: `Duration #${i + 1}: ${label} price must be a positive number` });
+    }
+    const sku = `custom_${pid}_${i + 1}_${Date.now().toString(36)}`;
+    const product = { pid, row, name: `${row} ${duration}`, duration, price, priceReseller, priceProReseller, image, tags, stockMode: true, stock: 0, createdAt: Date.now() };
+    batch.set(db().collection('customProducts').doc(sku), product);
+    created.push({ sku, ...product });
+  }
+  await batch.commit();
+  invalidateCustomProductCache();
+  res.json({ success: true, row, products: created });
+}));
+
+async function requireStockSku(req, res) {
+  const sku = String(req.params.sku || '').trim();
+  const custom = await getCustomProductRaw(sku);
+  if (!custom || custom.stockMode !== true) {
+    res.status(404).json({ success: false, error: 'That duration is not a manual-stock product' });
+    return null;
+  }
+  return { sku, custom };
+}
+
+router.get('/products/:sku/stock', asyncHandler(async (req, res) => {
+  const hit = await requireStockSku(req, res);
+  if (!hit) return;
+  res.json({ success: true, sku: hit.sku, keys: await listKeys(hit.sku) });
+}));
+
+router.post('/products/:sku/add-stock', asyncHandler(async (req, res) => {
+  const hit = await requireStockSku(req, res);
+  if (!hit) return;
+  let keys;
+  try { keys = cleanKeys(req.body?.keys); } catch (e) { return res.status(e.status || 400).json({ success: false, error: e.message }); }
+  if (!keys.length) return res.status(400).json({ success: false, error: 'Paste at least one key' });
+  if (keys.length > MAX_KEYS_PER_ADD) return res.status(400).json({ success: false, error: `Add at most ${MAX_KEYS_PER_ADD} keys at a time` });
+
+  const { added, skipped } = await addKeys(hit.sku, keys);
+  if (added) invalidateCustomProductCache();
+  const fresh = await getCustomProductRaw(hit.sku);
+  res.json({ success: true, sku: hit.sku, added, skipped, stock: Math.max(0, Number(fresh?.stock) || 0) });
+}));
+
+router.post('/products/:sku/stock/remove', asyncHandler(async (req, res) => {
+  const hit = await requireStockSku(req, res);
+  if (!hit) return;
+  const ok = await removeKey(hit.sku, req.body?.id);
+  if (!ok) return res.status(404).json({ success: false, error: 'Key not found (already sold or removed)' });
+  invalidateCustomProductCache();
+  res.json({ success: true });
+}));
+
 router.get('/products/whatsapp', asyncHandler(async (req, res) => {
   const snap = await db().collection('whatsappProducts').get();
   const products = snap.docs.map((d) => ({ id: d.id, ...d.data() }));

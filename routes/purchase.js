@@ -5,9 +5,10 @@ import admin from 'firebase-admin';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { asyncHandler } from '../src/asyncHandler.js';
 import { db, requireFirebaseUid, userCors } from '../src/firebase.js';
-import { catalogFind, getMaintenanceForSku, findCustomProductFresh } from '../src/srt_storage_product.js';
+import { catalogFind, getMaintenanceForSku, findCustomProductFresh, adjustCustomStock } from '../src/srt_storage_product.js';
 import { telegramNotify, telegramFormat } from '../src/telegram.js';
 import { fetchRealKey } from '../src/upstream.js';
+import { takeKeyInTx } from '../src/stockKeys.js';
 // src by SRT X CHEATS. Copy right SRT X CHEATS
 import { invalidateUserDoc } from '../src/userCache.js';
 import { leaderboardCache } from '../src/sharedCaches.js';
@@ -70,6 +71,9 @@ router.post('/checkout/start', asyncHandler(async (req, res) => {
   }
   if (product.type === 'manual') {
     return res.status(400).json({ success: false, error: 'This product is ordered via WhatsApp, not instant checkout.' });
+  }
+  if (product.stockMode && !(Number(product.stock) > 0)) {
+    return res.status(409).json({ success: false, error: 'This duration is currently out of stock.' });
   }
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -259,9 +263,18 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       }
 
       // src by SRT X CHEATS. Copy right SRT X CHEATS
-      setJob(jobId, { percent: 55, label: 'Connecting to server...' });
-      const key = await fetchRealKey(sku, product, androidId);
-      setJob(jobId, { percent: 80, label: 'Server connected...' });
+      setJob(jobId, { percent: 55, label: product.stockMode ? 'Picking your key...' : 'Connecting to server...' });
+      let key;
+      let taken = null;
+      if (product.stockMode) {
+        // Manual stock: reads must come before writes inside the transaction.
+        taken = await takeKeyInTx(tx, sku);
+        if (!taken) throw new Error('This duration is currently out of stock.');
+        key = taken.key;
+      } else {
+        key = await fetchRealKey(sku, product, androidId);
+      }
+      setJob(jobId, { percent: 80, label: product.stockMode ? 'Key reserved...' : 'Server connected...' });
 
       setJob(jobId, { percent: 90, label: 'Finalizing order...' });
       // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -274,6 +287,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
       const purchaseHistory = snap.exists ? (snap.data().purchaseHistory || []) : [];
       purchaseHistory.push(historyEntry);
 
+      if (taken) taken.consume();
       tx.set(userRef, {
         balance: newBalance, purchaseHistory,
         // src by SRT X CHEATS. Copy right SRT X CHEATS
@@ -285,7 +299,7 @@ async function runCheckoutJob(jobId, uid, email, sku, buyerName, buyerWa, androi
     });
     // The key is already paid for and saved at this point - a cache hiccup must never turn
     // a successful purchase into "Purchase rejected" or skip the success alert below.
-    try { invalidateUserDoc(uid); leaderboardCache.invalidate(); } catch (e) { console.error('[purchase] cache invalidate failed', e?.message || e); }
+    try { if (product.stockMode) adjustCustomStock(sku, -1); invalidateUserDoc(uid); leaderboardCache.invalidate(); } catch (e) { console.error('[purchase] cache invalidate failed', e?.message || e); }
 
     setJob(jobId, { percent: 100, label: 'Delivered!', done: true, success: true, key: result.key, newBalance: result.newBalance, entry: result.entry });
 // src by SRT X CHEATS. Copy right SRT X CHEATS
