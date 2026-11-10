@@ -216,13 +216,28 @@ export async function deleteShopSrcProduct(id) {
   invalidateShopSrcProductCache();
 }
 
+// Manual-stock durations: the shown count is the number of keys left; 0 keys = sold out automatically.
+function withStock(p) {
+  if (!p || !p.stockMode) return p;
+  const stock = Math.max(0, Math.floor(Number(p.stock) || 0));
+  return stock > 0 ? { ...p, stock } : { ...p, stock, outOfStock: true, outOfStockMessage: 'Out of stock — check back soon.' };
+}
+
+// Keeps the in-memory catalog's key count right after a sale / restock without re-reading Firestore.
+export function adjustCustomStock(sku, delta) {
+  customProducts.patch((map) => {
+    if (map && map[sku]) map[sku] = { ...map[sku], stock: Math.max(0, (Number(map[sku].stock) || 0) + delta) };
+    return map;
+  });
+}
+
 export async function getLiveCatalog(role = 'user') {
   let base = { ...catalogForRole(role) };
 
   try {
     // src by SRT X CHEATS. Copy right SRT X CHEATS
     const custom = await refreshCustomProducts();
-    for (const [sku, p] of Object.entries(custom)) base[sku] = applyCustomRole(p, role);
+    for (const [sku, p] of Object.entries(custom)) base[sku] = withStock(applyCustomRole(p, role));
   } catch (e) {
     console.error('[catalog] custom products unavailable, showing static catalog only:', e);
   }
@@ -271,8 +286,8 @@ export async function getLiveCatalog(role = 'user') {
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       maintenance: !!o.maintenance,
       maintenanceMessage: o.maintenance ? (o.maintenanceMessage || merged[sku].maintenanceMessage || 'This product is temporarily under maintenance.') : undefined,
-      outOfStock: !!o.outOfStock,
-      outOfStockMessage: o.outOfStock ? (o.outOfStockMessage || 'Out of stock — check back soon.') : undefined,
+      outOfStock: !!o.outOfStock || (merged[sku].stockMode === true && merged[sku].outOfStock === true),
+      outOfStockMessage: (o.outOfStock || merged[sku].outOfStock) ? (o.outOfStockMessage || merged[sku].outOfStockMessage || 'Out of stock — check back soon.') : undefined,
       ...(o.image !== undefined ? { image: o.image } : {}),
       // src by SRT X CHEATS. Copy right SRT X CHEATS
       ...(o.name !== undefined ? { name: o.name } : {}),

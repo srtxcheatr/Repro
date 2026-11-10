@@ -20,6 +20,7 @@ export async function listApiProducts(role = 'reseller') {
 
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   return Object.entries(custom)
+    .filter(([, d]) => !d.stockMode)
     .map(([sku, d]) => {
       const o = overrides[sku] || {};
       return {
@@ -46,7 +47,7 @@ export async function loadPidProducts(pid) {
 }
 
 export async function findApiProduct(pid, duration, role = 'reseller') {
-  const products = await loadPidProducts(pid);
+  const products = (await loadPidProducts(pid)).filter((x) => !x.stockMode);
   const m = matchProduct(products, pid, duration);
   // src by SRT X CHEATS. Copy right SRT X CHEATS
   if (m.error) return m;
@@ -70,6 +71,7 @@ export async function listPiProducts(role = 'user') {
   ]);
   const groups = new Map();
   for (const [sku, d] of Object.entries(custom)) {
+    if (d.stockMode) continue;
     const base = Number(tierPrice(d, role));
     if (!Number.isFinite(base) || base <= 0) continue;
     const o = overrides[sku] || {};
